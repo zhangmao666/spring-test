@@ -1,6 +1,6 @@
 package com.example.springboottest.controller;
 
-import com.example.springboottest.DTO.ApiResponse;
+import com.example.springboottest.common.dto.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

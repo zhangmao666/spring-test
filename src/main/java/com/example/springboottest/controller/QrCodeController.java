@@ -1,7 +1,7 @@
 package com.example.springboottest.controller;
 
-import com.example.springboottest.DTO.ApiResponse;
-import com.example.springboottest.DTO.QrCodeRequest;
+import com.example.springboottest.common.dto.ApiResponse;
+import com.example.springboottest.common.dto.QrCodeRequest;
 import com.example.springboottest.service.QrCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

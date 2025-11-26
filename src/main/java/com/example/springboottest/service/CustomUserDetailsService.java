@@ -1,7 +1,7 @@
 package com.example.springboottest.service;
 
-import com.example.springboottest.entity.User;
-import com.example.springboottest.repository.UserRepository;
+import com.example.springboottest.modules.auth.entity.User;
+import com.example.springboottest.modules.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

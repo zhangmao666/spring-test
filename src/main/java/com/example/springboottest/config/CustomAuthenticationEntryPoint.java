@@ -1,6 +1,6 @@
 package com.example.springboottest.config;
 
-import com.example.springboottest.DTO.ApiResponse;
+import com.example.springboottest.common.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

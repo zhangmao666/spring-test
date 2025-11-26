@@ -1,7 +1,7 @@
 package com.example.springboottest.service;
 
 import com.example.springboottest.config.ActiveMqConfig;
-import com.example.springboottest.DTO.FileProcessMessage;
+import com.example.springboottest.modules.file.dto.FileProcessMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Service;

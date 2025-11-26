@@ -1,9 +1,9 @@
 package com.example.springboottest.service.impl;
 
-import com.example.springboottest.DTO.WeatherRequest;
-import com.example.springboottest.DTO.WeatherResponse;
 import com.example.springboottest.annotation.Loggale;
-import com.example.springboottest.service.WeatherService;
+import com.example.springboottest.modules.weather.dto.WeatherRequest;
+import com.example.springboottest.modules.weather.dto.WeatherResponse;
+import com.example.springboottest.modules.weather.service.WeatherService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

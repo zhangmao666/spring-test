@@ -1,6 +1,6 @@
 package com.example.springboottest.config;
 
-import com.example.springboottest.DTO.ApiResponse;
+import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.exception.BusinessException;
 import com.example.springboottest.exception.DuplicateResourceException;
 import com.example.springboottest.exception.ResourceNotFoundException;

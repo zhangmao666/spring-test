@@ -4,10 +4,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Random;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.example.springboottest.entity.User;
-import com.example.springboottest.util.CaptchaUtil.CaptchaResult;
-
 /**
  * 验证码工具类
  * 用于生成图形验证码和验证验证码
