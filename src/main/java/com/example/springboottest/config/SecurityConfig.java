@@ -54,14 +54,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 用户认证接口
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
-                        // API Key管理接口（需要管理员权限）
-                        .requestMatchers("/api/clients/**").authenticated()
-                        // Mock测试接口
-                        .requestMatchers("/mock/**").permitAll()
                         // 健康检查
                         .requestMatchers("/health").permitAll()
                         // 课程系统 - 公开接口（查看已发布课程）
-                        .requestMatchers("/api/courses", "/api/courses/search").permitAll()
+                        .requestMatchers("/courses", "/courses/search").permitAll()
                         // 其他请求需要认证
                         .anyRequest().authenticated()
                 )

@@ -1,6 +1,6 @@
 package com.example.springboottest.service;
 
-import com.example.springboottest.DTO.FileProcessMessage;
+import com.example.springboottest.modules.file.dto.FileProcessMessage;
 
 /**
  * 消息生产者服务接口

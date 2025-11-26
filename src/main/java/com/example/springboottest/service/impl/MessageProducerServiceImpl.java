@@ -1,8 +1,9 @@
 package com.example.springboottest.service.impl;
 
 import com.example.springboottest.config.ActiveMqConfig;
-import com.example.springboottest.DTO.FileProcessMessage;
+import com.example.springboottest.modules.file.dto.FileProcessMessage;
 import com.example.springboottest.service.MessageProducerService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
@@ -13,10 +14,10 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MessageProducerServiceImpl implements MessageProducerService {
 
-    @Autowired
-    private JmsTemplate jmsTemplate;
+    private final JmsTemplate jmsTemplate;
 
     @Override
     public void sendFileUploadMessage(FileProcessMessage message) {
