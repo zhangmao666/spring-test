@@ -1,0 +1,167 @@
+# 生产环境配置
+spring:
+  application:
+    name: spring-boot-test
+  
+  # 数据源配置
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # HikariCP 连接池配置（生产环境）
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      pool-name: SpringBootTestHikariCP
+      leak-detection-threshold: 60000
+    
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 生产环境不自动更新表结构
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.MySQLDialect
+        cache:
+          use_second_level_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+    serialization:
+      fail-on-empty-beans: false
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=3600s
+
+server:
+  port: ${SERVER_PORT:8777}
+  servlet:
+    context-path: /api
+  shutdown: graceful
+  tomcat:
+    connection-timeout: 20000
+    threads:
+      max: 300
+      min-spare: 20
+    accept-count: 200
+    max-connections: 20000
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
+
+# API客户端Token配置
+api:
+  client:
+    token:
+      expiration: ${API_CLIENT_TOKEN_EXPIRATION:7200000}  # 2小时（毫秒）
+      default-scopes: ${API_CLIENT_DEFAULT_SCOPES:read,write}
+
+# 日志配置（生产环境）
+logging:
+  level:
+    root: INFO
+    com.example.springboottest: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+  file:
+    name: /var/log/spring-boot-test/application.log
+    max-size: 50MB
+    max-history: 60
+    total-size-cap: 5GB
+
+# AI配置
+ai:
+  openai:
+    api-key: ${OPENAI_API_KEY}
+    api-url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+    model: ${OPENAI_MODEL:gpt-3.5-turbo}
+    max-tokens: 1000
+    temperature: 0.7
+  
+  qwen:
+    api-key: ${QWEN_API_KEY}
+    api-url: ${QWEN_API_URL:https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation}
+    model: ${QWEN_MODEL:qwen-turbo}
+    max-tokens: 1000
+    temperature: 0.7
+  
+  wenxin:
+    api-key: ${WENXIN_API_KEY}
+    secret-key: ${WENXIN_SECRET_KEY}
+    api-url: ${WENXIN_API_URL:https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant}
+    max-tokens: 1000
+    temperature: 0.7
+  
+  default-provider: ${AI_DEFAULT_PROVIDER:openai}
+  timeout: 30
+
+# MinIO配置
+minio:
+  endpoint: ${MINIO_ENDPOINT}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket-name: ${MINIO_BUCKET_NAME}
+  secure: ${MINIO_SECURE:true}
+
+di:
+  url: ${DI_URLS}
+
+# ActiveMQ配置
+spring:
+  activemq:
+    broker-url: ${ACTIVEMQ_BROKER_URL}
+    user: ${ACTIVEMQ_USER}
+    password: ${ACTIVEMQ_PASSWORD}
+    packages:
+      trust-all: true
+  jms:
+    pub-sub-domain: false
+
+# Spring Boot Actuator配置（生产环境）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+
+# HTTP客户端配置（生产环境）
+http:
+  connect-timeout: 30
+  read-timeout: 60
+  write-timeout: 60
+  max-idle-connections: 20
+  keep-alive-duration: 300
+  enable-logging: false
+  max-retries: 3
