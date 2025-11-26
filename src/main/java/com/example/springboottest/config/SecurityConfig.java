@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/mock/**").permitAll()
                         // 健康检查
                         .requestMatchers("/health").permitAll()
+                        // 课程系统 - 公开接口（查看已发布课程）
+                        .requestMatchers("/api/courses", "/api/courses/search").permitAll()
                         // 其他请求需要认证
                         .anyRequest().authenticated()
                 )
