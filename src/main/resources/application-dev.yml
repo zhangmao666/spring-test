@@ -67,7 +67,7 @@ server:
       max: 200
       min-spare: 10
     accept-count: 100
-    max-connections: 10000
+    max-connections: 11000
 
 # JWT配置 - 使用环境变量
 jwt:
