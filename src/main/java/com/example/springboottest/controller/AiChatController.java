@@ -25,7 +25,7 @@ public class AiChatController {
     
     private final AiChatService aiChatService;
     
-    @PostMapping("/chat")
+    @PostMapping("/chatAi")
     @PreAuthorize("hasRole('USER')")
     public CompletableFuture<ApiResponse<AiChatResponse>> chat(@Valid @RequestBody AiChatRequest request) {
         log.info("收到AI聊天请求: {}", request.getMessage());
