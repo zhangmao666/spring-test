@@ -108,10 +108,10 @@ ai:
     temperature: 0.7
   
   qwen:
-    api-key: ${QWEN_API_KEY:your-qwen-api-key}
-    api-url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
-    model: qwen-turbo
-    max-tokens: 1000
+    api-key: ${QWEN_API_KEY:sk-79d862e0b7984e9ca2ca7247493f0d79}
+    api-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model: qwen3-max
+    max-tokens: 10000
     temperature: 0.7
   
   wenxin:
@@ -121,7 +121,7 @@ ai:
     max-tokens: 1000
     temperature: 0.7
   
-  default-provider: openai
+  default-provider: qwen
   timeout: 30
 
 # MinIO配置
@@ -159,3 +159,35 @@ http:
   keep-alive-duration: 300
   enable-logging: true
   max-retries: 3
+
+# 股票实时分析配置
+stock:
+  data:
+    # 数据源类型：sina（新浪财经）, tencent（腾讯财经）
+    source: sina
+    # 行情获取间隔（秒）
+    fetch-interval: 5
+    # 交易时间段
+    trading-hours:
+      start: "09:30"
+      end: "15:00"
+    # 是否启用定时任务
+    schedule-enabled: true
+
+  # WebSocket配置
+  websocket:
+    # 允许的源（跨域配置）
+    allowed-origins: "*"
+    # 消息大小限制（KB）
+    message-size-limit: 128
+
+  # AI分析配置
+  analysis:
+    # 分析间隔（分钟）
+    interval: 15
+    # 默认AI提供商（openai或qwen）
+    provider: qwen
+    # 历史数据窗口（天）
+    history-window: 7
+    # 是否启用AI分析
+    enabled: true

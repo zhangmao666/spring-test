@@ -2,6 +2,7 @@ package com.example.springboottest.service;
 
 import com.example.springboottest.modules.auth.entity.User;
 import com.example.springboottest.modules.auth.repository.UserRepository;
+import com.example.springboottest.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -39,15 +40,17 @@ public class CustomUserDetailsService implements UserDetailsService {
         
         User user = userOptional.get();
         
-        // 创建Spring Security的UserDetails对象
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .authorities(Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
-                .accountExpired(false)
-                .accountLocked(user.getStatus() != 1)
-                .credentialsExpired(false)
-                .disabled(user.getStatus() != 1)
-                .build();
+        // 创建自定义 UserDetails 对象，包含用户ID和邮箱
+        return new CustomUserDetails(
+                user.getId(),
+                user.getUsername(),
+                user.getPassword(),
+                user.getEmail(),
+                user.getStatus() == 1,  // enabled
+                true,                    // accountNonExpired
+                true,                    // credentialsNonExpired
+                user.getStatus() == 1,  // accountNonLocked
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+        );
     }
 }

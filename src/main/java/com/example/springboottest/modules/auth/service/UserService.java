@@ -45,10 +45,12 @@ public class UserService {
         }
         
         String accessToken = jwtUtil.generateToken(user.getUsername(), user.getId());
+
+        String appendAccessToken = "Bearer " + accessToken;
         
         log.info("用户 {} 登录成功", username);
         
-        return new LoginResponse(accessToken, user.getId(), user.getUsername(), user.getEmail());
+        return new LoginResponse(appendAccessToken, user.getId(), user.getUsername(), user.getEmail());
     }
     
     /**

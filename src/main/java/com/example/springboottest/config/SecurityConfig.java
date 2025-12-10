@@ -55,8 +55,14 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
                         // 健康检查
                         .requestMatchers("/health").permitAll()
+                        // ai
+                        .requestMatchers("/ai/**").permitAll()
+                        //weather
+                        .requestMatchers("/weather/**").permitAll()
                         // 课程系统 - 公开接口（查看已发布课程）
                         .requestMatchers("/courses", "/courses/search").permitAll()
+                        // Swagger UI 相关路径
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // 其他请求需要认证
                         .anyRequest().authenticated()
                 )

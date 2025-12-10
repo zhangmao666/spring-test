@@ -9,3 +9,14 @@ spring:
   # 通用配置
   lifecycle:
     timeout-per-shutdown-phase: 30s
+
+# SpringDoc OpenAPI 配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha

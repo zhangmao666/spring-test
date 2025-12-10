@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "ai")
 public class AiProperties {
     
-    private String defaultProvider = "openai";
+    private String defaultProvider = "qwen";
     private int timeout = 30;
     
     private OpenAiConfig openai = new OpenAiConfig();
@@ -28,9 +28,9 @@ public class AiProperties {
     @Data
     public static class QwenConfig {
         private String apiKey;
-        private String apiUrl = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation";
-        private String model = "qwen-turbo";
-        private int maxTokens = 1000;
+        private String apiUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+        private String model = "qwen3-max";
+        private int maxTokens = 100000;
         private double temperature = 0.7;
     }
     

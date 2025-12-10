@@ -26,7 +26,6 @@ public class AiChatController {
     private final AiChatService aiChatService;
     
     @PostMapping("/chatAi")
-    @PreAuthorize("hasRole('USER')")
     public CompletableFuture<ApiResponse<AiChatResponse>> chat(@Valid @RequestBody AiChatRequest request) {
         log.info("收到AI聊天请求: {}", request.getMessage());
         
@@ -50,14 +49,12 @@ public class AiChatController {
     }
     
     @GetMapping("/providers")
-    @PreAuthorize("hasRole('USER')")
     public ApiResponse<List<AiProviderInfo>> getProviders() {
         List<AiProviderInfo> providers = aiChatService.getAvailableProviders();
         return ApiResponse.success(providers);
     }
     
     @GetMapping("/providers/{provider}/status")
-    @PreAuthorize("hasRole('USER')")
     public ApiResponse<Boolean> checkProviderStatus(@PathVariable String provider) {
         boolean available = aiChatService.isProviderAvailable(provider);
         return ApiResponse.success(available);
