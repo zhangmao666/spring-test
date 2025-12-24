@@ -5,6 +5,7 @@ import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.modules.weather.dto.WeatherRequest;
 import com.example.springboottest.modules.weather.dto.WeatherResponse;
 import com.example.springboottest.modules.weather.service.WeatherService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -20,10 +21,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/weather")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "天气查询", description = "天气信息查询接口")
 public class WeatherController {
-    
+
     private final WeatherService weatherService;
-    
+
     @PostMapping("/query")
     public ApiResponse<WeatherResponse> getWeatherByCity(@Valid @RequestBody WeatherRequest weatherRequest) {
         try {
@@ -35,9 +37,10 @@ public class WeatherController {
             return ApiResponse.error("查询失败: " + e.getMessage());
         }
     }
-    
+
     @GetMapping("/city/{cityName}")
-    public ApiResponse<WeatherResponse> getWeatherByCityName(@PathVariable @NotBlank(message = "城市名称不能为空") String cityName) {
+    public ApiResponse<WeatherResponse> getWeatherByCityName(
+            @PathVariable @NotBlank(message = "城市名称不能为空") String cityName) {
         try {
             WeatherResponse weatherResponse = weatherService.getWeatherByCity(cityName);
             return ApiResponse.success("查询成功", weatherResponse);
@@ -46,9 +49,10 @@ public class WeatherController {
             return ApiResponse.error("查询失败: " + e.getMessage());
         }
     }
-    
+
     @GetMapping
-    public ApiResponse<WeatherResponse> getWeatherByParams(@RequestParam @NotBlank(message = "城市名称不能为空") String city, @RequestParam(defaultValue = "CN") String countryCode) {
+    public ApiResponse<WeatherResponse> getWeatherByParams(@RequestParam @NotBlank(message = "城市名称不能为空") String city,
+            @RequestParam(defaultValue = "CN") String countryCode) {
         try {
             WeatherRequest request = new WeatherRequest();
             request.setCity(city);
@@ -60,10 +64,10 @@ public class WeatherController {
             return ApiResponse.error("查询失败: " + e.getMessage());
         }
     }
-    
+
     @GetMapping("/cities")
     public ApiResponse<String[]> getSupportedCities() {
-        String[] supportedCities = {"北京", "上海", "广州", "深圳", "杭州", "成都", "西安", "武汉", "南京", "天津"};
+        String[] supportedCities = { "北京", "上海", "广州", "深圳", "杭州", "成都", "西安", "武汉", "南京", "天津" };
         return ApiResponse.success("获取成功", supportedCities);
     }
 

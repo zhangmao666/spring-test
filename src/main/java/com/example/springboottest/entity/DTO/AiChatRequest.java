@@ -1,4 +1,4 @@
-package com.example.springboottest.DTO;
+package com.example.springboottest.entity.DTO;
 
 import lombok.Data;
 import lombok.Builder;

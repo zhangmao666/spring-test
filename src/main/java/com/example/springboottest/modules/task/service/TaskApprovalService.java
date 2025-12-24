@@ -5,8 +5,8 @@ import com.example.springboottest.exception.BusinessException;
 import com.example.springboottest.exception.ResourceNotFoundException;
 import com.example.springboottest.modules.auth.entity.User;
 import com.example.springboottest.modules.auth.repository.UserRepository;
-import com.example.springboottest.modules.auth.repository.UserRoleRepository;
 import com.example.springboottest.modules.task.dto.*;
+import com.example.springboottest.modules.task.helper.ApprovalHelper;
 import com.example.springboottest.modules.task.entity.*;
 import com.example.springboottest.modules.task.enums.*;
 import com.example.springboottest.modules.task.repository.*;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,7 +31,7 @@ public class TaskApprovalService {
     private final TaskApprovalNodeRepository nodeRepository;
     private final TaskApprovalRecordRepository recordRepository;
     private final UserRepository userRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final ApprovalHelper approvalHelper;
 
     @Transactional
     public ApprovalResultVO approve(ApproveRequest request, Long userId) {
@@ -202,7 +201,7 @@ public class TaskApprovalService {
     @Transactional(readOnly = true)
     public List<ApprovalRecordVO> getApprovalHistory(Long taskId) {
         List<TaskApprovalRecord> records = recordRepository.selectByTaskId(taskId);
-        return records.stream().map(this::convertRecordToVO).collect(Collectors.toList());
+        return records.stream().map(approvalHelper::convertRecordToVO).collect(Collectors.toList());
     }
 
     private boolean hasApprovalPermission(Task task, Long userId) {
@@ -217,7 +216,7 @@ public class TaskApprovalService {
         } else if (ApprovalType.COUNTERSIGN == approvalType) {
             TaskApprovalNode node = nodeRepository.selectById(nodeId);
             if (node == null) return false;
-            List<Long> allApprovers = getNodeApprovers(node);
+            List<Long> allApprovers = approvalHelper.getNodeApprovers(node);
             if (allApprovers.isEmpty()) return false;
             List<TaskApprovalRecord> approvedRecords = recordRepository.selectList(
                     new LambdaQueryWrapper<TaskApprovalRecord>()
@@ -239,7 +238,7 @@ public class TaskApprovalService {
     }
 
     private void createPendingRecordsForNode(Task task, TaskApprovalNode node) {
-        List<Long> approverIds = getNodeApprovers(node);
+        List<Long> approverIds = approvalHelper.getNodeApprovers(node);
         for (Long approverId : approverIds) {
             User approver = userRepository.selectById(approverId);
             if (approver != null) {
@@ -256,28 +255,6 @@ public class TaskApprovalService {
         }
     }
 
-    private List<Long> getNodeApprovers(TaskApprovalNode node) {
-        List<Long> approverIds = new ArrayList<>();
-        if (ApproverType.USER.name().equals(node.getApproverType())) {
-            if (node.getApproverIds() != null && !node.getApproverIds().isEmpty()) {
-                for (String id : node.getApproverIds().split(",")) {
-                    try {
-                        approverIds.add(Long.parseLong(id.trim()));
-                    } catch (NumberFormatException e) {
-                        log.warn("解析审批人ID失败: {}", id);
-                    }
-                }
-            }
-        } else if (ApproverType.ROLE.name().equals(node.getApproverType())) {
-            if (node.getApproverRoles() != null && !node.getApproverRoles().isEmpty()) {
-                for (String roleCode : node.getApproverRoles().split(",")) {
-                    approverIds.addAll(userRoleRepository.selectUserIdsByRoleCode(roleCode.trim()));
-                }
-            }
-        }
-        return approverIds.stream().distinct().collect(Collectors.toList());
-    }
-
     private ApprovalResultVO buildApprovalResult(Task task, String message, boolean flowCompleted, String nextNodeName) {
         ApprovalResultVO vo = new ApprovalResultVO();
         vo.setTaskId(task.getId());
@@ -290,23 +267,4 @@ public class TaskApprovalService {
         return vo;
     }
 
-    private ApprovalRecordVO convertRecordToVO(TaskApprovalRecord record) {
-        ApprovalRecordVO vo = new ApprovalRecordVO();
-        vo.setId(record.getId());
-        vo.setNodeName(record.getNodeName());
-        vo.setNodeOrder(record.getNodeOrder());
-        vo.setApproverName(record.getApproverName());
-        vo.setAction(record.getAction());
-        vo.setActionText(record.getAction() != null ? ApprovalAction.fromName(record.getAction()).getDisplayName() : "");
-        vo.setResult(record.getResult());
-        vo.setResultText(ApprovalResult.fromName(record.getResult()).getDisplayName());
-        vo.setComment(record.getComment());
-        vo.setTransferToUserName(record.getTransferToUserName());
-        vo.setApprovalTime(record.getApprovalTime());
-        if (record.getRejectToNodeId() != null) {
-            TaskApprovalNode rejectNode = nodeRepository.selectById(record.getRejectToNodeId());
-            vo.setRejectToNodeName(rejectNode != null ? rejectNode.getNodeName() : "");
-        }
-        return vo;
-    }
 }

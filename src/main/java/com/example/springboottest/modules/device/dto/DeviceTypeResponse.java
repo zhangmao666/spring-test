@@ -1,10 +1,13 @@
 package com.example.springboottest.modules.device.dto;
 
-import com.example.springboottest.modules.device.entity.DeviceType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+/**
+ * 设备类型响应DTO
+ * 使用 DeviceTypeMapper 进行对象转换
+ */
 @Data
 @NoArgsConstructor
 public class DeviceTypeResponse {
@@ -22,21 +25,5 @@ public class DeviceTypeResponse {
     private String iconPc;
     private String iconColour;
     private String deviceImg;
-
-    public DeviceTypeResponse(DeviceType deviceType) {
-        this.deviceTypeCode = deviceType.getDeviceTypeCode();
-        this.name = deviceType.getName();
-        this.status = deviceType.getStatus();
-        this.fullName = deviceType.getFullName();
-        this.tbTypeCode = deviceType.getTbTypeCode();
-        this.icon = deviceType.getIcon();
-        this.introduction = deviceType.getIntroduction();
-        this.createTime = deviceType.getCreateTime();
-        this.createBy = deviceType.getCreateBy();
-        this.updateTime = deviceType.getUpdateTime();
-        this.updateBy = deviceType.getUpdateBy();
-        this.iconPc = deviceType.getIconPc();
-        this.iconColour = deviceType.getIconColour();
-        this.deviceImg = deviceType.getDeviceImg();
-    }
+    private DeviceConfigDTO config;
 }

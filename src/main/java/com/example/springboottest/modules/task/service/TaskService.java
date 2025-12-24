@@ -7,7 +7,7 @@ import com.example.springboottest.exception.BusinessException;
 import com.example.springboottest.exception.ResourceNotFoundException;
 import com.example.springboottest.modules.auth.entity.User;
 import com.example.springboottest.modules.auth.repository.UserRepository;
-import com.example.springboottest.modules.auth.repository.UserRoleRepository;
+import com.example.springboottest.modules.task.helper.ApprovalHelper;
 import com.example.springboottest.modules.task.dto.*;
 import com.example.springboottest.modules.task.entity.*;
 import com.example.springboottest.modules.task.enums.*;
@@ -36,7 +36,7 @@ public class TaskService {
     private final TaskApprovalNodeRepository nodeRepository;
     private final TaskApprovalRecordRepository recordRepository;
     private final UserRepository userRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final ApprovalHelper approvalHelper;
 
     @Transactional
     public TaskVO createTask(CreateTaskRequest request, Long userId) {
@@ -106,7 +106,7 @@ public class TaskService {
         task.setSubmittedAt(LocalDateTime.now());
         taskRepository.updateById(task);
 
-        List<Long> approverIds = getNodeApprovers(firstNode);
+        List<Long> approverIds = approvalHelper.getNodeApprovers(firstNode);
         for (Long approverId : approverIds) {
             User approver = userRepository.selectById(approverId);
             if (approver != null) {
@@ -196,7 +196,7 @@ public class TaskService {
 
         detailVO.setFlow(convertFlowToVO(flow));
         detailVO.setNodes(nodes.stream().map(this::convertNodeToVO).collect(Collectors.toList()));
-        detailVO.setRecords(records.stream().map(this::convertRecordToVO).collect(Collectors.toList()));
+        detailVO.setRecords(records.stream().map(approvalHelper::convertRecordToVO).collect(Collectors.toList()));
 
         if (task.getCurrentNodeId() != null) {
             List<TaskApprovalRecord> pendingRecords = recordRepository.selectPendingByTaskIdAndNodeId(taskId, task.getCurrentNodeId());
@@ -216,9 +216,7 @@ public class TaskService {
         Page<Task> pageParam = new Page<>(page, size);
         IPage<Task> pageResult = taskRepository.selectPendingTasksByApproverId(pageParam, userId);
 
-        List<TaskVO> taskVOs = pageResult.getRecords().stream()
-                .map(task -> convertToVO(task, flowRepository.selectById(task.getFlowId())))
-                .collect(Collectors.toList());
+        List<TaskVO> taskVOs = convertTasksToVOs(pageResult.getRecords());
 
         return new PageResult<>(taskVOs, pageResult.getTotal(), page, size);
     }
@@ -228,11 +226,33 @@ public class TaskService {
         Page<Task> pageParam = new Page<>(page, size);
         IPage<Task> pageResult = taskRepository.selectPageByCreatorId(pageParam, userId);
 
-        List<TaskVO> taskVOs = pageResult.getRecords().stream()
-                .map(task -> convertToVO(task, flowRepository.selectById(task.getFlowId())))
-                .collect(Collectors.toList());
+        List<TaskVO> taskVOs = convertTasksToVOs(pageResult.getRecords());
 
         return new PageResult<>(taskVOs, pageResult.getTotal(), page, size);
+    }
+
+    /**
+     * 批量转换任务列表为VO，避免N+1查询问题
+     */
+    private List<TaskVO> convertTasksToVOs(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 批量获取所有flowId
+        Set<Long> flowIds = tasks.stream()
+                .map(Task::getFlowId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        
+        // 批量查询flow，构建Map
+        Map<Long, TaskApprovalFlow> flowMap = flowIds.isEmpty() ? Collections.emptyMap() :
+                flowRepository.selectBatchIds(flowIds).stream()
+                        .collect(Collectors.toMap(TaskApprovalFlow::getId, flow -> flow));
+        
+        // 转换为VO
+        return tasks.stream()
+                .map(task -> convertToVO(task, flowMap.get(task.getFlowId())))
+                .collect(Collectors.toList());
     }
 
     private String generateTaskNo() {
@@ -249,28 +269,6 @@ public class TaskService {
             }
         }
         return prefix + String.format("%06d", sequence);
-    }
-
-    private List<Long> getNodeApprovers(TaskApprovalNode node) {
-        List<Long> approverIds = new ArrayList<>();
-        if (ApproverType.USER.name().equals(node.getApproverType())) {
-            if (node.getApproverIds() != null && !node.getApproverIds().isEmpty()) {
-                for (String id : node.getApproverIds().split(",")) {
-                    try {
-                        approverIds.add(Long.parseLong(id.trim()));
-                    } catch (NumberFormatException e) {
-                        log.warn("解析审批人ID失败: {}", id);
-                    }
-                }
-            }
-        } else if (ApproverType.ROLE.name().equals(node.getApproverType())) {
-            if (node.getApproverRoles() != null && !node.getApproverRoles().isEmpty()) {
-                for (String roleCode : node.getApproverRoles().split(",")) {
-                    approverIds.addAll(userRoleRepository.selectUserIdsByRoleCode(roleCode.trim()));
-                }
-            }
-        }
-        return approverIds.stream().distinct().collect(Collectors.toList());
     }
 
     private TaskVO convertToVO(Task task, TaskApprovalFlow flow) {
@@ -321,32 +319,12 @@ public class TaskService {
         vo.setNodeOrder(node.getNodeOrder());
         vo.setApprovalType(node.getApprovalType());
         vo.setApprovalTypeText(ApprovalType.fromName(node.getApprovalType()).getDisplayName());
-        List<Long> approverIds = getNodeApprovers(node);
+        List<Long> approverIds = approvalHelper.getNodeApprovers(node);
         vo.setApproverNames(approverIds.stream()
                 .map(id -> userRepository.selectById(id))
                 .filter(Objects::nonNull)
                 .map(User::getUsername)
                 .collect(Collectors.toList()));
-        return vo;
-    }
-
-    private ApprovalRecordVO convertRecordToVO(TaskApprovalRecord record) {
-        ApprovalRecordVO vo = new ApprovalRecordVO();
-        vo.setId(record.getId());
-        vo.setNodeName(record.getNodeName());
-        vo.setNodeOrder(record.getNodeOrder());
-        vo.setApproverName(record.getApproverName());
-        vo.setAction(record.getAction());
-        vo.setActionText(record.getAction() != null ? ApprovalAction.fromName(record.getAction()).getDisplayName() : "");
-        vo.setResult(record.getResult());
-        vo.setResultText(ApprovalResult.fromName(record.getResult()).getDisplayName());
-        vo.setComment(record.getComment());
-        vo.setTransferToUserName(record.getTransferToUserName());
-        vo.setApprovalTime(record.getApprovalTime());
-        if (record.getRejectToNodeId() != null) {
-            TaskApprovalNode rejectNode = nodeRepository.selectById(record.getRejectToNodeId());
-            vo.setRejectToNodeName(rejectNode != null ? rejectNode.getNodeName() : "");
-        }
         return vo;
     }
 

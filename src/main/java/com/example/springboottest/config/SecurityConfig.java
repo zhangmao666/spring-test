@@ -51,19 +51,16 @@ public class SecurityConfig {
 
                 // 配置授权规则
                 .authorizeHttpRequests(auth -> auth
-                        // 用户认证接口
+                        // 用户认证接口 - 公开
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
-                        // 健康检查
+                        // 健康检查 - 公开
                         .requestMatchers("/health").permitAll()
-                        // ai
-                        .requestMatchers("/ai/**").permitAll()
-                        //weather
                         .requestMatchers("/weather/**").permitAll()
-                        // 课程系统 - 公开接口（查看已发布课程）
-                        .requestMatchers("/courses", "/courses/search").permitAll()
-                        // Swagger UI 相关路径
+                        // AI聊天接口 - 公开
+                        .requestMatchers("/ai/**").permitAll()
+                        // Swagger UI - 公开（仅开发环境使用）
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // 其他请求需要认证
+                        // 其他所有请求需要认证（通过JWT token验证）
                         .anyRequest().authenticated()
                 )
 

@@ -5,7 +5,7 @@ import com.example.springboottest.modules.file.dto.FileListResponse;
 import com.example.springboottest.modules.file.dto.FileProcessMessage;
 import com.example.springboottest.modules.file.dto.FileUploadResponse;
 import com.example.springboottest.modules.file.service.FileService;
-import com.example.springboottest.service.MessageProducerService;
+import com.example.springboottest.modules.message.service.MessageProducerService;
 import io.minio.*;
 import io.minio.http.Method;
 import io.minio.messages.Item;

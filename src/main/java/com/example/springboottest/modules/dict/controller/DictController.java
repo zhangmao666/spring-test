@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.modules.dict.dto.*;
 import com.example.springboottest.modules.dict.service.DictService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import java.util.List;
 @RequestMapping("/dicts")
 @CrossOrigin(originPatterns = "*", allowCredentials = "true")
 @RequiredArgsConstructor
+@Tag(name = "字典管理", description = "字典和字典项的增删改查等管理接口")
 public class DictController {
 
     private final DictService dictService;
@@ -51,7 +53,8 @@ public class DictController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<DictResponse>> updateDict(@PathVariable Long id, @Valid @RequestBody DictRequest request) {
+    public ResponseEntity<ApiResponse<DictResponse>> updateDict(@PathVariable Long id,
+            @Valid @RequestBody DictRequest request) {
         try {
             DictResponse response = dictService.updateDict(id, request);
             return ResponseEntity.ok(ApiResponse.success("更新字典成功", response));
@@ -122,7 +125,8 @@ public class DictController {
     }
 
     @PutMapping("/items/{id}")
-    public ResponseEntity<ApiResponse<DictItemResponse>> updateDictItem(@PathVariable Long id, @Valid @RequestBody DictItemRequest request) {
+    public ResponseEntity<ApiResponse<DictItemResponse>> updateDictItem(@PathVariable Long id,
+            @Valid @RequestBody DictItemRequest request) {
         try {
             DictItemResponse response = dictService.updateDictItem(id, request);
             return ResponseEntity.ok(ApiResponse.success("更新字典项成功", response));

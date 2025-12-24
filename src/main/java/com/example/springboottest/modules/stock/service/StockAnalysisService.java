@@ -1,13 +1,9 @@
 package com.example.springboottest.modules.stock.service;
 
-import com.alibaba.dashscope.aigc.generation.Generation;
-import com.alibaba.dashscope.aigc.generation.GenerationParam;
-import com.alibaba.dashscope.aigc.generation.GenerationResult;
-import com.alibaba.dashscope.common.Message;
-import com.alibaba.dashscope.common.Role;
-import com.alibaba.dashscope.exception.ApiException;
-import com.alibaba.dashscope.exception.InputRequiredException;
-import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.chat.completions.ChatCompletion;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import com.example.springboottest.config.AiProperties;
 import com.example.springboottest.modules.stock.config.StockProperties;
 import com.example.springboottest.modules.stock.dto.StockAnalysisDTO;
@@ -27,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
@@ -79,35 +74,25 @@ public class StockAnalysisService {
         });
     }
 
-    private String callQwenApi(String prompt) throws NoApiKeyException, ApiException, InputRequiredException {
-        Generation gen = new Generation();
-
-        Message systemMsg = Message.builder()
-                .role(Role.SYSTEM.getValue())
-                .content("你是一位专业的股票分析师，擅长技术分析和基本面分析。")
-                .build();
-
-        Message userMsg = Message.builder()
-                .role(Role.USER.getValue())
-                .content(prompt)
-                .build();
-
-        GenerationParam param = GenerationParam.builder()
+    private String callQwenApi(String prompt) {
+        OpenAIClient client = OpenAIOkHttpClient.builder()
                 .apiKey(aiProperties.getQwen().getApiKey())
-                .model(aiProperties.getQwen().getModel())
-                .messages(Arrays.asList(systemMsg, userMsg))
-                .resultFormat(GenerationParam.ResultFormat.MESSAGE)
-                .temperature(Float.valueOf(String.valueOf(aiProperties.getQwen().getTemperature())))
-                .maxTokens(aiProperties.getQwen().getMaxTokens())
+                .baseUrl(aiProperties.getQwen().getApiUrl())
                 .build();
 
-        GenerationResult result = gen.call(param);
+        ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
+                .model(aiProperties.getQwen().getModel())
+                .addSystemMessage("你是一位专业的股票分析师，擅长技术分析和基本面分析。")
+                .addUserMessage(prompt)
+                .build();
 
-        if (result == null || result.getOutput() == null || result.getOutput().getChoices() == null || result.getOutput().getChoices().isEmpty()) {
+        ChatCompletion chatCompletion = client.chat().completions().create(params);
+
+        if (chatCompletion == null || chatCompletion.choices() == null || chatCompletion.choices().isEmpty()) {
             throw new RuntimeException("Qwen API返回结果为空");
         }
 
-        return result.getOutput().getChoices().get(0).getMessage().getContent();
+        return chatCompletion.choices().get(0).message().content().orElse("");
     }
 
     private String buildAnalysisPrompt(Stock stock, List<StockQuote> quotes) {

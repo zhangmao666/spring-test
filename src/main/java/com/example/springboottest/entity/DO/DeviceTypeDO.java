@@ -1,4 +1,4 @@
-package com.example.springboottest.DO;
+package com.example.springboottest.entity.DO;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;

@@ -7,8 +7,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 
 @Configuration
@@ -16,6 +18,7 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 public class WebConfig implements WebMvcConfigurer {
     
     private final RequestLoggingInterceptor requestLoggingInterceptor;
+    private final CurrentUserResolver currentUserResolver;
     // private final RateLimitInterceptor rateLimitInterceptor;  // 启用限流时取消注释
     
     @Bean
@@ -50,5 +53,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/auth/**", "/health", "/actuator/**");
         */
+    }
+    
+    @Override
+    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+        resolvers.add(currentUserResolver);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.springboottest.modules.device.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.example.springboottest.modules.device.dto.DeviceConfigDTO;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -49,4 +50,7 @@ public class DeviceType {
     
     @TableField("device_img")
     private String deviceImg;
+
+    @TableField(value = "config", typeHandler = com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler.class)
+    private DeviceConfigDTO config;
 }

@@ -35,4 +35,6 @@ public class DeviceTypeRequest {
 
     @Size(max = 255, message = "设备图片URL长度不能超过255个字符")
     private String deviceImg;
+
+    private DeviceConfigDTO config;
 }

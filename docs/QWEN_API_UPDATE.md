@@ -97,8 +97,8 @@ ai:
 
 ### 移除依赖
 - `com.example.springboottest.service.AiChatService` （在StockAnalysisService中）
-- `com.example.springboottest.DTO.AiChatRequest`
-- `com.example.springboottest.DTO.AiChatResponse`
+- `com.example.springboottest.entity.DTO.AiChatRequest`
+- `com.example.springboottest.entity.DTO.AiChatResponse`
 
 ## 🧪 测试建议
 
