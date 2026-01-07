@@ -96,27 +96,11 @@ logging:
 ai:
   openai:
     api-key: ${OPENAI_API_KEY}
-    api-url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+    api-url: ${OPENAI_API_URL:https://api.gpt.ge/}
     model: ${OPENAI_MODEL:gpt-3.5-turbo}
     max-tokens: 1000
     temperature: 0.7
-  
-  qwen:
-    api-key: ${QWEN_API_KEY}
-    api-url: ${QWEN_API_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-    model: ${QWEN_MODEL:qwen-turbo}
-    max-tokens: 1000
-    temperature: 0.7
-  
-  wenxin:
-    api-key: ${WENXIN_API_KEY}
-    secret-key: ${WENXIN_SECRET_KEY}
-    api-url: ${WENXIN_API_URL:https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant}
-    max-tokens: 1000
-    temperature: 0.7
-  
-  default-provider: ${AI_DEFAULT_PROVIDER:openai}
-  timeout: 30
+
 
 # MinIO配置
 minio:

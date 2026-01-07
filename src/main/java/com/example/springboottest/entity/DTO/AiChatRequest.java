@@ -27,4 +27,8 @@ public class AiChatRequest {
     private Integer maxTokens;
     
     private String conversationId; // 对话ID，用于维持上下文
+
+    private Boolean useWebSearch; // 是否开启联网搜索
+
+    private Boolean useDeepThinking; // 是否开启深度思考
 }

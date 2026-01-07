@@ -1,0 +1,69 @@
+// 主题色彩系统
+$primary-color: #6366F1; // Indigo
+$primary-light: #A5B4FC;
+$primary-dark: #4338CA;
+$primary-bg: rgba(99, 102, 241, 0.1);
+
+// 功能色
+$success-color: #10B981;
+$warning-color: #F59E0B;
+$danger-color: #EF4444;
+$info-color: #3B82F6;
+
+// 中性色
+$text-primary: #0F172A;
+$text-secondary: #475569;
+$text-placeholder: #94A3B8;
+$text-disabled: #CBD5E1;
+
+// 背景色
+$bg-page: #F1F5F9;
+$bg-card: #FFFFFF;
+$bg-hover: #F8FAFC;
+$bg-active: #E2E8F0;
+
+// 玻璃拟态变量
+$glass-bg: rgba(255, 255, 255, 0.7);
+$glass-blur: 16px;
+$glass-border: rgba(255, 255, 255, 0.3);
+$glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
+// 边框
+$border-color: #E2E8F0;
+$border-light: #F1F5F9;
+
+// 阴影 - 柔化处理
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+
+// 圆角 - 变大
+$radius-sm: 8px;
+$radius-base: 12px;
+$radius-md: 16px;
+$radius-lg: 24px;
+$radius-xl: 32px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-base: 12px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// 过渡
+$transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+// 侧边栏
+$sidebar-width: 260px;
+$sidebar-collapsed-width: 80px;
+$sidebar-bg: rgba(255, 255, 255, 0.8);
+
+// 头部
+$header-height: 72px;
+$header-bg: rgba(255, 255, 255, 0.8);

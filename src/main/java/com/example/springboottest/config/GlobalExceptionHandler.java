@@ -163,10 +163,11 @@ public class GlobalExceptionHandler {
      * 处理其他运行时异常
      */
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException e) {
+    public ResponseEntity<Object> handleRuntimeException(RuntimeException e) {
         log.error("运行时异常: {}", e.getMessage(), e);
-        ApiResponse<Object> response = ApiResponse.error(500, "系统内部错误");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        // 如果是 SSE 相关的异常，可能已经在流中处理了
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .body(ApiResponse.error(500, "系统内部错误: " + e.getMessage()));
     }
 
     /**

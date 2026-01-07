@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>转账服务</title>
+    <link rel="stylesheet" href="css/common.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-alipay {
+            background: linear-gradient(135deg, #1677ff 0%, #0958d9 100%);
+            color: white;
+        }
+
+        .btn-alipay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(22, 119, 255, 0.4);
+        }
+
+        .btn-wechat {
+            background: linear-gradient(135deg, #07c160 0%, #06ae56 100%);
+            color: white;
+        }
+
+        .btn-wechat:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(7, 193, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .card-icon.alipay {
+            background: linear-gradient(135deg, #e6f4ff 0%, #bae0ff 100%);
+        }
+
+        .card-icon.wechat {
+            background: linear-gradient(135deg, #e6fff0 0%, #b7eb8f 100%);
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #ff4757;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-input.alipay:focus {
+            border-color: #1677ff;
+            box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.1);
+        }
+
+        .form-input.wechat:focus {
+            border-color: #07c160;
+            box-shadow: 0 0 0 4px rgba(7, 193, 96, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #bbb;
+        }
+
+        .amount-input-wrapper {
+            position: relative;
+        }
+
+        .amount-prefix {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .amount-input {
+            padding-left: 40px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        /* 订单列表 */
+        .order-section {
+            grid-column: 1 / -1;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .order-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .order-table th,
+        .order-table td {
+            padding: 14px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .order-table th {
+            background: #fafafa;
+            font-weight: 500;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .order-table tr:hover {
+            background: #fafafa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .status-processing {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .status-success {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .status-failed {
+            background: #fff2f0;
+            color: #ff4d4f;
+        }
+
+        .status-closed {
+            background: #f5f5f5;
+            color: #8c8c8c;
+        }
+
+        .channel-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .channel-alipay {
+            background: #e6f4ff;
+            color: #1677ff;
+        }
+
+        .channel-wechat {
+            background: #e6fff0;
+            color: #07c160;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Toast提示 */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 分页 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .page-btn {
+            padding: 8px 14px;
+            border: 1px solid #e8e8e8;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>💸 转账服务</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="refreshOrders()">
+                    🔄 刷新订单
+                </button>
+            </div>
+        </div>
+
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <!-- 支付宝转账卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon alipay">💙</div>
+                    <div>
+                        <div class="card-title">支付宝转账</div>
+                        <div class="card-subtitle">转账至支付宝账户</div>
+                    </div>
+                </div>
+                <form id="alipayForm" onsubmit="submitTransfer(event, 'alipay')">
+                    <div class="form-group">
+                        <label class="form-label">
+                            收款账号 <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-input alipay" 
+                               name="payeeAccount" 
+                               placeholder="请输入支付宝账号（手机号/邮箱）" 
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            收款人姓名 <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-input alipay" 
+                               name="payeeName" 
+                               placeholder="请输入收款人真实姓名" 
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            转账金额 <span class="required">*</span>
+                        </label>
+                        <div class="amount-input-wrapper">
+                            <span class="amount-prefix">¥</span>
+                            <input type="number" class="form-input alipay amount-input" 
+                                   name="amount" 
+                                   placeholder="0.00"
+                                   step="0.01" 
+                                   min="0.01" 
+                                   max="50000"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">转账备注</label>
+                        <input type="text" class="form-input alipay" 
+                               name="remark" 
+                               placeholder="选填，如：工资、报销等"
+                               maxlength="200">
+                    </div>
+                    <button type="submit" class="btn btn-alipay submit-btn">
+                        确认转账
+                    </button>
+                </form>
+            </div>
+
+            <!-- 微信转账卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon wechat">💚</div>
+                    <div>
+                        <div class="card-title">微信转账</div>
+                        <div class="card-subtitle">转账至微信零钱</div>
+                    </div>
+                </div>
+                <form id="wechatForm" onsubmit="submitTransfer(event, 'wechat')">
+                    <div class="form-group">
+                        <label class="form-label">
+                            收款人OpenID <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-input wechat" 
+                               name="payeeAccount" 
+                               placeholder="请输入微信用户OpenID" 
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            收款人姓名 <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-input wechat" 
+                               name="payeeName" 
+                               placeholder="请输入收款人真实姓名" 
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            转账金额 <span class="required">*</span>
+                        </label>
+                        <div class="amount-input-wrapper">
+                            <span class="amount-prefix">¥</span>
+                            <input type="number" class="form-input wechat amount-input" 
+                                   name="amount" 
+                                   placeholder="0.00"
+                                   step="0.01" 
+                                   min="0.01" 
+                                   max="50000"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">转账备注</label>
+                        <input type="text" class="form-input wechat" 
+                               name="remark" 
+                               placeholder="选填，如：工资、报销等"
+                               maxlength="200">
+                    </div>
+                    <button type="submit" class="btn btn-wechat submit-btn">
+                        确认转账
+                    </button>
+                </form>
+            </div>
+
+            <!-- 转账记录 -->
+            <div class="card order-section">
+                <div class="order-header">
+                    <div class="order-title">📋 转账记录</div>
+                    <div>
+                        <select id="channelFilter" class="form-input" style="width: auto; padding: 8px 12px;" onchange="refreshOrders()">
+                            <option value="">全部渠道</option>
+                            <option value="alipay">支付宝</option>
+                            <option value="wechat">微信</option>
+                        </select>
+                        <select id="statusFilter" class="form-input" style="width: auto; padding: 8px 12px; margin-left: 8px;" onchange="refreshOrders()">
+                            <option value="">全部状态</option>
+                            <option value="0">待处理</option>
+                            <option value="1">处理中</option>
+                            <option value="2">成功</option>
+                            <option value="3">失败</option>
+                            <option value="4">已关闭</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="orderList">
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>暂无转账记录</div>
+                    </div>
+                </div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/payment';
+        let currentPage = 1;
+        const pageSize = 10;
+
+        // 显示Toast
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 显示/隐藏Loading
+        function setLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('show');
+            } else {
+                loading.classList.remove('show');
+            }
+        }
+
+        // 获取Token
+        function getToken() {
+            return localStorage.getItem('token') || '';
+        }
+
+        // 发起请求
+        async function request(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                }
+            };
+            const response = await fetch(url, { ...defaultOptions, ...options });
+            const data = await response.json();
+            
+            if (data.code !== 200) {
+                throw new Error(data.message || '请求失败');
+            }
+            return data;
+        }
+
+        // 提交转账
+        async function submitTransfer(event, channel) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const requestData = {
+                channel: channel,
+                amount: parseFloat(formData.get('amount')),
+                payeeAccount: formData.get('payeeAccount'),
+                payeeName: formData.get('payeeName'),
+                remark: formData.get('remark') || ''
+            };
+
+            try {
+                setLoading(true);
+                const result = await request(`${API_BASE}/transfer`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestData)
+                });
+                
+                showToast('转账请求已提交', 'success');
+                form.reset();
+                refreshOrders();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 获取状态样式类
+        function getStatusClass(status) {
+            const classes = {
+                0: 'status-pending',
+                1: 'status-processing',
+                2: 'status-success',
+                3: 'status-failed',
+                4: 'status-closed'
+            };
+            return classes[status] || 'status-pending';
+        }
+
+        // 获取渠道样式类
+        function getChannelBadge(channel) {
+            if (channel === 'alipay') {
+                return '<span class="channel-badge channel-alipay">💙 支付宝</span>';
+            } else if (channel === 'wechat') {
+                return '<span class="channel-badge channel-wechat">💚 微信</span>';
+            }
+            return channel;
+        }
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        // 刷新订单列表
+        async function refreshOrders(page = 1) {
+            currentPage = page;
+            const channel = document.getElementById('channelFilter').value;
+            const status = document.getElementById('statusFilter').value;
+
+            let url = `${API_BASE}/orders?pageNum=${page}&pageSize=${pageSize}`;
+            if (channel) url += `&channel=${channel}`;
+            if (status !== '') url += `&status=${status}`;
+
+            try {
+                setLoading(true);
+                const result = await request(url);
+                renderOrders(result.data);
+            } catch (error) {
+                showToast(error.message, 'error');
+                document.getElementById('orderList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">⚠️</div>
+                        <div>${error.message}</div>
+                    </div>
+                `;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 渲染订单列表
+        function renderOrders(pageData) {
+            const orderList = document.getElementById('orderList');
+            const pagination = document.getElementById('pagination');
+
+            if (!pageData || !pageData.records || pageData.records.length === 0) {
+                orderList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>暂无转账记录</div>
+                    </div>
+                `;
+                pagination.innerHTML = '';
+                return;
+            }
+
+            const records = pageData.records;
+            let html = `
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>订单号</th>
+                            <th>渠道</th>
+                            <th>收款方</th>
+                            <th>金额</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            records.forEach(order => {
+                html += `
+                    <tr>
+                        <td style="font-family: monospace; font-size: 12px;">${order.outTradeNo}</td>
+                        <td>${getChannelBadge(order.channel)}</td>
+                        <td>
+                            <div>${order.payeeName}</div>
+                            <div style="font-size: 12px; color: #999;">${order.payeeAccount}</div>
+                        </td>
+                        <td style="font-weight: 600; color: #ff4757;">¥${order.amount.toFixed(2)}</td>
+                        <td>
+                            <span class="status-badge ${getStatusClass(order.status)}">${order.statusDesc}</span>
+                            ${order.failReason ? `<div style="font-size: 11px; color: #ff4d4f; margin-top: 4px;">${order.failReason}</div>` : ''}
+                        </td>
+                        <td style="font-size: 13px; color: #666;">${formatDate(order.createTime)}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            orderList.innerHTML = html;
+
+            // 渲染分页
+            renderPagination(pageData);
+        }
+
+        // 渲染分页
+        function renderPagination(pageData) {
+            const pagination = document.getElementById('pagination');
+            const totalPages = pageData.pages || 1;
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            
+            html += `<button class="page-btn" onclick="refreshOrders(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="refreshOrders(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += '<span style="padding: 8px;">...</span>';
+                }
+            }
+            
+            html += `<button class="page-btn" onclick="refreshOrders(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>下一页</button>`;
+            
+            pagination.innerHTML = html;
+        }
+
+        // 页面加载时刷新订单
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshOrders();
+        });
+    </script>
+</body>
+</html>

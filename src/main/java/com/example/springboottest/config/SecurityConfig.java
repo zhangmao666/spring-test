@@ -58,8 +58,11 @@ public class SecurityConfig {
                         .requestMatchers("/weather/**").permitAll()
                         // AI聊天接口 - 公开
                         .requestMatchers("/ai/**").permitAll()
-                        // Swagger UI - 公开（仅开发环境使用）
-                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // 基金接口 - 公开
+                        .requestMatchers("/fund/**").permitAll()
+                        // Swagger UI & Knife4j - 公开（仅开发环境使用）
+                        .requestMatchers("/doc.html", "/webjars/**", "/swagger-resources/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         // 其他所有请求需要认证（通过JWT token验证）
                         .anyRequest().authenticated()
                 )

@@ -64,7 +64,7 @@ public class StockAnalysisService {
                 }
 
                 String prompt = buildAnalysisPrompt(stock, recentQuotes);
-                String analysisContent = callQwenApi(prompt);
+                String analysisContent = callOpenAiApi(prompt);
 
                 return processAnalysisResult(stockId, stock, analysisContent);
             } catch (Exception e) {
@@ -74,14 +74,22 @@ public class StockAnalysisService {
         });
     }
 
-    private String callQwenApi(String prompt) {
+    private String callOpenAiApi(String prompt) {
+        // OpenAIClient expects base URL without /chat/completions suffix for some SDKs, but let's check.
+        // The property value is https://api.gpt.ge/v1/chat/completions
+        // We generally need https://api.gpt.ge/v1
+        String baseUrl = aiProperties.getOpenai().getApiUrl().replace("/chat/completions", "");
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
         OpenAIClient client = OpenAIOkHttpClient.builder()
-                .apiKey(aiProperties.getQwen().getApiKey())
-                .baseUrl(aiProperties.getQwen().getApiUrl())
+                .apiKey(aiProperties.getOpenai().getApiKey())
+                .baseUrl(baseUrl)
                 .build();
 
         ChatCompletionCreateParams params = ChatCompletionCreateParams.builder()
-                .model(aiProperties.getQwen().getModel())
+                .model(aiProperties.getOpenai().getModel())
                 .addSystemMessage("你是一位专业的股票分析师，擅长技术分析和基本面分析。")
                 .addUserMessage(prompt)
                 .build();
@@ -89,7 +97,7 @@ public class StockAnalysisService {
         ChatCompletion chatCompletion = client.chat().completions().create(params);
 
         if (chatCompletion == null || chatCompletion.choices() == null || chatCompletion.choices().isEmpty()) {
-            throw new RuntimeException("Qwen API返回结果为空");
+            throw new RuntimeException("OpenAI API返回结果为空");
         }
 
         return chatCompletion.choices().get(0).message().content().orElse("");
@@ -136,7 +144,7 @@ public class StockAnalysisService {
                 .confidenceScore(confidenceScore)
                 .predictedPrice(predictedPrice)
                 .riskLevel(riskLevel.getCode())
-                .aiProvider("qwen")
+                .aiProvider("openai")
                 .status(1)
                 .build();
 

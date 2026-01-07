@@ -20,7 +20,8 @@ public class Test1 {
      * @return
      */
     public static JSONObject function(String jsonObjectStr) {
-        return JSONObject.parseObject(jsonObjectStr);
+        final JSONObject jsonObject = JSONObject.parseObject(jsonObjectStr);
+        return jsonObject;
     }
 
     public static void main(String[] args) {
@@ -30,7 +31,6 @@ public class Test1 {
         map.put("sex", "男性");
         map.put("address", "北京市朝阳区");
         map.put("phone", "13800138000");
-
 
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             System.out.println(entry.getKey() + ":" + entry.getValue());

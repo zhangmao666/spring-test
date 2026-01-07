@@ -101,28 +101,13 @@ logging:
 # AI配置
 ai:
   openai:
-    api-key: ${OPENAI_API_KEY:your-openai-api-key}
-    api-url: https://api.openai.com/v1/chat/completions
-    model: gpt-3.5-turbo
-    max-tokens: 1000
+    api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
+    api-url: https://yunwu.ai/v1/chat/completions
+    model: gpt-5.2-chat
+    thinking-model: deepseek-v3.2-thinking
+    search-model: gemini-2.5-flash-all
+    max-tokens: 1024
     temperature: 0.7
-  
-  qwen:
-    api-key: ${QWEN_API_KEY:sk-01895d8ce5df45539738ceae398235ca}
-    api-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    model: qwen3-max
-    max-tokens: 10000
-    temperature: 0.7
-  
-  wenxin:
-    api-key: ${WENXIN_API_KEY:your-wenxin-api-key}
-    secret-key: ${WENXIN_SECRET_KEY:your-wenxin-secret-key}
-    api-url: https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant
-    max-tokens: 1000
-    temperature: 0.7
-  
-  default-provider: qwen
-  timeout: 30
 
 # MinIO配置
 minio:
@@ -191,3 +176,23 @@ stock:
     history-window: 7
     # 是否启用AI分析
     enabled: true
+
+# 支付配置
+payment:
+  # 支付宝配置
+  alipay:
+    app-id: ${ALIPAY_APP_ID:}
+    private-key: ${ALIPAY_PRIVATE_KEY:}
+    alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
+    gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
+    notify-url: ${ALIPAY_NOTIFY_URL:http://your-domain/api/payment/notify/alipay}
+    return-url: ${ALIPAY_RETURN_URL:http://your-domain/payment/result}
+  
+  # 微信支付配置
+  wechat:
+    merchant-id: ${WECHAT_MERCHANT_ID:}
+    private-key: ${WECHAT_PRIVATE_KEY:}
+    merchant-serial-number: ${WECHAT_MERCHANT_SERIAL_NUMBER:}
+    api-v3-key: ${WECHAT_API_V3_KEY:}
+    app-id: ${WECHAT_APP_ID:}
+    notify-url: ${WECHAT_NOTIFY_URL:http://your-domain/api/payment/notify/wechat}
