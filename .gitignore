@@ -45,3 +45,9 @@ logs/
 *.tmp
 *.temp
 *~
+
+### Node.js ###
+node_modules/
+
+### JVM crash logs ###
+hs_err_pid*.log

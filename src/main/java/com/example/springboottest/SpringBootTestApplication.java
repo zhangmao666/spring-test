@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Spring Boot 主启动类
@@ -17,7 +18,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableCaching  // 启用 Spring Cache 缓存功能
 @EnableAspectJAutoProxy
 @EnableAsync  // 启用异步任务支持（用于异步记录日志）
-@MapperScan({"com.example.springboottest.repository", "com.example.springboottest.modules.*.repository"})
+@EnableScheduling  // 启用定时任务支持
+@MapperScan({
+    "com.example.springboottest.modules.*.repository",
+    "com.example.springboottest.modules.*.mapper"
+})
 public class SpringBootTestApplication {
 
     public static void main(String[] args) {

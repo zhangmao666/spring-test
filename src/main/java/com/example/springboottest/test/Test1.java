@@ -24,16 +24,27 @@ public class Test1 {
         return jsonObject;
     }
 
-    public static void main(String[] args) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("name", "zm");
-        map.put("age", 18);
-        map.put("sex", "男性");
-        map.put("address", "北京市朝阳区");
-        map.put("phone", "13800138000");
 
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            System.out.println(entry.getKey() + ":" + entry.getValue());
+    public static void function1(){
+        Map<String,Object> map =new HashMap<>();
+        map.put("name","zm");
+        map.put("age",18);
+        map.put("address","Beijing");
+
+        for(Map.Entry<String,Object> entry:map.entrySet()){
+            System.out.println(entry.getKey()+":"+entry.getValue());
         }
+
+    }
+
+    public static void function2() {
+        String prompt = """
+                     你是一个基金分析专家，请分析以下基金的基本情况和投资价值：
+                """;
+        System.out.println(prompt);
+    }
+
+    public static void main(String[] args) {
+        function1();
     }
 }

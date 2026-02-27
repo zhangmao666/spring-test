@@ -8,8 +8,10 @@
           <p class="subtitle">智能筛选优质基金，辅助量化决策</p>
         </div>
         <div class="market-status">
-          <el-tag type="success" effect="dark" round>交易中</el-tag>
-          <span class="time">2026-01-06 17:40</span>
+          <el-tag :type="isMarketOpen ? 'success' : 'info'" effect="dark" round>
+            {{ isMarketOpen ? '交易中' : '已收盘' }}
+          </el-tag>
+          <span class="time">{{ currentTime }}</span>
         </div>
       </div>
     </div>
@@ -57,23 +59,6 @@
             <el-radio-button label="债券型" />
             <el-radio-button label="指数型" />
           </el-radio-group>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">行业主题:</span>
-          <el-select v-model="filters.sector" placeholder="全部行业" size="small" clearable style="width: 120px">
-            <el-option label="全部" value="" />
-            <el-option label="科技" value="科技" />
-            <el-option label="消费" value="消费" />
-            <el-option label="医疗" value="医疗" />
-            <el-option label="新能源" value="新能源" />
-          </el-select>
-        </div>
-        <div class="filter-group hide-mobile">
-          <span class="filter-label">业绩门槛:</span>
-          <el-checkbox-group v-model="filters.perform" size="small">
-            <el-checkbox-button label="morningstar">晨星5星</el-checkbox-button>
-            <el-checkbox-button label="positive">连续3年正收益</el-checkbox-button>
-          </el-checkbox-group>
         </div>
         <div class="flex-grow"></div>
         <el-input v-model="searchQuery" placeholder="搜索代码/名称..." suffix-icon="Search" size="small" style="width: 200px" />
@@ -123,76 +108,136 @@
 
         <!-- 动态切换的列 -->
         <template v-if="activeTab === 'realtime'">
-          <el-table-column prop="netValue" label="最新净值" width="120">
-            <template #default="scope">{{ scope.row.netValue?.toFixed(4) }}</template>
+          <el-table-column prop="netValue" label="最新净值" width="110" sortable>
+            <template #default="scope">{{ scope.row.netValue?.toFixed(4) || '--' }}</template>
           </el-table-column>
-          <el-table-column label="日涨跌" width="120">
+          <el-table-column label="日涨跌" width="100" sortable :sort-by="(row) => row.changePercent">
             <template #default="scope">
-              <span class="trend-text" :class="scope.row.changePercent >= 0 ? 'up' : 'down'">
-                {{ scope.row.changePercent >= 0 ? '+' : '' }}{{ scope.row.changePercent?.toFixed(2) }}%
+              <span class="trend-text" :class="(scope.row.changePercent || 0) >= 0 ? 'up' : 'down'">
+                {{ (scope.row.changePercent || 0) >= 0 ? '+' : '' }}{{ (scope.row.changePercent || 0).toFixed(2) }}%
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="近一周" width="120">
+          <el-table-column label="近1周" width="100" sortable :sort-by="(row) => row.oneWeekReturn">
             <template #default="scope">
-               <div class="mini-sparkline" :class="scope.row.changePercent >= 0 ? 'up' : 'down'">
-                 <svg viewBox="0 0 100 30" class="spark-svg">
-                   <path d="M0 25 L20 15 L40 20 L60 5 L80 18 L100 10" fill="none" stroke="currentColor" stroke-width="2" />
-                 </svg>
-               </div>
+              <span v-if="scope.row.oneWeekReturn != null" :class="scope.row.oneWeekReturn >= 0 ? 'up' : 'down'">
+                {{ scope.row.oneWeekReturn >= 0 ? '+' : '' }}{{ scope.row.oneWeekReturn.toFixed(2) }}%
+              </span>
+              <span v-else class="no-data">--</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="近1月" width="100" sortable :sort-by="(row) => row.oneMonthReturn">
+            <template #default="scope">
+              <span v-if="scope.row.oneMonthReturn != null" :class="scope.row.oneMonthReturn >= 0 ? 'up' : 'down'">
+                {{ scope.row.oneMonthReturn >= 0 ? '+' : '' }}{{ scope.row.oneMonthReturn.toFixed(2) }}%
+              </span>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
         </template>
 
         <template v-if="activeTab === 'performance'">
-          <el-table-column label="近1月" width="100">
+          <el-table-column label="近3月" width="100" sortable :sort-by="(row) => row.threeMonthReturn">
             <template #default="scope">
-              <span :class="scope.row.oneMonthReturn >= 0 ? 'up' : 'down'">{{ (scope.row.oneMonthReturn || 0).toFixed(2) }}%</span>
+              <span v-if="scope.row.threeMonthReturn != null" :class="scope.row.threeMonthReturn >= 0 ? 'up' : 'down'">{{ scope.row.threeMonthReturn.toFixed(2) }}%</span>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
-          <el-table-column label="今年来" width="100">
+          <el-table-column label="近6月" width="100" sortable :sort-by="(row) => row.sixMonthReturn">
             <template #default="scope">
-              <span :class="scope.row.ytdReturn >= 0 ? 'up' : 'down'">{{ (scope.row.ytdReturn || 0).toFixed(2) }}%</span>
+              <span v-if="scope.row.sixMonthReturn != null" :class="scope.row.sixMonthReturn >= 0 ? 'up' : 'down'">{{ scope.row.sixMonthReturn.toFixed(2) }}%</span>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
-          <el-table-column label="近1年" width="100">
+          <el-table-column label="近1年" width="100" sortable :sort-by="(row) => row.oneYearReturn">
             <template #default="scope">
-              <span :class="scope.row.oneYearReturn >= 0 ? 'up' : 'down'">{{ (scope.row.oneYearReturn || 0).toFixed(2) }}%</span>
+              <span v-if="scope.row.oneYearReturn != null" :class="scope.row.oneYearReturn >= 0 ? 'up' : 'down'">
+                <strong>{{ scope.row.oneYearReturn.toFixed(2) }}%</strong>
+              </span>
+              <span v-else class="no-data">--</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="今年来" width="100" sortable :sort-by="(row) => row.ytdReturn">
+            <template #default="scope">
+              <span v-if="scope.row.ytdReturn != null" :class="scope.row.ytdReturn >= 0 ? 'up' : 'down'">{{ scope.row.ytdReturn.toFixed(2) }}%</span>
+              <span v-else class="no-data">--</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="成立来" width="110" sortable :sort-by="(row) => row.sinceInceptionReturn">
+            <template #default="scope">
+              <span v-if="scope.row.sinceInceptionReturn != null" :class="scope.row.sinceInceptionReturn >= 0 ? 'up' : 'down'">{{ scope.row.sinceInceptionReturn.toFixed(2) }}%</span>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
         </template>
 
         <template v-if="activeTab === 'risk'">
-          <el-table-column label="最大回撤 (1年)" width="150">
+          <el-table-column label="日涨跌" width="100">
             <template #default="scope">
-              <el-progress :percentage="Math.abs(scope.row.maxDrawdown || 0)" status="exception" :show-text="false" :stroke-width="12" />
-              <span class="drawdown-val">{{ scope.row.maxDrawdown?.toFixed(2) }}%</span>
+              <span :class="(scope.row.changePercent || 0) >= 0 ? 'up' : 'down'">
+                {{ (scope.row.changePercent || 0) >= 0 ? '+' : '' }}{{ (scope.row.changePercent || 0).toFixed(2) }}%
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="近6月波幅" width="110">
+            <template #default="scope">
+              <span v-if="scope.row.sixMonthReturn != null">
+                {{ Math.abs(scope.row.sixMonthReturn).toFixed(2) }}%
+              </span>
+              <span v-else class="no-data">--</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="最大回撤" width="150">
+            <template #default="scope">
+              <template v-if="scope.row.maxDrawdown != null">
+                <el-progress :percentage="Math.min(Math.abs(scope.row.maxDrawdown), 100)" status="exception" :show-text="false" :stroke-width="12" />
+                <span class="drawdown-val">{{ scope.row.maxDrawdown?.toFixed(2) }}%</span>
+              </template>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
           <el-table-column label="夏普比率" width="120">
-            <template #default>2.14</template>
+            <template #default="scope">
+              <span v-if="scope.row.sharpeRatio != null">{{ scope.row.sharpeRatio.toFixed(2) }}</span>
+              <span v-else class="no-data">--</span>
+            </template>
           </el-table-column>
         </template>
 
         <template v-if="activeTab === 'manager'">
           <el-table-column label="基金经理" width="150">
             <template #default="scope">
-              <div class="manager-cell">
+              <div class="manager-cell" v-if="scope.row.managerName">
                 <el-avatar :size="24" icon="UserFilled" />
                 <span class="name">{{ scope.row.managerName }}</span>
               </div>
+              <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
-          <el-table-column label="从业年限" width="120">
-            <template #default="scope">{{ scope.row.managerYears }}年</template>
+          <el-table-column label="累计净值" width="110">
+            <template #default="scope">{{ scope.row.accumulatedValue?.toFixed(4) || '--' }}</template>
+          </el-table-column>
+          <el-table-column label="成立来" width="110">
+            <template #default="scope">
+              <span v-if="scope.row.sinceInceptionReturn != null" :class="scope.row.sinceInceptionReturn >= 0 ? 'up' : 'down'">{{ scope.row.sinceInceptionReturn.toFixed(2) }}%</span>
+              <span v-else class="no-data">--</span>
+            </template>
           </el-table-column>
         </template>
 
-        <el-table-column label="操作" width="120" fixed="right" align="center">
+        <el-table-column label="操作" width="260" fixed="right" align="center">
           <template #default="scope">
-            <el-button type="primary" size="small" link @click.stop="analyzeFund(scope.row)">
-              <el-icon><MagicStick /></el-icon> AI诊断
-            </el-button>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap;">
+              <el-button type="primary" size="small" link @click.stop="viewTrend(scope.row)">
+                <el-icon><TrendCharts /></el-icon> 走势
+              </el-button>
+              <el-button type="success" size="small" link @click.stop="goAnalysis(scope.row)" style="margin-left: 0;">
+                <el-icon><DataLine /></el-icon> AI分析
+              </el-button>
+              <el-button type="primary" size="small" link @click.stop="analyzeFund(scope.row)" style="margin-left: 0;">
+                <el-icon><MagicStick /></el-icon> AI诊断
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -240,9 +285,36 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { CaretTop, Refresh, RefreshRight, Search, MagicStick, Download } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  CaretTop, Refresh, RefreshRight, Search, MagicStick, 
+  DataLine, TrendCharts, UserFilled
+} from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+
+const currentTime = ref('')
+const isMarketOpen = ref(true)
+let timer = null
+
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleString('zh-CN', { 
+    hour12: false, 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  }).replace(/\//g, '-')
+  
+  const hour = now.getHours()
+  const minute = now.getMinutes()
+  const totalMin = hour * 60 + minute
+  // 简单模拟A股交易时间：9:30-11:30, 13:00-15:00
+  const isOpen = (totalMin >= 570 && totalMin <= 690) || (totalMin >= 780 && totalMin <= 900)
+  isMarketOpen.value = isOpen
+}
 
 const loading = ref(false)
 const rankingData = ref([])
@@ -251,9 +323,7 @@ const searchQuery = ref('')
 
 // 筛选器状态
 const filters = reactive({
-  type: '全部',
-  sector: '',
-  perform: []
+  type: '全部'
 })
 
 // 仪表盘颜色配置
@@ -268,15 +338,13 @@ const customColors = [
 // 过滤后的数据
 const filteredData = computed(() => {
   return rankingData.value.filter(item => {
-    const matchSearch = !searchQuery.value || 
-      item.fundName.includes(searchQuery.value) || 
+    const matchSearch = !searchQuery.value ||
+      item.fundName.includes(searchQuery.value) ||
       item.fundCode.includes(searchQuery.value)
-    
+
     const matchType = filters.type === '全部' || item.fundType === filters.type
-    const matchSector = !filters.sector || item.sector === filters.sector
-    const matchStar = !filters.perform.includes('morningstar') || item.starRating >= 5
-    
-    return matchSearch && matchType && matchSector && matchStar
+
+    return matchSearch && matchType
   })
 })
 
@@ -305,11 +373,23 @@ const aiConclusion = ref('')
 const aiAdvice = ref('')
 const scores = reactive({ return: 0, risk: 0 })
 
+const fundRouter = useRouter()
+
+const viewTrend = (row) => {
+  // 跳转到走势页面
+  fundRouter.push(`/finance/fund-trend/${row.fundCode}`)
+}
+
+const goAnalysis = (row) => {
+  // 跳转到AI走势分析页面
+  fundRouter.push(`/fund/analysis/${row.fundCode}`)
+}
+
 const analyzeFund = (row) => {
   currentFund.value = row
   drawerVisible.value = true
   analyzing.value = true
-  
+
   // 模拟 AI 异步分析过程
   setTimeout(() => {
     analyzing.value = false
@@ -340,6 +420,12 @@ const triggerUpdate = async () => {
 
 onMounted(() => {
   fetchRanking()
+  updateTime()
+  timer = setInterval(updateTime, 60000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
 })
 </script>
 

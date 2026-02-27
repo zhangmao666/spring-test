@@ -2,7 +2,20 @@
 spring:
   application:
     name: spring-boot-test
-  
+
+  # Spring AI 配置
+  ai:
+    openai:
+      base-url: https://yunwu.ai
+      api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
+      chat:
+        enabled: true
+        options:
+#          model: gpt-5.2-chat-latest
+          model: gpt-5.2-chat-latest
+          temperature: 0.7
+          max-tokens: 1024
+
   # 数据源配置
   datasource:
     url: jdbc:mysql://${DB_HOST:118.24.128.221}:${DB_PORT:3306}/${DB_NAME:spring_boot_test}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
@@ -21,6 +34,7 @@ spring:
     
   # MyBatis Plus配置
   mybatis-plus:
+    mapper-locations: classpath:mapper/*.xml
     configuration:
       map-underscore-to-camel-case: true
       log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -43,6 +57,23 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=600s
+
+  # 邮件配置
+  mail:
+    host: smtp.qq.com  # QQ邮箱SMTP服务器，如使用其他邮箱请修改
+    port: 587
+    username: ${MAIL_USERNAME:1097765371@qq.com}  # 发件人邮箱
+    password: ${MAIL_PASSWORD:rqjlkqmvltrhifhe}  # 邮箱授权码（不是登录密码）
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.qq.com
+    default-encoding: UTF-8
 
   # ActiveMQ配置
   activemq:
@@ -89,6 +120,10 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    # Agent 性能诊断日志
+    org.springframework.ai.chat.client: DEBUG
+    org.springframework.ai.openai: DEBUG
+    org.springframework.ai.tool: DEBUG
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
@@ -103,7 +138,7 @@ ai:
   openai:
     api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
     api-url: https://yunwu.ai/v1/chat/completions
-    model: gpt-5.2-chat
+    model: gpt-5.2-chat-latest
     thinking-model: deepseek-v3.2-thinking
     search-model: gemini-2.5-flash-all
     max-tokens: 1024
@@ -131,6 +166,9 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    mail:
+      enabled: false  # 禁用邮件健康检查
   metrics:
     tags:
       application: ${spring.application.name}

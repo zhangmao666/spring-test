@@ -1,177 +1,328 @@
 package com.example.springboottest.modules.stock.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.example.springboottest.entity.DTO.AiChatRequest;
-import com.example.springboottest.entity.DTO.AiChatResponse;
-import com.example.springboottest.modules.ai.service.AiChatService;
 import com.example.springboottest.modules.stock.entity.FundNews;
 import com.example.springboottest.modules.stock.entity.FundRanking;
 import com.example.springboottest.modules.stock.repository.FundNewsRepository;
 import com.example.springboottest.modules.stock.repository.FundRankingRepository;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 基金数据服务类
+ * 使用天天基金(Eastmoney)真实API获取排行数据
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FundDataService {
 
-    private final AiChatService aiChatService;
     private final FundRankingRepository fundRankingRepository;
     private final FundNewsRepository fundNewsRepository;
-    private final ObjectMapper objectMapper;
+    private final FundTrendService fundTrendService;
+    private final OkHttpClient okHttpClient;
 
     /**
-     * 更新前一天的基金数据
+     * 天天基金排行API基础地址
+     * 参数说明:
+     *   op=ph: 排行操作
+     *   dt=kf: 开放式基金
+     *   ft=all/gp/hh/zq/zs: 基金类型 (全部/股票型/混合型/债券型/指数型)
+     *   sc=1nzf/rzdf/zzf/1yzf/6yzf/jnzf: 排序字段 (近1年/日涨跌/近1周/近1月/近6月/今年来)
+     *   st=desc/asc: 排序方向
+     *   pi=1: 页码
+     *   pn=30: 每页数量
+     *   dx=1: 含衍生品
+     */
+    private static final String EASTMONEY_RANK_API =
+            "https://fund.eastmoney.com/data/rankhandler.aspx?op=ph&dt=kf&ft=%s&rs=&gs=0&sc=%s&st=desc&pi=1&pn=%d&dx=1";
+
+    /**
+     * 更新基金排行数据和历史净值数据
      */
     @Transactional
     public void updateFundData() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        log.info("开始获取并处理基金数据，目标日期: {}", yesterday);
-
-        // 1. 获取并更新排行榜
-        updateRanking(yesterday);
-
-        // 2. 获取并更新资讯
-        updateNews(yesterday);
-        
-        log.info("基金数据更新任务完成");
-    }
-
-    private void updateRanking(LocalDate date) {
-        String prompt = "任务：获取 " + date + " 的热门开放式基金排行数据（前15名）。\n" +
-                "必须包含以下字段的丰富数据：\n" +
-                "1. fundCode (代码), fundName (名称), netValue (最新净值), changePercent (日涨跌%)\n" +
-                "2. oneMonthReturn (近1月收益%), oneYearReturn (近1年收益%), ytd_return (今年来收益%)\n" +
-                "3. maxDrawdown (近1年最大回撤%, 填负数如-15.2)\n" +
-                "4. managerName (经理名), managerYears (从业年限, 整数)\n" +
-                "5. starRating (晨星评级, 1-5整数)\n" +
-                "6. fundType (类型: 股票型|混合型|债券型|指数型)\n" +
-                "7. sector (主题: 消费|科技|医疗|新能源|金融|制造)\n" +
-                "约束：\n" +
-                "1. 严禁任何文字说明，仅返回纯净 JSON 数组。\n" +
-                "2. 数据要真实模拟当前市场风格（如科技/半导体近日活跃）。\n" +
-                "3. 严禁使用 Markdown 代码块。";
-
-        AiChatRequest request = new AiChatRequest();
-        request.setMessage(prompt);
-        request.setUseWebSearch(true);
-        // 如果使用了 Gemini 模型，建议降低随机性
-        request.setTemperature(0.1);
+        LocalDate today = LocalDate.now();
+        log.info("开始更新基金排行数据，日期: {}", today);
 
         try {
-            log.info("正在调用AI获取排行数据...");
-            AiChatResponse response = aiChatService.chat(request).get();
-            if (response.isSuccess()) {
-                String jsonStr = extractJson(response.getMessage());
-                try {
-                    List<FundRanking> rankings = objectMapper.readValue(jsonStr, new TypeReference<List<FundRanking>>() {});
-                    
-                    // 清理旧数据并保存新数据
-                    fundRankingRepository.delete(new LambdaQueryWrapper<FundRanking>().eq(FundRanking::getUpdateDate, date));
-                    for (FundRanking r : rankings) {
-                        r.setUpdateDate(date);
-                        fundRankingRepository.insert(r);
-                    }
-                    log.info("排行数据保存成功，共 {} 条", rankings.size());
-                } catch (Exception e) {
-                    log.error("解析基金排行JSON失败. 原始消息内容: {}", response.getMessage());
-                    throw e;
-                }
-            } else {
-                log.error("AI服务返回错误: {}", response.getError());
+            // 获取并保存排行数据
+            List<FundRanking> rankings = fetchRankingFromEastmoney("all", "1nzf", 30);
+
+            if (rankings.isEmpty()) {
+                log.warn("未获取到排行数据");
+                return;
             }
+
+            // 先删除今天的数据，再插入
+            fundRankingRepository.delete(new LambdaQueryWrapper<FundRanking>()
+                    .eq(FundRanking::getUpdateDate, today));
+
+            for (FundRanking r : rankings) {
+                r.setUpdateDate(today);
+                fundRankingRepository.insert(r);
+            }
+
+            log.info("基金排行数据保存成功，共 {} 条", rankings.size());
+
+            // 更新前30名基金的历史净值数据（近一年）
+            log.info("开始更新基金历史净值数据");
+            int successCount = 0;
+            for (FundRanking ranking : rankings) {
+                try {
+                    fundTrendService.fetchAndSaveFundHistory(ranking.getFundCode(), 365);
+                    successCount++;
+                    log.info("更新基金 {} ({}) 历史数据成功", ranking.getFundCode(), ranking.getFundName());
+                    // 避免请求过快，休眠500ms
+                    Thread.sleep(500);
+                } catch (Exception e) {
+                    log.error("更新基金 {} 历史数据失败: {}", ranking.getFundCode(), e.getMessage());
+                }
+            }
+            log.info("基金历史净值数据更新完成，成功 {} 条", successCount);
+
         } catch (Exception e) {
-            log.error("AI获取基金排行失败: {}", e.getMessage());
+            log.error("更新基金排行数据失败: {}", e.getMessage(), e);
         }
     }
 
-    private void updateNews(LocalDate date) {
-        String prompt = "任务：整理 " + date + " 基金行业的5条核心资讯。\n" +
-                "约束：\n" +
-                "1. 必须包含字段：title (字符串), summary (字符串且禁止包含Markdown符号), url (字符串), publishDate (ISO格式: yyyy-MM-ddTHH:mm:ss)\n" +
-                "2. 严禁任何文字说明、前言、包裹符号、Markdown代码快或分析。\n" +
-                "3. 严禁输出任何非 JSON 字符。\n" +
-                "4. 仅返回一个纯净的 JSON 数组。\n" +
-                "输出格式要求严格，确保 Jackson 可以直接读取。";
+    /**
+     * 从天天基金API获取排行数据
+     *
+     * @param fundType 基金类型: all/gp/hh/zq/zs
+     * @param sortBy   排序字段: 1nzf(近1年), rzdf(日涨跌), 1yzf(近1月), 6yzf(近6月), jnzf(今年来)
+     * @param pageSize 获取数量
+     */
+    public List<FundRanking> fetchRankingFromEastmoney(String fundType, String sortBy, int pageSize) {
+        List<FundRanking> result = new ArrayList<>();
 
-        AiChatRequest request = new AiChatRequest();
-        request.setMessage(prompt);
-        request.setUseWebSearch(true);
-        request.setTemperature(0.2);
+        String url = String.format(EASTMONEY_RANK_API, fundType, sortBy, pageSize);
+        log.info("请求天天基金排行API: {}", url);
 
-        try {
-            log.info("正在调用AI获取资讯数据...");
-            AiChatResponse response = aiChatService.chat(request).get();
-            if (response.isSuccess()) {
-                String jsonStr = extractJson(response.getMessage());
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Referer", "https://fund.eastmoney.com/data/fundranking.html")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build();
+
+        try (Response response = okHttpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                log.error("天天基金API请求失败: HTTP {}", response.code());
+                return result;
+            }
+
+            String body = response.body().string();
+            log.debug("API原始响应长度: {}", body.length());
+
+            // 解析JavaScript格式响应: var rankData = {datas:["...","...",...],allRecords:...}
+            List<String> dataStrings = extractDataStrings(body);
+            log.info("解析到 {} 条基金数据", dataStrings.size());
+
+            for (String dataStr : dataStrings) {
                 try {
-                    List<FundNews> newsList = objectMapper.readValue(jsonStr, new TypeReference<List<FundNews>>() {});
-                    
-                    // 清理旧数据并保存新数据
-                    fundNewsRepository.delete(new LambdaQueryWrapper<FundNews>().eq(FundNews::getUpdateDate, date));
-                    for (FundNews n : newsList) {
-                        n.setUpdateDate(date);
-                        fundNewsRepository.insert(n);
+                    FundRanking ranking = parseRankingData(dataStr);
+                    if (ranking != null) {
+                        result.add(ranking);
                     }
-                    log.info("资讯数据保存成功，共 {} 条", newsList.size());
                 } catch (Exception e) {
-                    log.error("解析基金资讯JSON失败. 原始消息内容: {}", response.getMessage());
-                    throw e;
+                    log.warn("解析单条基金数据失败，跳过: {}", e.getMessage());
                 }
             }
         } catch (Exception e) {
-            log.error("AI获取基金资讯失败: {}", e.getMessage());
+            log.error("调用天天基金API异常: {}", e.getMessage(), e);
+        }
+
+        return result;
+    }
+
+    /**
+     * 从响应体中提取数据字符串列表
+     * 响应格式: var rankData = {datas:["022364,永赢...,","000001,华夏..."],allRecords:19260,...}
+     */
+    private List<String> extractDataStrings(String responseBody) {
+        List<String> dataList = new ArrayList<>();
+
+        // 用正则提取 datas 数组中的每个字符串
+        Pattern pattern = Pattern.compile("\"([^\"]+)\"");
+        int datasStart = responseBody.indexOf("datas:[");
+        if (datasStart == -1) {
+            log.error("响应中未找到 datas 字段");
+            return dataList;
+        }
+
+        int datasEnd = responseBody.indexOf("]", datasStart);
+        if (datasEnd == -1) {
+            log.error("响应中 datas 数组格式异常");
+            return dataList;
+        }
+
+        String datasSection = responseBody.substring(datasStart + 7, datasEnd);
+        Matcher matcher = pattern.matcher(datasSection);
+        while (matcher.find()) {
+            dataList.add(matcher.group(1));
+        }
+
+        return dataList;
+    }
+
+    /**
+     * 解析单条基金数据
+     *
+     * 字段索引映射（天天基金API返回的逗号分隔数据）:
+     *   0: 基金代码
+     *   1: 基金名称
+     *   2: 拼音简称
+     *   3: 净值日期
+     *   4: 单位净值
+     *   5: 累计净值
+     *   6: 日涨跌幅(%)
+     *   7: 近1周(%)
+     *   8: 近1月(%)
+     *   9: 近3月(%)
+     *  10: 近6月(%)
+     *  11: 近1年(%)
+     *  12-13: (可能为空)
+     *  14: 今年来(%)
+     *  15: 成立来(%)
+     */
+    private FundRanking parseRankingData(String dataStr) {
+        String[] fields = dataStr.split(",", -1);
+
+        if (fields.length < 16) {
+            log.warn("数据字段不足, 实际: {}, 数据: {}", fields.length, dataStr.substring(0, Math.min(100, dataStr.length())));
+            return null;
+        }
+
+        String fundCode = fields[0].trim();
+        String fundName = fields[1].trim();
+
+        if (fundCode.isEmpty() || fundName.isEmpty()) {
+            return null;
+        }
+
+        // 推断基金类型
+        String fundType = inferFundType(fundName);
+
+        return FundRanking.builder()
+                .fundCode(fundCode)
+                .fundName(fundName)
+                .netValue(parseDouble(fields[4]))
+                .accumulatedValue(parseDouble(fields[5]))
+                .changePercent(parseDouble(fields[6]))
+                .oneWeekReturn(parseDouble(fields[7]))
+                .oneMonthReturn(parseDouble(fields[8]))
+                .threeMonthReturn(parseDouble(fields[9]))
+                .sixMonthReturn(parseDouble(fields[10]))
+                .oneYearReturn(parseDouble(fields[11]))
+                .ytdReturn(parseDouble(fields[14]))
+                .sinceInceptionReturn(parseDouble(fields[15]))
+                .fundType(fundType)
+                .build();
+    }
+
+    /**
+     * 根据基金名称推断基金类型
+     */
+    private String inferFundType(String fundName) {
+        if (fundName.contains("指数") || fundName.contains("ETF") || fundName.contains("LOF")) {
+            return "指数型";
+        } else if (fundName.contains("债") || fundName.contains("利率") || fundName.contains("信用")) {
+            return "债券型";
+        } else if (fundName.contains("混合") || fundName.contains("配置") || fundName.contains("平衡")) {
+            return "混合型";
+        } else if (fundName.contains("股票") || fundName.contains("成长") || fundName.contains("价值") ||
+                   fundName.contains("优选") || fundName.contains("精选") || fundName.contains("主题")) {
+            return "股票型";
+        } else if (fundName.contains("货币") || fundName.contains("现金")) {
+            return "货币型";
+        } else if (fundName.contains("QDII") || fundName.contains("美元") || fundName.contains("美国")) {
+            return "QDII";
+        }
+        return "混合型"; // 默认
+    }
+
+    /**
+     * 安全解析 Double，空值返回 null
+     */
+    private Double parseDouble(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
-    private String extractJson(String content) {
-        if (content == null || content.isEmpty()) return "[]";
-        
-        // 1. 尝试匹配 Markdown JSON 代码块
-        if (content.contains("```json")) {
-            int start = content.indexOf("```json") + 7;
-            int end = content.indexOf("```", start);
-            if (end > start) {
-                return content.substring(start, end).trim();
-            }
-        } else if (content.contains("```")) {
-            int start = content.indexOf("```") + 3;
-            int end = content.indexOf("```", start);
-            if (end > start) {
-                return content.substring(start, end).trim();
-            }
-        }
-
-        // 2. 尝试寻找最外层的 [ ]
-        int firstBracket = content.indexOf("[");
-        int lastBracket = content.lastIndexOf("]");
-        if (firstBracket != -1 && lastBracket != -1 && lastBracket > firstBracket) {
-            return content.substring(firstBracket, lastBracket + 1).trim();
-        }
-
-        return content.trim();
-    }
-
+    /**
+     * 获取最新排行数据
+     * 优先取今天的数据，如果没有则取最近一次的数据
+     */
     public List<FundRanking> getLatestRankings() {
+        // 先尝试取今天的数据
+        LocalDate today = LocalDate.now();
+        List<FundRanking> rankings = fundRankingRepository.selectList(
+                new LambdaQueryWrapper<FundRanking>()
+                        .eq(FundRanking::getUpdateDate, today)
+                        .orderByDesc(FundRanking::getOneYearReturn)
+        );
+
+        if (!rankings.isEmpty()) {
+            return rankings;
+        }
+
+        // 如果今天没有数据，尝试获取昨天的
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        return fundRankingRepository.selectList(new LambdaQueryWrapper<FundRanking>()
-                .eq(FundRanking::getUpdateDate, yesterday));
+        rankings = fundRankingRepository.selectList(
+                new LambdaQueryWrapper<FundRanking>()
+                        .eq(FundRanking::getUpdateDate, yesterday)
+                        .orderByDesc(FundRanking::getOneYearReturn)
+        );
+
+        if (!rankings.isEmpty()) {
+            return rankings;
+        }
+
+        // 如果最近两天都没有，取数据库中最新的一批
+        rankings = fundRankingRepository.selectList(
+                new LambdaQueryWrapper<FundRanking>()
+                        .orderByDesc(FundRanking::getUpdateDate)
+                        .orderByDesc(FundRanking::getOneYearReturn)
+                        .last("LIMIT 30")
+        );
+
+        return rankings;
     }
 
+    /**
+     * 获取最新资讯数据
+     */
     public List<FundNews> getLatestNews() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        return fundNewsRepository.selectList(new LambdaQueryWrapper<FundNews>()
-                .eq(FundNews::getUpdateDate, yesterday));
+        List<FundNews> news = fundNewsRepository.selectList(
+                new LambdaQueryWrapper<FundNews>()
+                        .eq(FundNews::getUpdateDate, yesterday));
+
+        if (news.isEmpty()) {
+            // 取最新的资讯
+            news = fundNewsRepository.selectList(
+                    new LambdaQueryWrapper<FundNews>()
+                            .orderByDesc(FundNews::getPublishDate)
+                            .last("LIMIT 10"));
+        }
+
+        return news;
     }
 }

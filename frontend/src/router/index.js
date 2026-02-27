@@ -26,6 +26,24 @@ const routes = [
         meta: { title: '基金排行', icon: 'TrendCharts' }
       },
       {
+        path: 'fund/analysis',
+        name: 'FundAnalysis',
+        component: () => import('@/views/finance/FundAnalysis.vue'),
+        meta: { title: 'AI走势分析', icon: 'MagicStick' }
+      },
+      {
+        path: 'fund/analysis/:fundCode',
+        name: 'FundAnalysisDetail',
+        component: () => import('@/views/finance/FundAnalysis.vue'),
+        meta: { title: 'AI走势分析', icon: 'MagicStick' }
+      },
+      {
+        path: 'finance/fund-trend/:fundCode',
+        name: 'FundTrend',
+        component: () => import('@/views/finance/FundTrend.vue'),
+        meta: { title: '基金走势', icon: 'DataLine' }
+      },
+      {
         path: 'course',
         name: 'Course',
         component: () => import('@/views/course/index.vue'),
@@ -60,6 +78,12 @@ const routes = [
         name: 'AiChat',
         component: () => import('@/views/ai/ChatRoom.vue'),
         meta: { title: 'AI 聊天室', icon: 'Service' }
+      },
+      {
+        path: 'news/daily',
+        name: 'DailyNews',
+        component: () => import('@/views/news/DailyNews.vue'),
+        meta: { title: '热点资讯', icon: 'Notification' }
       }
     ]
   }

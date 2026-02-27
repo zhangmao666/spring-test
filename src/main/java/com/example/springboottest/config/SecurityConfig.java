@@ -60,6 +60,8 @@ public class SecurityConfig {
                         .requestMatchers("/ai/**").permitAll()
                         // 基金接口 - 公开
                         .requestMatchers("/fund/**").permitAll()
+                        // 资讯接口 - 公开
+                        .requestMatchers("/news/**").permitAll()
                         // Swagger UI & Knife4j - 公开（仅开发环境使用）
                         .requestMatchers("/doc.html", "/webjars/**", "/swagger-resources/**", "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()

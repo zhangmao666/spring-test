@@ -21,22 +21,32 @@
             :default-active="activeMenu"
             :collapse="isCollapse"
             :collapse-transition="false"
+            active-text-color="#ffffff"
             router
           >
             <el-menu-item index="/dashboard">
-              <el-icon><Odometer /></el-icon>
-              <template #title>仪表盘</template>
-            </el-menu-item>
-            
-            <el-menu-item index="/fund/ranking">
-              <el-icon><TrendCharts /></el-icon>
-              <template #title>基金排行</template>
+              <el-icon><Monitor /></el-icon>
+              <template #title>数字化看板</template>
             </el-menu-item>
 
             <el-menu-item index="/ai/chat">
-              <el-icon><ChatLineRound /></el-icon>
-              <template #title>AI 智能对话</template>
+              <el-icon><Lightning /></el-icon>
+              <template #title>AI 灵感助手</template>
             </el-menu-item>
+
+            <el-menu-item index="/news/daily">
+              <el-icon><Bell /></el-icon>
+              <template #title>热点资讯</template>
+            </el-menu-item>
+
+            <el-sub-menu index="finance">
+              <template #title>
+                <el-icon><TrendCharts /></el-icon>
+                <span>智能投研</span>
+              </template>
+              <el-menu-item index="/fund/ranking">基金排行</el-menu-item>
+              <el-menu-item index="/fund/analysis">AI走势分析</el-menu-item>
+            </el-sub-menu>
 
             <el-sub-menu index="management">
               <template #title>
@@ -76,7 +86,11 @@
         <div class="header-left">
           <div class="breadcrumb-custom">
             <span class="active-page">{{ $route.meta.title || '概览' }}</span>
-            <span class="welcome-tag">你好, {{ username }}</span>
+            <div class="breadcrumb-path">
+              <span>系统</span>
+              <el-icon :size="10"><ArrowRight /></el-icon>
+              <span>{{ $route.meta.title }}</span>
+            </div>
           </div>
         </div>
         
@@ -126,9 +140,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
-import { 
-  Odometer, TrendCharts, ChatLineRound, FolderOpened, Tickets, 
-  Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton 
+import {
+  Monitor, DataLine, Lightning, FolderOpened, Tickets, TrendCharts,
+  Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton,
+  ArrowRight, Bell
 } from '@element-plus/icons-vue'
 import { getWeatherByCity } from '@/api/weather'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
@@ -317,10 +332,19 @@ const handleCommand = (command) => {
       color: var(--text-primary);
     }
     
-    .welcome-tag {
-      font-size: 0.85rem;
+    .breadcrumb-path {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
       color: var(--text-secondary);
-      opacity: 0.7;
+      opacity: 0.6;
+      font-weight: 500;
+      margin-top: 2px;
+      
+      .el-icon {
+        margin-top: 1px;
+      }
     }
   }
 
