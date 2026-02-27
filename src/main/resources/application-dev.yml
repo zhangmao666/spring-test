@@ -144,6 +144,29 @@ ai:
     max-tokens: 1024
     temperature: 0.7
 
+# Agent Skills 配置
+agent:
+  default-model: default
+  skills:
+    directories:
+      - classpath:skills/
+    custom-dir: ./custom-skills
+    enable-shell-tools: true
+    enable-fs-tools: true
+  models:
+    default:
+      model: glm-4.7
+      description: 智谱GLM-4.7（默认）
+    fast:
+      model: glm-4-flash
+      description: 智谱GLM-4-Flash（快速响应）
+    thinking:
+      model: deepseek-v3.2-thinking
+      description: DeepSeek深度思考
+    gpt:
+      model: gpt-5.2-chat-latest
+      description: GPT-5.2（高质量）
+
 # MinIO配置
 minio:
   endpoint: ${MINIO_ENDPOINT:http://222.173.143.39:29103}

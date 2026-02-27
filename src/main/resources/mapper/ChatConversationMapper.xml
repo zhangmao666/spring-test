@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springboottest.modules.ai.mapper.ChatConversationMapper">
+
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.example.springboottest.modules.ai.entity.ChatConversation">
+        <id column="id" property="id"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="title" property="title"/>
+        <result column="user_id" property="userId"/>
+        <result column="provider" property="provider"/>
+        <result column="model" property="model"/>
+        <result column="last_message_time" property="lastMessageTime"/>
+        <result column="message_count" property="messageCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted" property="deleted"/>
+    </resultMap>
+
+    <!-- 根据会话ID查询 -->
+    <select id="findByConversationId" resultMap="BaseResultMap">
+        SELECT * FROM chat_conversations
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <!-- 查询某用户的所有未删除会话 -->
+    <select id="findByUserIdAndDeleted" resultMap="BaseResultMap">
+        SELECT * FROM chat_conversations
+        WHERE user_id = #{userId} AND deleted = #{deleted}
+        ORDER BY last_message_time DESC
+    </select>
+
+    <!-- 查询所有未删除的会话 -->
+    <select id="findByDeleted" resultMap="BaseResultMap">
+        SELECT * FROM chat_conversations
+        WHERE deleted = #{deleted}
+        ORDER BY last_message_time DESC
+    </select>
+
+    <!-- 检查会话是否存在 -->
+    <select id="existsByConversationId" resultType="int">
+        SELECT COUNT(1) FROM chat_conversations
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <!-- 插入会话 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO chat_conversations (
+            conversation_id, title, user_id, provider, model,
+            last_message_time, message_count, deleted
+        ) VALUES (
+            #{conversationId}, #{title}, #{userId}, #{provider}, #{model},
+            #{lastMessageTime}, #{messageCount}, #{deleted}
+        )
+    </insert>
+
+    <!-- 更新会话 -->
+    <update id="update">
+        UPDATE chat_conversations
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="provider != null">provider = #{provider},</if>
+            <if test="model != null">model = #{model},</if>
+            <if test="lastMessageTime != null">last_message_time = #{lastMessageTime},</if>
+            <if test="messageCount != null">message_count = #{messageCount},</if>
+            <if test="deleted != null">deleted = #{deleted},</if>
+        </set>
+        WHERE conversation_id = #{conversationId}
+    </update>
+
+    <!-- 更新会话标题 -->
+    <update id="updateTitle">
+        UPDATE chat_conversations
+        SET title = #{title}
+        WHERE conversation_id = #{conversationId}
+    </update>
+
+    <!-- 软删除会话 -->
+    <update id="softDelete">
+        UPDATE chat_conversations
+        SET deleted = 1
+        WHERE conversation_id = #{conversationId}
+    </update>
+
+</mapper>
