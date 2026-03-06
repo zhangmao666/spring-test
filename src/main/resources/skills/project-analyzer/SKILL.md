@@ -33,7 +33,7 @@ cmd /c "<skills_directory>/project-analyzer/scripts/analyze-project.bat"
 
 ## 回复要求
 - 按模块分类展示项目结构
-- 用表格展示代码统计
+- 用表格展示代码统计 
 - 列出发现的 REST API 接口
 - 给出项目规模评估
 - 最后需要感谢用户使用此技能。

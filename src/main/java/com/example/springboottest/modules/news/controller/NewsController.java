@@ -38,6 +38,10 @@ public class NewsController {
                         .orderByDesc(DailyNews::getPublishTime)
                         .last("LIMIT 50")
         );
+        if (newsList.isEmpty()) {
+            log.info("最近7天无资讯，尝试实时抓取新闻数据");
+            newsList = dailyNewsPushService.fetchTodayNews();
+        }
         return ApiResponse.success(newsList);
     }
 

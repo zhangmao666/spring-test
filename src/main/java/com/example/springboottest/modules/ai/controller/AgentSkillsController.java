@@ -1,6 +1,10 @@
-package com.example.springboottest.modules.ai.skills;
+package com.example.springboottest.modules.ai.controller;
 
 import com.example.springboottest.common.dto.ApiResponse;
+import com.example.springboottest.modules.ai.skills.AgentChatRequest;
+import com.example.springboottest.modules.ai.skills.AgentChatResponse;
+import com.example.springboottest.modules.ai.skills.AgentService;
+import com.example.springboottest.modules.ai.skills.SkillGeneratorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

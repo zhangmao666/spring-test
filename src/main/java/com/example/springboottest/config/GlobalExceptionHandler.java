@@ -19,6 +19,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -157,6 +158,16 @@ public class GlobalExceptionHandler {
         log.warn("业务异常: {}", e.getMessage());
         ApiResponse<Object> response = ApiResponse.error(e.getCode(), e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 处理异步请求超时异常
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public ResponseEntity<ApiResponse<Object>> handleAsyncRequestTimeoutException(AsyncRequestTimeoutException e) {
+        log.warn("异步请求超时: {}", e.getMessage());
+        ApiResponse<Object> response = ApiResponse.error(504, "请求处理超时，请稍后重试");
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
     }
 
     /**

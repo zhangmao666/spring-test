@@ -138,7 +138,7 @@ ai:
   openai:
     api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
     api-url: https://yunwu.ai/v1/chat/completions
-    model: gpt-5.2-chat-latest
+    model: deepseek-v3.2
     thinking-model: deepseek-v3.2-thinking
     search-model: gemini-2.5-flash-all
     max-tokens: 1024
@@ -155,7 +155,7 @@ agent:
     enable-fs-tools: true
   models:
     default:
-      model: glm-4.7
+      model: gpt-5.2
       description: 智谱GLM-4.7（默认）
     fast:
       model: glm-4-flash

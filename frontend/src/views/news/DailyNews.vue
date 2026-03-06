@@ -174,6 +174,9 @@ const fetchNews = async () => {
     const res = await response.json()
     if (res.code === 200) {
       newsList.value = res.data || []
+      if (newsList.value.length === 0) {
+        ElMessage.warning('暂无资讯，正在尝试从免费新闻源同步，请稍后刷新')
+      }
     } else {
       ElMessage.error(res.message || '获取资讯失败')
     }

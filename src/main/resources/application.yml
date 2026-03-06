@@ -10,6 +10,11 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
+  # MVC 异步请求超时（AI 接口使用 CompletableFuture，默认超时较短会触发 AsyncRequestTimeoutException）
+  mvc:
+    async:
+      request-timeout: 600s
+
 # SpringDoc OpenAPI 配置
 springdoc:
   api-docs:
