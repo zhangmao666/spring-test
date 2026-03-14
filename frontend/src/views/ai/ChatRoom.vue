@@ -132,9 +132,12 @@
                       <div class="text markdown-body" v-html="msg.renderedHtml || ''"></div>
                     </div>
                   </div>
-                  <div class="message-actions" v-if="msg.role !== 'user' && msg.content">
+                  <div class="message-actions" v-if="msg.content">
                     <button class="action-btn" @click="copyMessage(msg.content)" title="复制">
                       <el-icon :size="14"><CopyDocument /></el-icon>
+                    </button>
+                    <button class="action-btn" :disabled="loading" @click="regenerateFromMessage(index)" title="重新生成">
+                      <el-icon :size="14"><RefreshRight /></el-icon>
                     </button>
                     <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
                   </div>
@@ -428,6 +431,33 @@ const clearCurrentHistory = () => {
 }
 
 // === 消息发送 ===
+const regenerateFromMessage = async (index) => {
+  if (loading.value) return
+
+  const target = messages.value[index]
+  if (!target || !target.content) return
+
+  let prompt = ''
+  if (target.role === 'user') {
+    prompt = target.content
+  } else {
+    for (let i = index - 1; i >= 0; i--) {
+      if (messages.value[i].role === 'user' && messages.value[i].content) {
+        prompt = messages.value[i].content
+        break
+      }
+    }
+  }
+
+  if (!prompt) {
+    ElMessage.warning('未找到可重新生成的提问')
+    return
+  }
+
+  inputToSent.value = prompt
+  await handleSend()
+}
+
 const handleSend = async () => {
   const content = inputToSent.value.trim()
   if (!content || loading.value) return
@@ -1215,7 +1245,7 @@ $primary-light: rgba(99, 102, 241, 0.1);
       align-items: center;
       gap: 8px;
       margin-top: 6px;
-      opacity: 0;
+      opacity: 1;
       transition: opacity 0.2s;
 
       .action-btn {
@@ -1233,6 +1263,11 @@ $primary-light: rgba(99, 102, 241, 0.1);
         &:hover {
           background: rgba($primary, 0.1);
           color: $primary;
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.45;
         }
       }
 

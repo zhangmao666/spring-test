@@ -1,0 +1,4 @@
+interface:
+  display_name: "Weather Query Custom"
+  short_description: "Get current weather and short forecasts by city"
+  default_prompt: "Use $weather-query-custom to check current weather and a 3-day forecast for Shanghai."

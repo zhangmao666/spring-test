@@ -24,9 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-
-/**
+import java.util.List;/**
  * JWT认证过滤器
  * 处理每个请求中的JWT令牌验证
  */
@@ -41,11 +39,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     // 无需认证的路径（与SecurityConfig保持一致）
     private static final List<String> PERMIT_ALL_PATHS = Arrays.asList(
             "/auth/", "/health", "/swagger-ui", "/v3/api-docs", "/error", "/weather/"
-    );
-    
-    // 公开的课程接口（精确匹配）
-    private static final List<String> PUBLIC_COURSE_PATHS = Arrays.asList(
-            "/courses", "/courses/search"
     );
 
     @Override
@@ -185,11 +178,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * 检查是否为无需认证的路径
      */
     private boolean isPermitAllPath(String requestURI) {
-        // 检查前缀匹配的路径
-        if (PERMIT_ALL_PATHS.stream().anyMatch(requestURI::startsWith)) {
-            return true;
-        }
-        // 检查精确匹配的公开课程路径
-        return PUBLIC_COURSE_PATHS.stream().anyMatch(requestURI::equals);
+        return PERMIT_ALL_PATHS.stream().anyMatch(requestURI::startsWith);
     }
 }

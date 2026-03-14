@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
@@ -44,12 +44,6 @@ const routes = [
         meta: { title: '基金走势', icon: 'DataLine' }
       },
       {
-        path: 'course',
-        name: 'Course',
-        component: () => import('@/views/course/index.vue'),
-        meta: { title: '课程管理', icon: 'Reading' }
-      },
-      {
         path: 'dict',
         name: 'Dict',
         component: () => import('@/views/dict/index.vue'),
@@ -80,10 +74,28 @@ const routes = [
         meta: { title: 'AI 聊天室', icon: 'Service' }
       },
       {
+        path: 'ai/resume',
+        name: 'ResumeAI',
+        component: () => import('@/views/ai/ResumeAI.vue'),
+        meta: { title: 'AI 简历助手', icon: 'DocumentChecked' }
+      },
+      {
+        path: 'tools/word-counter',
+        name: 'WordCounter',
+        component: () => import('@/views/tools/WordCounter.vue'),
+        meta: { title: '字数统计器', icon: 'EditPen' }
+      },
+      {
         path: 'news/daily',
         name: 'DailyNews',
         component: () => import('@/views/news/DailyNews.vue'),
         meta: { title: '热点资讯', icon: 'Notification' }
+      },
+      {
+        path: 'news/sentiment',
+        name: 'SentimentAnalysis',
+        component: () => import('@/views/news/SentimentAnalysis.vue'),
+        meta: { title: 'AI 情绪分析仪', icon: 'TrendCharts' }
       }
     ]
   }

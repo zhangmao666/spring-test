@@ -9,9 +9,7 @@ spring:
       base-url: https://yunwu.ai
       api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
       chat:
-        enabled: true
         options:
-#          model: gpt-5.2-chat-latest
           model: gpt-5.2-chat-latest
           temperature: 0.7
           max-tokens: 1024
@@ -129,9 +127,11 @@ logging:
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
   file:
     name: logs/spring-boot-test.log
-    max-size: 10MB
-    max-history: 30
-    total-size-cap: 1GB
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 1GB
 
 # AI配置
 ai:
@@ -139,8 +139,8 @@ ai:
     api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
     api-url: https://yunwu.ai/v1/chat/completions
     model: deepseek-v3.2
-    thinking-model: deepseek-v3.2-thinking
-    search-model: gemini-2.5-flash-all
+    thinking-model: gemini-2.5-flash-all
+    search-model:
     max-tokens: 1024
     temperature: 0.7
 
@@ -153,19 +153,6 @@ agent:
     custom-dir: ./custom-skills
     enable-shell-tools: true
     enable-fs-tools: true
-  models:
-    default:
-      model: gpt-5.2
-      description: 智谱GLM-4.7（默认）
-    fast:
-      model: glm-4-flash
-      description: 智谱GLM-4-Flash（快速响应）
-    thinking:
-      model: deepseek-v3.2-thinking
-      description: DeepSeek深度思考
-    gpt:
-      model: gpt-5.2-chat-latest
-      description: GPT-5.2（高质量）
 
 # MinIO配置
 minio:

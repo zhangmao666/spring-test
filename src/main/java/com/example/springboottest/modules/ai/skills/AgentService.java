@@ -32,20 +32,19 @@ public class AgentService {
     private final AgentProperties agentProperties;
     private final AiProperties aiProperties;
     private final ObjectMapper objectMapper;
-
-    /** 缓存已创建的 ChatModel（按模型名去重） */
-    private final Map<String, OpenAiChatModel> modelCache = new ConcurrentHashMap<>();
+    private final OpenAiChatModel defaultOpenAiChatModel;
 
     public AgentService(@Qualifier("agentChatClient") ChatClient agentChatClient,
                         @Qualifier("agentToolCallbacks") ToolCallback[] agentToolCallbacks,
                         AgentProperties agentProperties,
                         AiProperties aiProperties,
-                        ObjectMapper objectMapper) {
+                        ObjectMapper objectMapper, OpenAiChatModel defaultOpenAiChatModel) {
         this.agentChatClient = agentChatClient;
         this.agentToolCallbacks = agentToolCallbacks;
         this.agentProperties = agentProperties;
         this.aiProperties = aiProperties;
         this.objectMapper = objectMapper;
+        this.defaultOpenAiChatModel = defaultOpenAiChatModel;
     }
 
     /**
@@ -60,26 +59,18 @@ public class AgentService {
         log.info("🤖 收到 Agent 聊天请求: {} | 模型: {}", message, modelKey);
 
         try {
-            String modelName = resolveModelName(modelKey);
             String reply;
 
-            if (modelName != null) {
-                // 使用指定模型：通过 options 覆盖
-                reply = agentChatClient.prompt()
-                        .user(message)
-                        .options(OpenAiChatOptions.builder().model(modelName).build())
-                        .call()
-                        .content();
-            } else {
-                // 使用默认模型
-                reply = agentChatClient.prompt()
-                        .user(message)
-                        .call()
-                        .content();
-            }
+
+            // 使用默认模型
+            reply = agentChatClient.prompt()
+                    .user(message)
+                    .call()
+                    .content();
+
 
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("🤖 Agent 回复完成 | 模型: {} | 耗时: {}ms", modelName, elapsed);
+            log.info("🤖 Agent 回复完成 | 耗时: {}ms", elapsed);
 
             return AgentChatResponse.builder()
                     .reply(reply)
@@ -111,12 +102,8 @@ public class AgentService {
             log.info("🤖 收到 Agent 流式请求: {} | 模型: {}", message, modelKey);
 
             try {
-                String modelName = resolveModelName(modelKey);
 
                 var promptSpec = agentChatClient.prompt().user(message);
-                if (modelName != null) {
-                    promptSpec = promptSpec.options(OpenAiChatOptions.builder().model(modelName).build());
-                }
 
                 // 使用流式调用
                 promptSpec.stream().chatResponse().subscribe(
@@ -178,37 +165,4 @@ public class AgentService {
         });
     }
 
-    /**
-     * 获取所有可用模型列表
-     */
-    public List<Map<String, String>> getAvailableModels() {
-        List<Map<String, String>> result = new ArrayList<>();
-        agentProperties.getModels().forEach((key, config) -> {
-            Map<String, String> item = new LinkedHashMap<>();
-            item.put("key", key);
-            item.put("model", config.getModel());
-            item.put("description", config.getDescription());
-            item.put("isDefault", String.valueOf(key.equals(agentProperties.getDefaultModel())));
-            result.add(item);
-        });
-        return result;
-    }
-
-    /**
-     * 解析模型路由名为实际模型标识
-     */
-    private String resolveModelName(String modelKey) {
-        if (modelKey == null || modelKey.isBlank()) {
-            modelKey = agentProperties.getDefaultModel();
-        }
-        AgentProperties.ModelConfig config = agentProperties.getModels().get(modelKey);
-        if (config != null) {
-            return config.getModel();
-        }
-        // 如果 key 不在 models map 中，尝试当作模型名直接使用
-        if (modelKey != null && !modelKey.isBlank()) {
-            return modelKey;
-        }
-        return null;
-    }
 }

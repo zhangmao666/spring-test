@@ -55,20 +55,6 @@
 
     <!-- 统计卡片 -->
     <div class="stat-cards">
-      <div class="stat-card stat-card--primary">
-        <div class="stat-card__icon">
-          <el-icon :size="24"><Reading /></el-icon>
-        </div>
-        <div class="stat-card__info">
-          <div class="stat-card__value">{{ stats.courses }}</div>
-          <div class="stat-card__label">课程总数</div>
-        </div>
-        <div class="stat-card__trend trend--up">
-          <el-icon><Top /></el-icon>
-          <span>12%</span>
-        </div>
-      </div>
-
       <div class="stat-card stat-card--success">
         <div class="stat-card__icon">
           <el-icon :size="24"><UserFilled /></el-icon>
@@ -111,12 +97,6 @@
             </div>
           </template>
           <div class="quick-grid">
-            <div class="quick-item" @click="$router.push('/course')">
-              <div class="quick-item__icon quick-item__icon--primary">
-                <el-icon :size="24"><Reading /></el-icon>
-              </div>
-              <div class="quick-item__text">课程管理</div>
-            </div>
             <div class="quick-item" @click="$router.push('/dict')">
               <div class="quick-item__icon quick-item__icon--success">
                 <el-icon :size="24"><Files /></el-icon>
@@ -212,7 +192,6 @@ const weather = ref(null)
 const weatherLoading = ref(false)
 
 const stats = ref({
-  courses: 0,
   users: 0,
   dicts: 0
 })
@@ -242,7 +221,6 @@ onMounted(() => {
   
   setTimeout(() => {
     stats.value = {
-      courses: 12,
       users: 156,
       dicts: 8
     }

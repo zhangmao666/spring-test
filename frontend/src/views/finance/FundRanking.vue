@@ -1,14 +1,15 @@
 <template>
   <div class="page-container fund-ranking-view">
-    <!-- 1. 顶部宏观指标区 (Dashboard) -->
+    <!-- 顶部标题栏 -->
     <div class="header-section">
       <div class="title-row">
         <div>
-          <h1 class="text-gradient">基金投资决策中心</h1>
-          <p class="subtitle">智能筛选优质基金，辅助量化决策</p>
+          <h1 class="text-gradient">智能基金排行</h1>
+          <p class="subtitle">实时行情 · 历史业绩 · 风险指标 · 多维筛选</p>
         </div>
         <div class="market-status">
-          <el-tag :type="isMarketOpen ? 'success' : 'info'" effect="dark" round>
+          <el-tag :type="isMarketOpen ? 'success' : 'info'" effect="dark" round size="small">
+            <span class="status-dot" :class="{ active: isMarketOpen }"></span>
             {{ isMarketOpen ? '交易中' : '已收盘' }}
           </el-tag>
           <span class="time">{{ currentTime }}</span>
@@ -16,42 +17,11 @@
       </div>
     </div>
 
-    <el-row :gutter="20" class="stat-cards">
-      <el-col :span="6">
-        <div class="stat-card glass-container">
-          <div class="label">市场温度</div>
-          <div class="value">65° <span class="desc">中性偏热</span></div>
-          <el-progress :percentage="65" :color="customColors" :show-text="false" />
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card glass-container">
-          <div class="label">全市场平均收益</div>
-          <div class="value up">+1.42%</div>
-          <div class="trend up"><el-icon><CaretTop /></el-icon> 较昨日上升 0.2%</div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card glass-container">
-          <div class="label">沪深300估值</div>
-          <div class="value">12.4x <span class="desc">低估</span></div>
-          <div class="trend down">处历史 15% 分位</div>
-        </div>
-      </el-col>
-      <el-col :span="6">
-        <div class="stat-card glass-container">
-          <div class="label">热门赛道</div>
-          <div class="value">🤖 人工智能</div>
-          <div class="trend up">资金流入 +42.5亿</div>
-        </div>
-      </el-col>
-    </el-row>
-
-    <!-- 2. 超级筛选栏 (Filter Bar) -->
+    <!-- 筛选栏 -->
     <el-card class="filter-card glass-container mb-4">
       <div class="filter-row">
         <div class="filter-group">
-          <span class="filter-label">基金类型:</span>
+          <span class="filter-label">基金类型</span>
           <el-radio-group v-model="filters.type" size="small">
             <el-radio-button label="全部" />
             <el-radio-button label="股票型" />
@@ -60,12 +30,21 @@
             <el-radio-button label="指数型" />
           </el-radio-group>
         </div>
-        <div class="flex-grow"></div>
-        <el-input v-model="searchQuery" placeholder="搜索代码/名称..." suffix-icon="Search" size="small" style="width: 200px" />
+        <div class="filter-right">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索代码 / 名称..."
+            :prefix-icon="Search"
+            size="small"
+            clearable
+            style="width: 220px"
+          />
+          <el-button size="small" :icon="Refresh" @click="fetchRanking" :loading="loading">刷新</el-button>
+        </div>
       </div>
     </el-card>
 
-    <!-- 3. 列表区域 (Data Table with Tabs) -->
+    <!-- 数据表格 -->
     <el-card class="table-card glass-container">
       <template #header>
         <div class="card-header">
@@ -75,362 +54,278 @@
             <el-tab-pane label="风险指标" name="risk" />
             <el-tab-pane label="基金经理" name="manager" />
           </el-tabs>
-          <div class="actions">
-            <el-button-group>
-              <el-button size="small" :icon="Refresh" @click="fetchRanking">刷新</el-button>
-            </el-button-group>
+          <div class="header-right">
+            <span class="data-count">共 {{ filteredData.length }} 只</span>
+            <el-button text size="small" @click="triggerUpdate" :loading="updating">
+              <el-icon><RefreshRight /></el-icon> 同步数据
+            </el-button>
           </div>
         </div>
       </template>
 
-      <el-table :data="filteredData" v-loading="loading" style="width: 100%">
-        <el-table-column width="60" align="center">
+      <el-table
+        :data="filteredData"
+        v-loading="loading"
+        style="width: 100%"
+        row-class-name="table-row"
+        :empty-text="loading ? '加载中...' : '暂无数据'"
+      >
+        <!-- 序号 -->
+        <el-table-column width="52" align="center">
           <template #default="scope">
-             <div class="rank-num">{{ scope.$index + 1 }}</div>
+            <div class="rank-badge" :class="scope.$index < 3 ? `top-${scope.$index + 1}` : ''">
+              {{ scope.$index + 1 }}
+            </div>
           </template>
         </el-table-column>
-        
-        <!-- 基础信息 (始终显示) -->
-        <el-table-column label="基金名称/代码" min-width="180">
+
+        <!-- 基金名称/代码 (始终显示) -->
+        <el-table-column label="基金" min-width="200">
           <template #default="scope">
             <div class="fund-info">
-              <div class="name">
+              <div class="fund-name">
                 {{ scope.row.fundName }}
-                <el-tag v-if="scope.row.starRating >= 5" size="small" type="warning" effect="dark" class="ml-1">5星</el-tag>
+                <el-tag v-if="scope.row.starRating >= 5" size="small" type="warning" effect="dark" class="star-tag">5★</el-tag>
               </div>
-              <div class="code-row">
+              <div class="fund-meta">
                 <span class="code">{{ scope.row.fundCode }}</span>
-                <span class="type-tag">{{ scope.row.fundType }}</span>
+                <span class="type-badge">{{ scope.row.fundType }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
 
-        <!-- 动态切换的列 -->
+        <!-- 实时行情 Tab -->
         <template v-if="activeTab === 'realtime'">
           <el-table-column prop="netValue" label="最新净值" width="110" sortable>
-            <template #default="scope">{{ scope.row.netValue?.toFixed(4) || '--' }}</template>
-          </el-table-column>
-          <el-table-column label="日涨跌" width="100" sortable :sort-by="(row) => row.changePercent">
             <template #default="scope">
-              <span class="trend-text" :class="(scope.row.changePercent || 0) >= 0 ? 'up' : 'down'">
-                {{ (scope.row.changePercent || 0) >= 0 ? '+' : '' }}{{ (scope.row.changePercent || 0).toFixed(2) }}%
+              <span class="mono-val">{{ scope.row.netValue?.toFixed(4) || '--' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="日涨跌" width="105" sortable :sort-by="r => r.changePercent">
+            <template #default="scope">
+              <span class="pct-val" :class="pctClass(scope.row.changePercent)">
+                {{ fmtPct(scope.row.changePercent) }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="近1周" width="100" sortable :sort-by="(row) => row.oneWeekReturn">
+          <el-table-column label="近1周" width="100" sortable :sort-by="r => r.oneWeekReturn">
             <template #default="scope">
-              <span v-if="scope.row.oneWeekReturn != null" :class="scope.row.oneWeekReturn >= 0 ? 'up' : 'down'">
-                {{ scope.row.oneWeekReturn >= 0 ? '+' : '' }}{{ scope.row.oneWeekReturn.toFixed(2) }}%
-              </span>
-              <span v-else class="no-data">--</span>
+              <ReturnCell :value="scope.row.oneWeekReturn" />
             </template>
           </el-table-column>
-          <el-table-column label="近1月" width="100" sortable :sort-by="(row) => row.oneMonthReturn">
+          <el-table-column label="近1月" width="100" sortable :sort-by="r => r.oneMonthReturn">
             <template #default="scope">
-              <span v-if="scope.row.oneMonthReturn != null" :class="scope.row.oneMonthReturn >= 0 ? 'up' : 'down'">
-                {{ scope.row.oneMonthReturn >= 0 ? '+' : '' }}{{ scope.row.oneMonthReturn.toFixed(2) }}%
-              </span>
-              <span v-else class="no-data">--</span>
+              <ReturnCell :value="scope.row.oneMonthReturn" />
             </template>
           </el-table-column>
         </template>
 
+        <!-- 历史业绩 Tab -->
         <template v-if="activeTab === 'performance'">
-          <el-table-column label="近3月" width="100" sortable :sort-by="(row) => row.threeMonthReturn">
-            <template #default="scope">
-              <span v-if="scope.row.threeMonthReturn != null" :class="scope.row.threeMonthReturn >= 0 ? 'up' : 'down'">{{ scope.row.threeMonthReturn.toFixed(2) }}%</span>
-              <span v-else class="no-data">--</span>
-            </template>
+          <el-table-column label="近3月" width="100" sortable :sort-by="r => r.threeMonthReturn">
+            <template #default="scope"><ReturnCell :value="scope.row.threeMonthReturn" /></template>
           </el-table-column>
-          <el-table-column label="近6月" width="100" sortable :sort-by="(row) => row.sixMonthReturn">
-            <template #default="scope">
-              <span v-if="scope.row.sixMonthReturn != null" :class="scope.row.sixMonthReturn >= 0 ? 'up' : 'down'">{{ scope.row.sixMonthReturn.toFixed(2) }}%</span>
-              <span v-else class="no-data">--</span>
-            </template>
+          <el-table-column label="近6月" width="100" sortable :sort-by="r => r.sixMonthReturn">
+            <template #default="scope"><ReturnCell :value="scope.row.sixMonthReturn" /></template>
           </el-table-column>
-          <el-table-column label="近1年" width="100" sortable :sort-by="(row) => row.oneYearReturn">
-            <template #default="scope">
-              <span v-if="scope.row.oneYearReturn != null" :class="scope.row.oneYearReturn >= 0 ? 'up' : 'down'">
-                <strong>{{ scope.row.oneYearReturn.toFixed(2) }}%</strong>
-              </span>
-              <span v-else class="no-data">--</span>
-            </template>
+          <el-table-column label="近1年" width="100" sortable :sort-by="r => r.oneYearReturn">
+            <template #default="scope"><ReturnCell :value="scope.row.oneYearReturn" bold /></template>
           </el-table-column>
-          <el-table-column label="今年来" width="100" sortable :sort-by="(row) => row.ytdReturn">
-            <template #default="scope">
-              <span v-if="scope.row.ytdReturn != null" :class="scope.row.ytdReturn >= 0 ? 'up' : 'down'">{{ scope.row.ytdReturn.toFixed(2) }}%</span>
-              <span v-else class="no-data">--</span>
-            </template>
+          <el-table-column label="今年来" width="100" sortable :sort-by="r => r.ytdReturn">
+            <template #default="scope"><ReturnCell :value="scope.row.ytdReturn" /></template>
           </el-table-column>
-          <el-table-column label="成立来" width="110" sortable :sort-by="(row) => row.sinceInceptionReturn">
-            <template #default="scope">
-              <span v-if="scope.row.sinceInceptionReturn != null" :class="scope.row.sinceInceptionReturn >= 0 ? 'up' : 'down'">{{ scope.row.sinceInceptionReturn.toFixed(2) }}%</span>
-              <span v-else class="no-data">--</span>
-            </template>
+          <el-table-column label="成立来" width="110" sortable :sort-by="r => r.sinceInceptionReturn">
+            <template #default="scope"><ReturnCell :value="scope.row.sinceInceptionReturn" /></template>
           </el-table-column>
         </template>
 
+        <!-- 风险指标 Tab -->
         <template v-if="activeTab === 'risk'">
-          <el-table-column label="日涨跌" width="100">
+          <el-table-column label="日涨跌" width="105">
             <template #default="scope">
-              <span :class="(scope.row.changePercent || 0) >= 0 ? 'up' : 'down'">
-                {{ (scope.row.changePercent || 0) >= 0 ? '+' : '' }}{{ (scope.row.changePercent || 0).toFixed(2) }}%
-              </span>
+              <span class="pct-val" :class="pctClass(scope.row.changePercent)">{{ fmtPct(scope.row.changePercent) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="近6月波幅" width="110">
             <template #default="scope">
-              <span v-if="scope.row.sixMonthReturn != null">
+              <span v-if="scope.row.sixMonthReturn != null" class="mono-val">
                 {{ Math.abs(scope.row.sixMonthReturn).toFixed(2) }}%
               </span>
               <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
-          <el-table-column label="最大回撤" width="150">
+          <el-table-column label="最大回撤" width="160">
             <template #default="scope">
               <template v-if="scope.row.maxDrawdown != null">
-                <el-progress :percentage="Math.min(Math.abs(scope.row.maxDrawdown), 100)" status="exception" :show-text="false" :stroke-width="12" />
+                <el-progress
+                  :percentage="Math.min(Math.abs(scope.row.maxDrawdown), 100)"
+                  status="exception"
+                  :show-text="false"
+                  :stroke-width="8"
+                  style="margin-bottom: 4px"
+                />
                 <span class="drawdown-val">{{ scope.row.maxDrawdown?.toFixed(2) }}%</span>
               </template>
               <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
-          <el-table-column label="夏普比率" width="120">
+          <el-table-column label="夏普比率" width="110">
             <template #default="scope">
-              <span v-if="scope.row.sharpeRatio != null">{{ scope.row.sharpeRatio.toFixed(2) }}</span>
+              <span v-if="scope.row.sharpeRatio != null" class="mono-val">{{ scope.row.sharpeRatio.toFixed(2) }}</span>
               <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
         </template>
 
+        <!-- 基金经理 Tab -->
         <template v-if="activeTab === 'manager'">
-          <el-table-column label="基金经理" width="150">
+          <el-table-column label="基金经理" width="160">
             <template #default="scope">
               <div class="manager-cell" v-if="scope.row.managerName">
-                <el-avatar :size="24" icon="UserFilled" />
-                <span class="name">{{ scope.row.managerName }}</span>
+                <el-avatar :size="28" :style="{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'#fff', fontSize:'12px' }">
+                  {{ scope.row.managerName?.charAt(0) }}
+                </el-avatar>
+                <span class="manager-name">{{ scope.row.managerName }}</span>
               </div>
               <span v-else class="no-data">--</span>
             </template>
           </el-table-column>
           <el-table-column label="累计净值" width="110">
-            <template #default="scope">{{ scope.row.accumulatedValue?.toFixed(4) || '--' }}</template>
-          </el-table-column>
-          <el-table-column label="成立来" width="110">
             <template #default="scope">
-              <span v-if="scope.row.sinceInceptionReturn != null" :class="scope.row.sinceInceptionReturn >= 0 ? 'up' : 'down'">{{ scope.row.sinceInceptionReturn.toFixed(2) }}%</span>
-              <span v-else class="no-data">--</span>
+              <span class="mono-val">{{ scope.row.accumulatedValue?.toFixed(4) || '--' }}</span>
             </template>
+          </el-table-column>
+          <el-table-column label="成立来收益" width="120">
+            <template #default="scope"><ReturnCell :value="scope.row.sinceInceptionReturn" /></template>
           </el-table-column>
         </template>
 
-        <el-table-column label="操作" width="260" fixed="right" align="center">
+        <!-- 操作列 -->
+        <el-table-column label="操作" width="200" fixed="right" align="center">
           <template #default="scope">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap;">
+            <div class="action-btns">
               <el-button type="primary" size="small" link @click.stop="viewTrend(scope.row)">
                 <el-icon><TrendCharts /></el-icon> 走势
               </el-button>
-              <el-button type="success" size="small" link @click.stop="goAnalysis(scope.row)" style="margin-left: 0;">
+              <el-divider direction="vertical" />
+              <el-button type="success" size="small" link @click.stop="goAnalysis(scope.row)">
                 <el-icon><DataLine /></el-icon> AI分析
-              </el-button>
-              <el-button type="primary" size="small" link @click.stop="analyzeFund(scope.row)" style="margin-left: 0;">
-                <el-icon><MagicStick /></el-icon> AI诊断
               </el-button>
             </div>
           </template>
         </el-table-column>
       </el-table>
-
-      <div class="table-footer">
-        <el-button text @click="triggerUpdate" :loading="updating">
-          <el-icon><RefreshRight /></el-icon> 手动同步
-        </el-button>
-      </div>
     </el-card>
-
-    <!-- AI 诊断抽屉 -->
-    <el-drawer
-      v-model="drawerVisible"
-      :title="'基金深度诊断: ' + currentFund?.fundName"
-      direction="rtl"
-      size="450px"
-      class="ai-drawer"
-    >
-      <div v-if="analyzing" class="analysis-loading" v-loading="true" element-loading-text="AI 正在深度解析中...">
-        <div class="skeleton-box"></div>
-      </div>
-      <div v-else class="analysis-content">
-        <div class="summary-card">
-          <h4>AI 核心观点</h4>
-          <p>{{ aiConclusion }}</p>
-        </div>
-        <div class="detail-grids">
-          <div class="grid-item">
-            <label>收益打分</label>
-            <el-rate v-model="scores.return" disabled show-score />
-          </div>
-          <div class="grid-item">
-            <label>风险控制</label>
-            <el-rate v-model="scores.risk" disabled show-score />
-          </div>
-        </div>
-        <div class="advice">
-          <h5>💡 投资建议</h5>
-          <p>{{ aiAdvice }}</p>
-        </div>
-      </div>
-    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, defineComponent, h } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-  CaretTop, Refresh, RefreshRight, Search, MagicStick, 
-  DataLine, TrendCharts, UserFilled
-} from '@element-plus/icons-vue'
+import { Refresh, RefreshRight, Search, DataLine, TrendCharts } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
+// ── 内联子组件：收益单元格 ────────────────────────────────────────
+const ReturnCell = defineComponent({
+  props: { value: { type: Number, default: null }, bold: Boolean },
+  setup(props) {
+    return () => {
+      if (props.value == null) return h('span', { class: 'no-data' }, '--')
+      const cls = ['pct-val', props.value >= 0 ? 'up' : 'down', props.bold ? 'bold' : ''].join(' ')
+      const text = (props.value >= 0 ? '+' : '') + props.value.toFixed(2) + '%'
+      return h('span', { class: cls }, text)
+    }
+  }
+})
+
+// ── 时钟 ──────────────────────────────────────────────────────────
 const currentTime = ref('')
-const isMarketOpen = ref(true)
-let timer = null
+const isMarketOpen = ref(false)
+let clockTimer = null
 
 const updateTime = () => {
   const now = new Date()
-  currentTime.value = now.toLocaleString('zh-CN', { 
-    hour12: false, 
-    year: 'numeric', 
-    month: '2-digit', 
-    day: '2-digit', 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  currentTime.value = now.toLocaleString('zh-CN', {
+    hour12: false, year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit'
   }).replace(/\//g, '-')
-  
-  const hour = now.getHours()
-  const minute = now.getMinutes()
-  const totalMin = hour * 60 + minute
-  // 简单模拟A股交易时间：9:30-11:30, 13:00-15:00
-  const isOpen = (totalMin >= 570 && totalMin <= 690) || (totalMin >= 780 && totalMin <= 900)
-  isMarketOpen.value = isOpen
+  const t = now.getHours() * 60 + now.getMinutes()
+  isMarketOpen.value = (t >= 570 && t <= 690) || (t >= 780 && t <= 900)
 }
 
+// ── 数据 ──────────────────────────────────────────────────────────
 const loading = ref(false)
+const updating = ref(false)
 const rankingData = ref([])
 const activeTab = ref('realtime')
 const searchQuery = ref('')
+const filters = reactive({ type: '全部' })
 
-// 筛选器状态
-const filters = reactive({
-  type: '全部'
-})
+const filteredData = computed(() => rankingData.value.filter(item => {
+  const q = searchQuery.value.trim()
+  const matchSearch = !q || item.fundName?.includes(q) || item.fundCode?.includes(q)
+  const matchType = filters.type === '全部' || item.fundType === filters.type
+  return matchSearch && matchType
+}))
 
-// 仪表盘颜色配置
-const customColors = [
-  { color: '#f56c6c', percentage: 20 },
-  { color: '#e6a23c', percentage: 40 },
-  { color: '#5cb87a', percentage: 60 },
-  { color: '#1989fa', percentage: 80 },
-  { color: '#6f7ad3', percentage: 100 },
-]
+// ── 格式化工具 ────────────────────────────────────────────────────
+const pctClass = (v) => (v == null ? '' : v >= 0 ? 'pct-val up' : 'pct-val down')
+const fmtPct = (v) => v == null ? '--' : (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%'
 
-// 过滤后的数据
-const filteredData = computed(() => {
-  return rankingData.value.filter(item => {
-    const matchSearch = !searchQuery.value ||
-      item.fundName.includes(searchQuery.value) ||
-      item.fundCode.includes(searchQuery.value)
-
-    const matchType = filters.type === '全部' || item.fundType === filters.type
-
-    return matchSearch && matchType
-  })
-})
-
+// ── 接口 ──────────────────────────────────────────────────────────
 const fetchRanking = async () => {
   loading.value = true
   try {
-    const response = await fetch('/api/fund/ranking')
-    const res = await response.json()
+    const res = await fetch('/api/fund/ranking').then(r => r.json())
     if (res.code === 200) {
       rankingData.value = res.data
     } else {
       ElMessage.error(res.message || '获取排行失败')
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('无法连接到服务器')
   } finally {
     loading.value = false
   }
 }
 
-// AI 诊断逻辑
-const drawerVisible = ref(false)
-const analyzing = ref(false)
-const currentFund = ref(null)
-const aiConclusion = ref('')
-const aiAdvice = ref('')
-const scores = reactive({ return: 0, risk: 0 })
-
-const fundRouter = useRouter()
-
-const viewTrend = (row) => {
-  // 跳转到走势页面
-  fundRouter.push(`/finance/fund-trend/${row.fundCode}`)
-}
-
-const goAnalysis = (row) => {
-  // 跳转到AI走势分析页面
-  fundRouter.push(`/fund/analysis/${row.fundCode}`)
-}
-
-const analyzeFund = (row) => {
-  currentFund.value = row
-  drawerVisible.value = true
-  analyzing.value = true
-
-  // 模拟 AI 异步分析过程
-  setTimeout(() => {
-    analyzing.value = false
-    aiConclusion.value = `该基金（${row.fundCode}）近期在${row.sector || '白马股'}赛道表现强势，近1年回撤控制在${Math.abs(row.maxDrawdown || 10).toFixed(1)}%以内，属于稳健进攻型。`
-    aiAdvice.value = "建议结合当前市场估值，在此位置分批建仓，长线持有以获取行业成长红利。"
-    scores.return = 4.5
-    scores.risk = row.maxDrawdown < -20 ? 3.0 : 4.8
-  }, 1500)
-}
-
-const updating = ref(false)
 const triggerUpdate = async () => {
   updating.value = true
   try {
-    const response = await fetch('/api/fund/update', { method: 'POST' })
-    const res = await response.json()
+    const res = await fetch('/api/fund/update', { method: 'POST' }).then(r => r.json())
     if (res.code === 200) {
-      ElMessage.success('昨日数据同步指令已下达，后台正在处理')
+      ElMessage.success('数据同步指令已下达，后台正在处理')
     } else {
-      ElMessage.error(res.message)
+      ElMessage.error(res.message || '触发失败')
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('触发同步失败')
   } finally {
     updating.value = false
   }
 }
 
+// ── 跳转 ──────────────────────────────────────────────────────────
+const router = useRouter()
+const viewTrend = (row) => router.push(`/finance/fund-trend/${row.fundCode}`)
+const goAnalysis = (row) => router.push(`/fund/analysis/${row.fundCode}`)
+
+// ── 生命周期 ──────────────────────────────────────────────────────
 onMounted(() => {
   fetchRanking()
   updateTime()
-  timer = setInterval(updateTime, 60000)
+  clockTimer = setInterval(updateTime, 60000)
 })
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
+  if (clockTimer) clearInterval(clockTimer)
 })
 </script>
 
 <style lang="scss" scoped>
 .fund-ranking-view {
+  // 标题区
   .header-section {
     margin-bottom: 24px;
     .title-row {
@@ -438,108 +333,125 @@ onUnmounted(() => {
       justify-content: space-between;
       align-items: flex-end;
     }
-    h1 { font-size: 2.2rem; margin-bottom: 6px; letter-spacing: -1px; }
-    .subtitle { color: var(--text-secondary); font-size: 1rem; opacity: 0.7; }
+    h1 { font-size: 2rem; margin-bottom: 6px; letter-spacing: -0.5px; }
+    .subtitle { color: var(--text-secondary); font-size: 0.9rem; }
     .market-status {
       display: flex;
       align-items: center;
       gap: 12px;
-      .time { font-size: 0.85rem; color: var(--text-secondary); font-family: monospace; }
-    }
-  }
-
-  .stat-cards {
-    margin-bottom: 24px;
-    .stat-card {
-      padding: 20px;
-      height: 120px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      .label { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
-      .value { 
-        font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; 
-        &.up { color: #10B981; }
-        .desc { font-size: 0.8rem; font-weight: 400; opacity: 0.6; margin-left: 4px; }
-      }
-      .trend {
-        font-size: 0.8rem; display: flex; align-items: center; gap: 4px;
-        &.up { color: #f56c6c; }
-        &.down { color: #10B981; }
+      .time { font-size: 0.82rem; color: var(--text-secondary); font-family: monospace; }
+      .status-dot {
+        display: inline-block;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        margin-right: 4px;
+        &.active { animation: blink-dot 1.5s infinite; }
       }
     }
   }
 
+  // 筛选栏
   .filter-card {
+    :deep(.el-card__body) { padding: 14px 20px; }
     .filter-row {
       display: flex;
       align-items: center;
-      gap: 20px;
+      justify-content: space-between;
+      gap: 16px;
       flex-wrap: wrap;
       .filter-group {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        .filter-label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+        display: flex; align-items: center; gap: 10px;
+        .filter-label { font-size: 0.83rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
       }
+      .filter-right { display: flex; align-items: center; gap: 10px; }
     }
   }
 
+  // 表格卡片头部
   .table-card {
+    :deep(.el-card__header) { padding: 0 20px; }
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: none;
-      padding-bottom: 0;
-      .ranking-tabs { border-bottom: none; :deep(.el-tabs__header) { margin-bottom: 0; } }
+      .ranking-tabs {
+        :deep(.el-tabs__header) { margin-bottom: 0; }
+        :deep(.el-tabs__nav-wrap::after) { display: none; }
+      }
+      .header-right {
+        display: flex; align-items: center; gap: 16px;
+        .data-count { font-size: 0.82rem; color: var(--text-secondary); }
+      }
     }
   }
 
+  // 序号徽标
+  .rank-badge {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+    background: var(--el-fill-color);
+    color: var(--text-secondary);
+    margin: 0 auto;
+    &.top-1 { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+    &.top-2 { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
+    &.top-3 { background: linear-gradient(135deg, #cd7c3a, #a0522d); color: #fff; }
+  }
+
+  // 基金信息
   .fund-info {
-    .name { font-weight: 700; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; }
-    .code-row {
-      display: flex; gap: 8px; font-size: 0.8rem;
-      .code { font-family: monospace; color: var(--text-secondary); }
-      .type-tag { background: rgba(0,0,0,0.05); padding: 0 4px; border-radius: 2px; color: var(--text-secondary); }
-    }
-  }
-
-  .trend-text { font-weight: 800; font-family: monospace; &.up { color: #f56c6c; } &.down { color: #10B981; } }
-
-  .mini-sparkline {
-    width: 60px; height: 24px;
-    &.up { color: #f56c6c; }
-    &.down { color: #10B981; }
-    .spark-svg { width: 100%; height: 100%; opacity: 0.6; }
-  }
-
-  .drawdown-val { font-size: 0.75rem; color: #EF4444; font-weight: 600; margin-top: 4px; display: block; }
-  
-  .manager-cell { display: flex; align-items: center; gap: 8px; .name { font-weight: 600; } }
-
-  .table-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-
-  // AI Drawer Styles
-  .ai-drawer {
-    .analysis-content {
+    .fund-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      margin-bottom: 4px;
       display: flex;
-      flex-direction: column;
-      gap: 24px;
-      .summary-card {
-        background: var(--el-color-primary-light-9); padding: 16px; border-radius: 12px;
-        h4 { margin: 0 0 8px 0; color: var(--el-color-primary); }
-        p { margin: 0; font-size: 0.95rem; line-height: 1.6; }
-      }
-      .detail-grids {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-        .grid-item { label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; display: block; } }
-      }
-      .advice {
-        h5 { margin: 0 0 8px 0; font-size: 1rem; }
-        p { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
+      align-items: center;
+      gap: 6px;
+      .star-tag { font-size: 0.7rem; padding: 0 5px; }
+    }
+    .fund-meta {
+      display: flex; gap: 8px; font-size: 0.78rem;
+      .code { font-family: monospace; color: var(--text-secondary); }
+      .type-badge {
+        background: rgba(99, 102, 241, 0.1);
+        color: #6366f1;
+        padding: 0 5px;
+        border-radius: 3px;
+        font-size: 0.72rem;
+        font-weight: 600;
       }
     }
   }
+
+  // 数值样式
+  .pct-val {
+    font-weight: 700; font-family: monospace; font-size: 0.9rem;
+    &.up { color: #ef4444; }
+    &.down { color: #10b981; }
+    &.bold { font-size: 1rem; }
+  }
+  .mono-val { font-family: monospace; font-size: 0.9rem; color: var(--text-primary); }
+  .no-data { color: var(--text-secondary); font-size: 0.82rem; opacity: 0.5; }
+  .drawdown-val { font-size: 0.75rem; color: #ef4444; font-weight: 600; }
+
+  // 基金经理
+  .manager-cell {
+    display: flex; align-items: center; gap: 10px;
+    .manager-name { font-weight: 600; font-size: 0.88rem; }
+  }
+
+  // 操作列
+  .action-btns {
+    display: flex; align-items: center; justify-content: center;
+    :deep(.el-divider--vertical) { margin: 0 4px; }
+  }
+}
+
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 </style>

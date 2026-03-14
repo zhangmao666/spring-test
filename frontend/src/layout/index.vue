@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-container class="layout-container" :data-theme="currentTheme">
     <!-- 主题装饰效果 -->
     <ThemeDecorations />
@@ -34,10 +34,25 @@
               <template #title>AI 灵感助手</template>
             </el-menu-item>
 
-            <el-menu-item index="/news/daily">
-              <el-icon><Bell /></el-icon>
-              <template #title>热点资讯</template>
+            <el-menu-item index="/ai/resume">
+              <el-icon><DocumentChecked /></el-icon>
+              <template #title>AI 简历助手</template>
             </el-menu-item>
+
+
+            <el-menu-item index="/tools/word-counter">
+              <el-icon><EditPen /></el-icon>
+              <template #title>字数统计器</template>
+            </el-menu-item>
+
+            <el-sub-menu index="news">
+              <template #title>
+                <el-icon><Bell /></el-icon>
+                <span>资讯中心</span>
+              </template>
+              <el-menu-item index="/news/daily">热点资讯</el-menu-item>
+              <el-menu-item index="/news/sentiment">AI 情绪分析仪</el-menu-item>
+            </el-sub-menu>
 
             <el-sub-menu index="finance">
               <template #title>
@@ -53,7 +68,6 @@
                 <el-icon><FolderOpened /></el-icon>
                 <span>系统管理</span>
               </template>
-              <el-menu-item index="/course">课程管理</el-menu-item>
               <el-menu-item index="/dict">数据字典</el-menu-item>
               <el-menu-item index="/user">用户管理</el-menu-item>
             </el-sub-menu>
@@ -143,7 +157,7 @@ import { ElMessageBox } from 'element-plus'
 import {
   Monitor, DataLine, Lightning, FolderOpened, Tickets, TrendCharts,
   Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton,
-  ArrowRight, Bell
+  ArrowRight, Bell, EditPen, DocumentChecked
 } from '@element-plus/icons-vue'
 import { getWeatherByCity } from '@/api/weather'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'

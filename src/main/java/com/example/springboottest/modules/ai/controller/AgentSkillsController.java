@@ -15,14 +15,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agent Skills Controller
  *
  * <h3>核心能力：</h3>
  * <ul>
- *   <li>多模型路由对话（同步 / SSE 流式）</li>
  *   <li>动态 Skill 管理（列表 / 创建 / 删除）</li>
  *   <li>可用模型查询</li>
  * </ul>
@@ -84,15 +82,6 @@ public class AgentSkillsController {
     }
 
     // ==================== 模型管理 ====================
-
-    /**
-     * 获取可用模型列表
-     */
-    @Operation(summary = "获取可用模型列表", description = "返回当前 Agent 可使用的所有模型")
-    @GetMapping("/models")
-    public ApiResponse<List<Map<String, String>>> listModels() {
-        return ApiResponse.success(agentService.getAvailableModels());
-    }
 
     // ==================== Skill 管理 ====================
 
