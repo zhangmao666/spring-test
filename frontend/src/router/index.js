@@ -44,6 +44,12 @@ const routes = [
         meta: { title: '基金走势', icon: 'DataLine' }
       },
       {
+        path: 'prompt',
+        name: 'PromptTemplate',
+        component: () => import('@/views/prompt/index.vue'),
+        meta: { title: '提示工程', icon: 'EditPen' }
+      },
+      {
         path: 'dict',
         name: 'Dict',
         component: () => import('@/views/dict/index.vue'),
@@ -78,6 +84,12 @@ const routes = [
         name: 'ResumeAI',
         component: () => import('@/views/ai/ResumeAI.vue'),
         meta: { title: 'AI 简历助手', icon: 'DocumentChecked' }
+      },
+      {
+        path: 'ai/models',
+        name: 'AiModelManage',
+        component: () => import('@/views/ai/ModelManage.vue'),
+        meta: { title: '基座模型管理', icon: 'Cpu' }
       },
       {
         path: 'tools/word-counter',

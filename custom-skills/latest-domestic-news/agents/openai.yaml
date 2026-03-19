@@ -1,0 +1,4 @@
+interface:
+  display_name: "Latest Domestic News"
+  short_description: "Free official RSS skill for latest China headlines."
+  default_prompt: "Use $latest-domestic-news to fetch the latest China domestic headlines in Chinese."

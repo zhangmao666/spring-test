@@ -1,0 +1,26 @@
+package com.example.springboottest.modules.ai.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+@Data
+public class AiModelTestRequest {
+
+    private Long id;
+
+    @NotBlank(message = "渠道标识不能为空")
+    @Size(max = 50, message = "渠道标识不能超过50个字符")
+    private String provider;
+
+    @NotBlank(message = "Base URL不能为空")
+    @Size(max = 255, message = "Base URL不能超过255个字符")
+    private String baseUrl;
+
+    @Size(max = 255, message = "API Key不能超过255个字符")
+    private String apiKey;
+
+    @NotBlank(message = "模型名称不能为空")
+    @Size(max = 100, message = "模型名称不能超过100个字符")
+    private String modelName;
+}

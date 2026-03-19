@@ -7,6 +7,7 @@ import com.example.springboottest.modules.ai.entity.ChatMessage;
 import com.example.springboottest.modules.ai.mapper.ChatConversationMapper;
 import com.example.springboottest.modules.ai.mapper.ChatMessageMapper;
 import com.example.springboottest.modules.ai.service.ChatHistoryService;
+import com.example.springboottest.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,12 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     }
 
     @Override
+    public ConversationVO getConversation(String conversationId) {
+        ChatConversation conversation = conversationMapper.findByConversationId(conversationId);
+        return conversation == null ? null : toConversationVO(conversation);
+    }
+
+    @Override
     public List<MessageVO> getConversationMessages(String conversationId) {
         return messageMapper.findByConversationIdOrderByIndex(conversationId)
                 .stream()
@@ -52,9 +59,8 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     @Transactional
     public void saveUserMessage(String conversationId, String content, boolean useWebSearch, boolean useDeepThinking) {
         ChatConversation conversation = getOrCreateConversation(conversationId);
-        
-        int messageIndex = conversation.getMessageCount();
-        
+        int messageIndex = conversation.getMessageCount() == null ? 0 : conversation.getMessageCount();
+
         ChatMessage message = ChatMessage.builder()
                 .conversationId(conversationId)
                 .role("user")
@@ -63,19 +69,14 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .usedDeepThinking(useDeepThinking)
                 .messageIndex(messageIndex)
                 .build();
-        
+
         messageMapper.insert(message);
-        
-        // 更新会话信息
+
         conversation.setMessageCount(messageIndex + 1);
         conversation.setLastMessageTime(LocalDateTime.now());
-        
-        // 如果是第一条消息，用它作为标题
         if (messageIndex == 0) {
-            String title = content.length() > 50 ? content.substring(0, 50) + "..." : content;
-            conversation.setTitle(title);
+            conversation.setTitle(content.length() > 50 ? content.substring(0, 50) + "..." : content);
         }
-        
         conversationMapper.update(conversation);
     }
 
@@ -83,9 +84,8 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     @Transactional
     public void saveAssistantMessage(String conversationId, String content, String thought, Integer thinkingTime) {
         ChatConversation conversation = getOrCreateConversation(conversationId);
-        
-        int messageIndex = conversation.getMessageCount();
-        
+        int messageIndex = conversation.getMessageCount() == null ? 0 : conversation.getMessageCount();
+
         ChatMessage message = ChatMessage.builder()
                 .conversationId(conversationId)
                 .role("assistant")
@@ -94,13 +94,19 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .thinkingTime(thinkingTime)
                 .messageIndex(messageIndex)
                 .build();
-        
+
         messageMapper.insert(message);
-        
-        // 更新会话信息
+
         conversation.setMessageCount(messageIndex + 1);
         conversation.setLastMessageTime(LocalDateTime.now());
         conversationMapper.update(conversation);
+    }
+
+    @Override
+    @Transactional
+    public void bindConversationModel(String conversationId, Long modelId, String provider, String model, String modelDisplayName) {
+        ChatConversation conversation = getOrCreateConversation(conversationId);
+        conversationMapper.updateModelBinding(conversation.getConversationId(), modelId, provider, model);
     }
 
     @Override
@@ -114,8 +120,9 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .messageCount(0)
                 .lastMessageTime(LocalDateTime.now())
                 .deleted(false)
+                .userId(resolveCurrentUserId())
                 .build();
-        
+
         conversationMapper.insert(conversation);
         return toConversationVO(conversation);
     }
@@ -137,21 +144,26 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
         return conversationMapper.existsByConversationId(conversationId) > 0;
     }
 
-    // ==================== 私有方法 ====================
-
     private ChatConversation getOrCreateConversation(String conversationId) {
         ChatConversation conversation = conversationMapper.findByConversationId(conversationId);
-        if (conversation == null) {
-            conversation = ChatConversation.builder()
-                    .conversationId(conversationId)
-                    .title("新对话")
-                    .messageCount(0)
-                    .lastMessageTime(LocalDateTime.now())
-                    .deleted(false)
-                    .build();
-            conversationMapper.insert(conversation);
+        if (conversation != null) {
+            return conversation;
         }
-        return conversation;
+        ChatConversation entity = ChatConversation.builder()
+                .conversationId(conversationId)
+                .title("新对话")
+                .messageCount(0)
+                .lastMessageTime(LocalDateTime.now())
+                .deleted(false)
+                .userId(resolveCurrentUserId())
+                .build();
+        conversationMapper.insert(entity);
+        return entity;
+    }
+
+    private String resolveCurrentUserId() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return userId == null ? null : String.valueOf(userId);
     }
 
     private ConversationVO toConversationVO(ChatConversation entity) {
@@ -161,6 +173,8 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .title(entity.getTitle())
                 .provider(entity.getProvider())
                 .model(entity.getModel())
+                .modelId(entity.getModelId())
+                .modelDisplayName(entity.getModelDisplayName())
                 .lastMessageTime(entity.getLastMessageTime())
                 .messageCount(entity.getMessageCount())
                 .createdAt(entity.getCreatedAt())

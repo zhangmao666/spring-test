@@ -2,11 +2,18 @@ package com.example.springboottest.modules.file.service.impl;
 
 import com.example.springboottest.config.MinioProperties;
 import com.example.springboottest.modules.file.dto.FileListResponse;
-import com.example.springboottest.modules.file.dto.FileProcessMessage;
 import com.example.springboottest.modules.file.dto.FileUploadResponse;
 import com.example.springboottest.modules.file.service.FileService;
-import com.example.springboottest.modules.message.service.MessageProducerService;
-import io.minio.*;
+import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.ListObjectsArgs;
+import io.minio.MakeBucketArgs;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
+import io.minio.Result;
+import io.minio.StatObjectArgs;
 import io.minio.http.Method;
 import io.minio.messages.Item;
 import jakarta.annotation.Resource;
@@ -22,7 +29,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * MinIO文件服务实现类
+ * MinIO 文件服务实现类
  */
 @Slf4j
 @Service
@@ -33,9 +40,6 @@ public class MinioFileServiceImpl implements FileService {
 
     @Resource
     private MinioProperties minioProperties;
-
-    @Resource
-    private MessageProducerService messageProducerService;
 
     private void initBucket() {
         try {
@@ -74,27 +78,8 @@ public class MinioFileServiceImpl implements FileService {
             log.info("文件上传成功: {}", storedName);
 
             String fileUrl = getFileUrl(storedName, 3600);
-            FileUploadResponse response = new FileUploadResponse(storedName, originalFilename, storedName,
+            return new FileUploadResponse(storedName, originalFilename, storedName,
                     file.getSize(), file.getContentType(), fileUrl, System.currentTimeMillis(), description, category);
-
-            try {
-                FileProcessMessage message = FileProcessMessage.builder()
-                        .fileName(storedName)
-                        .originalFileName(originalFilename)
-                        .fileSize(file.getSize())
-                        .contentType(file.getContentType())
-                        .category(category)
-                        .description(description)
-                        .processType("UPLOAD")
-                        .uploadTime(System.currentTimeMillis())
-                        .fileUrl(fileUrl)
-                        .build();
-                messageProducerService.sendFileUploadMessage(message);
-                log.info("文件上传消息已发送到 ActiveMQ: {}", storedName);
-            } catch (Exception e) {
-                log.error("发送文件上传消息到 ActiveMQ 失败: {}", storedName, e);
-            }
-            return response;
         } catch (Exception e) {
             log.error("文件上传失败", e);
             throw new RuntimeException("文件上传失败: " + e.getMessage(), e);

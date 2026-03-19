@@ -68,6 +68,8 @@
                 <el-icon><FolderOpened /></el-icon>
                 <span>系统管理</span>
               </template>
+              <el-menu-item index="/prompt">提示工程</el-menu-item>
+              <el-menu-item index="/ai/models">基座模型管理</el-menu-item>
               <el-menu-item index="/dict">数据字典</el-menu-item>
               <el-menu-item index="/user">用户管理</el-menu-item>
             </el-sub-menu>
@@ -266,7 +268,23 @@ const handleCommand = (command) => {
 
   .menu-wrapper {
     flex: 1;
+    min-height: 0;
     padding: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.18);
+      border-radius: 999px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.32);
+    }
     
     :deep(.el-menu) {
       border: none;

@@ -11,6 +11,9 @@ import com.example.springboottest.modules.ai.dto.ResumeGenerateResponse;
 import com.example.springboottest.modules.ai.dto.ResumeOptimizeRequest;
 import com.example.springboottest.modules.ai.dto.ResumeOptimizeResponse;
 import com.example.springboottest.modules.ai.service.AiChatService;
+import com.example.springboottest.modules.prompt.service.PromptTemplateService;
+import com.example.springboottest.modules.prompt.support.PromptTemplateCodes;
+import com.example.springboottest.modules.prompt.support.PromptTemplateDefaults;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +49,7 @@ import java.util.regex.Pattern;
 public class AiChatController {
 
     private final AiChatService aiChatService;
+    private final PromptTemplateService promptTemplateService;
     private static final int ESSAY_TIMEOUT_SECONDS = 180;
 
     @Operation(summary = "AI聊天", description = "发送消息给AI并获取回复（非流式）")
@@ -142,28 +148,17 @@ public class AiChatController {
     }
 
     private String buildHighScoreEssayPrompt(EssayGenerateRequest request) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("你是一名资深中高考语文阅卷老师和作文教练，请生成一篇可作为高分范文的作文。").append('\n');
-        prompt.append("题目：").append(request.getTopic()).append('\n');
-        prompt.append("年级：").append(request.getGradeLevel()).append('\n');
-        prompt.append("体裁：").append(request.getGenre()).append('\n');
-        prompt.append("目标字数：约").append(request.getExpectedWordCount()).append("字").append('\n');
-
-        if (StringUtils.hasText(request.getRequirements())) {
-            prompt.append("补充要求：").append(request.getRequirements().trim()).append('\n');
-        }
-
-        prompt.append("写作要求：立意积极深刻、结构完整、论证或叙事充分、语言有文采、避免空话套话。").append('\n');
-        prompt.append("输出格式必须严格如下，不要增加其它小节：").append('\n');
-        prompt.append("【作文标题】").append('\n');
-        prompt.append("（给出一个正式且有吸引力的标题）").append('\n');
-        prompt.append("【作文正文】").append('\n');
-        prompt.append("（完整作文正文）").append('\n');
-        prompt.append("【得分亮点】").append('\n');
-        prompt.append("1. ...").append('\n');
-        prompt.append("2. ...").append('\n');
-        prompt.append("3. ...");
-        return prompt.toString();
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("topic", request.getTopic());
+        variables.put("gradeLevel", request.getGradeLevel());
+        variables.put("genre", request.getGenre());
+        variables.put("expectedWordCount", request.getExpectedWordCount());
+        variables.put("requirementsBlock", buildLineBlock("补充要求", request.getRequirements()));
+        return promptTemplateService.renderPromptWithFallback(
+                PromptTemplateCodes.AI_ESSAY_HIGH_SCORE,
+                PromptTemplateDefaults.ESSAY_HIGH_SCORE,
+                variables
+        );
     }
 
     private EssayGenerateResponse parseEssayResponse(String topic, String conversationId, AiChatResponse aiResponse) {
@@ -336,75 +331,70 @@ public class AiChatController {
     // ─── Prompt 构建 ───────────────────────────────────────────
 
     private String buildResumeOptimizePrompt(ResumeOptimizeRequest request) {
-        StringBuilder p = new StringBuilder();
-        p.append("你是一名专业的简历优化顾问和职场导师，请对以下简历进行全面优化。\n\n");
-        p.append("【目标岗位】").append(request.getTargetPosition()).append("\n");
-        if (StringUtils.hasText(request.getTargetIndustry())) {
-            p.append("【目标行业】").append(request.getTargetIndustry()).append("\n");
-        }
-        if (StringUtils.hasText(request.getOptimizeDirection())) {
-            p.append("【优化方向】").append(request.getOptimizeDirection()).append("\n");
-        }
-        if (StringUtils.hasText(request.getAdditionalRequirements())) {
-            p.append("【附加要求】").append(request.getAdditionalRequirements()).append("\n");
-        }
-        p.append("\n【原始简历内容】\n").append(request.getResumeContent()).append("\n\n");
-        p.append("请按以下格式严格输出，不要增加其它小节：\n");
-        p.append("【匹配度评分】\n（给出0-100的整数评分，并简要说明原因）\n");
-        p.append("【优化后简历】\n（输出优化后的完整简历正文，保持清晰的板块结构）\n");
-        p.append("【优化摘要】\n1. ...\n2. ...\n3. ...\n");
-        p.append("【核心亮点】\n1. ...\n2. ...\n3. ...\n");
-        p.append("【改进建议】\n1. ...\n2. ...\n3. ...");
-        return p.toString();
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("targetPosition", request.getTargetPosition());
+        variables.put("targetIndustryBlock", buildSectionBlock("目标行业", request.getTargetIndustry()));
+        variables.put("optimizeDirectionBlock", buildSectionBlock("优化方向", request.getOptimizeDirection()));
+        variables.put("additionalRequirementsBlock", buildSectionBlock("附加要求", request.getAdditionalRequirements()));
+        variables.put("resumeContent", safeText(request.getResumeContent()));
+        return promptTemplateService.renderPromptWithFallback(
+                PromptTemplateCodes.AI_RESUME_OPTIMIZE,
+                PromptTemplateDefaults.RESUME_OPTIMIZE,
+                variables
+        );
     }
 
     private String buildResumeGeneratePrompt(ResumeGenerateRequest request) {
-        StringBuilder p = new StringBuilder();
-        p.append("你是一名资深HR和职业规划师，请根据以下信息生成一份专业的中文简历。\n\n");
-        p.append("【基本信息】\n");
-        p.append("姓名：").append(request.getName()).append("\n");
-        p.append("目标岗位：").append(request.getTargetPosition()).append("\n");
-        if (StringUtils.hasText(request.getTargetIndustry())) {
-            p.append("目标行业：").append(request.getTargetIndustry()).append("\n");
-        }
-        p.append("工作年限：").append(request.getWorkYears()).append("\n");
-        if (StringUtils.hasText(request.getEducation())) {
-            p.append("学历：").append(request.getEducation()).append("\n");
-        }
-        if (StringUtils.hasText(request.getSchool())) {
-            p.append("毕业院校：").append(request.getSchool()).append("\n");
-        }
-        if (StringUtils.hasText(request.getMajor())) {
-            p.append("专业：").append(request.getMajor()).append("\n");
-        }
-        if (StringUtils.hasText(request.getCoreSkills())) {
-            p.append("\n【核心技能】\n").append(request.getCoreSkills()).append("\n");
-        }
-        if (StringUtils.hasText(request.getWorkExperience())) {
-            p.append("\n【工作经历（关键信息）】\n").append(request.getWorkExperience()).append("\n");
-        }
-        if (StringUtils.hasText(request.getProjectExperience())) {
-            p.append("\n【项目经历（关键信息）】\n").append(request.getProjectExperience()).append("\n");
-        }
-        if (StringUtils.hasText(request.getPersonalSummary())) {
-            p.append("\n【个人优势】\n").append(request.getPersonalSummary()).append("\n");
-        }
-        if (StringUtils.hasText(request.getAdditionalInfo())) {
-            p.append("\n【其他信息】\n").append(request.getAdditionalInfo()).append("\n");
-        }
         String styleDesc = switch (request.getStyle() == null ? "detailed" : request.getStyle()) {
             case "concise" -> "简洁风格，每项不超过2行";
             case "technical" -> "技术向风格，突出技术栈和量化数据";
             default -> "详细风格，内容充实，量化成果";
         };
-        p.append("\n【写作要求】\n");
-        p.append("风格：").append(styleDesc).append("\n");
-        p.append("要求：使用 Markdown 格式，结构清晰，量化描述工作成果，突出与目标岗位的匹配度。\n");
-        p.append("必须包含：个人简介、工作经历、项目经历（如有）、技能特长、教育背景板块。\n\n");
-        p.append("请按以下格式严格输出：\n");
-        p.append("【简历正文】\n（Markdown 格式的完整简历）\n");
-        p.append("【写作建议】\n（3-5条简历优化或求职建议）");
-        return p.toString();
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("name", request.getName());
+        variables.put("targetPosition", request.getTargetPosition());
+        variables.put("targetIndustryBlock", buildLineBlock("目标行业", request.getTargetIndustry()));
+        variables.put("workYears", request.getWorkYears());
+        variables.put("educationBlock", buildLineBlock("学历", request.getEducation()));
+        variables.put("schoolBlock", buildLineBlock("毕业院校", request.getSchool()));
+        variables.put("majorBlock", buildLineBlock("专业", request.getMajor()));
+        variables.put("coreSkillsBlock", buildContentSection("核心技能", request.getCoreSkills()));
+        variables.put("workExperienceBlock", buildContentSection("工作经历（关键信息）", request.getWorkExperience()));
+        variables.put("projectExperienceBlock", buildContentSection("项目经历（关键信息）", request.getProjectExperience()));
+        variables.put("personalSummaryBlock", buildContentSection("个人优势", request.getPersonalSummary()));
+        variables.put("additionalInfoBlock", buildContentSection("其他信息", request.getAdditionalInfo()));
+        variables.put("styleDesc", styleDesc);
+        return promptTemplateService.renderPromptWithFallback(
+                PromptTemplateCodes.AI_RESUME_GENERATE,
+                PromptTemplateDefaults.RESUME_GENERATE,
+                variables
+        );
+    }
+
+    private String buildLineBlock(String label, String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return label + "：" + value.trim() + "\n";
+    }
+
+    private String buildSectionBlock(String label, String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return "【" + label + "】" + value.trim() + "\n";
+    }
+
+    private String buildContentSection(String title, String content) {
+        if (!StringUtils.hasText(content)) {
+            return "";
+        }
+        return "\n【" + title + "】\n" + content.trim() + "\n";
+    }
+
+    private String safeText(String value) {
+        return value == null ? "" : value.trim();
     }
 
     // ─── 响应解析 ──────────────────────────────────────────────

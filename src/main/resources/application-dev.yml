@@ -3,7 +3,6 @@ spring:
   application:
     name: spring-boot-test
 
-  # Spring AI 配置
   ai:
     openai:
       base-url: https://yunwu.ai
@@ -14,13 +13,11 @@ spring:
           temperature: 0.7
           max-tokens: 1024
 
-  # 数据源配置
   datasource:
     url: jdbc:mysql://${DB_HOST:118.24.128.221}:${DB_PORT:3306}/${DB_NAME:spring_boot_test}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:admin}
     password: ${DB_PASSWORD:cxzx!@#123}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # HikariCP 连接池配置
     hikari:
       minimum-idle: 5
       maximum-pool-size: 20
@@ -29,8 +26,7 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
       pool-name: SpringBootTestHikariCP
-    
-  # MyBatis Plus配置
+
   mybatis-plus:
     mapper-locations: classpath:mapper/*.xml
     configuration:
@@ -42,8 +38,7 @@ spring:
         logic-delete-value: 1
         logic-not-delete-value: 0
       banner: false
-        
-  # Jackson配置
+
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
@@ -56,12 +51,11 @@ spring:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=600s
 
-  # 邮件配置
   mail:
-    host: smtp.qq.com  # QQ邮箱SMTP服务器，如使用其他邮箱请修改
+    host: smtp.qq.com
     port: 587
-    username: ${MAIL_USERNAME:1097765371@qq.com}  # 发件人邮箱
-    password: ${MAIL_PASSWORD:rqjlkqmvltrhifhe}  # 邮箱授权码（不是登录密码）
+    username: ${MAIL_USERNAME:1097765371@qq.com}
+    password: ${MAIL_PASSWORD:rqjlkqmvltrhifhe}
     properties:
       mail:
         smtp:
@@ -73,23 +67,11 @@ spring:
             trust: smtp.qq.com
     default-encoding: UTF-8
 
-  # ActiveMQ配置
-  activemq:
-    broker-url: ${ACTIVEMQ_BROKER_URL:tcp://118.24.128.221:61616}
-    user: ${ACTIVEMQ_USER:admin}
-    password: ${ACTIVEMQ_PASSWORD:admin}
-    packages:
-      trust-all: true
-  jms:
-    pub-sub-domain: false  # 使用点对点模式（队列）
-
 server:
   port: 8879
   servlet:
     context-path: /api
-  # 优雅关闭
   shutdown: graceful
-  # 连接超时配置
   tomcat:
     connection-timeout: 20000
     threads:
@@ -98,19 +80,16 @@ server:
     accept-count: 100
     max-connections: 11000
 
-# JWT配置 - 使用环境变量
 jwt:
   secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
-  expiration: 86400000 # 24小时，单位毫秒
+  expiration: 86400000
 
-# API客户端Token配置
 api:
   client:
     token:
-      expiration: 7200000  # 2小时（毫秒）
+      expiration: 7200000
       default-scopes: read,write
 
-# 日志配置
 logging:
   level:
     root: INFO
@@ -118,7 +97,6 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    # Agent 性能诊断日志
     org.springframework.ai.chat.client: DEBUG
     org.springframework.ai.openai: DEBUG
     org.springframework.ai.tool: DEBUG
@@ -133,18 +111,16 @@ logging:
       max-history: 30
       total-size-cap: 1GB
 
-# AI配置
 ai:
   openai:
     api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
     api-url: https://yunwu.ai/v1/chat/completions
     model: deepseek-v3.2
     thinking-model: gemini-2.5-flash-all
-    search-model:
+    search-model: gemini-2.5-flash-all
     max-tokens: 1024
     temperature: 0.7
 
-# Agent Skills 配置
 agent:
   default-model: default
   skills:
@@ -154,7 +130,6 @@ agent:
     enable-shell-tools: true
     enable-fs-tools: true
 
-# MinIO配置
 minio:
   endpoint: ${MINIO_ENDPOINT:http://222.173.143.39:29103}
   access-key: ${MINIO_ACCESS_KEY:RvqM1kk8xaDPJNoE}
@@ -167,7 +142,6 @@ di:
     - http://192.168.1.1:8080
     - http://192.168.1.2:8080
 
-# Spring Boot Actuator配置
 management:
   endpoints:
     web:
@@ -178,12 +152,11 @@ management:
       show-details: always
   health:
     mail:
-      enabled: false  # 禁用邮件健康检查
+      enabled: false
   metrics:
     tags:
       application: ${spring.application.name}
 
-# HTTP客户端配置
 http:
   connect-timeout: 30
   read-timeout: 60
@@ -193,41 +166,26 @@ http:
   enable-logging: true
   max-retries: 3
 
-# 股票实时分析配置
 stock:
   data:
-    # 数据源类型：sina（新浪财经）, tencent（腾讯财经）
     source: sina
-    # 行情获取间隔（秒）
     fetch-interval: 5
-    # 交易时间段
     trading-hours:
       start: "09:30"
       end: "15:00"
-    # 是否启用定时任务
     schedule-enabled: true
 
-  # WebSocket配置
   websocket:
-    # 允许的源（跨域配置）
     allowed-origins: "*"
-    # 消息大小限制（KB）
     message-size-limit: 128
 
-  # AI分析配置
   analysis:
-    # 分析间隔（分钟）
     interval: 15
-    # 默认AI提供商（openai或qwen）
     provider: qwen
-    # 历史数据窗口（天）
     history-window: 7
-    # 是否启用AI分析
     enabled: true
 
-# 支付配置
 payment:
-  # 支付宝配置
   alipay:
     app-id: ${ALIPAY_APP_ID:}
     private-key: ${ALIPAY_PRIVATE_KEY:}
@@ -235,8 +193,7 @@ payment:
     gateway-url: https://openapi-sandbox.dl.alipaydev.com/gateway.do
     notify-url: ${ALIPAY_NOTIFY_URL:http://your-domain/api/payment/notify/alipay}
     return-url: ${ALIPAY_RETURN_URL:http://your-domain/payment/result}
-  
-  # 微信支付配置
+
   wechat:
     merchant-id: ${WECHAT_MERCHANT_ID:}
     private-key: ${WECHAT_PRIVATE_KEY:}

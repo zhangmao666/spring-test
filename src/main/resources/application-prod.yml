@@ -2,14 +2,12 @@
 spring:
   application:
     name: spring-boot-test
-  
-  # 数据源配置
+
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    # HikariCP 连接池配置（生产环境）
     hikari:
       minimum-idle: 10
       maximum-pool-size: 50
@@ -19,11 +17,10 @@ spring:
       connection-test-query: SELECT 1
       pool-name: SpringBootTestHikariCP
       leak-detection-threshold: 60000
-    
-  # JPA配置
+
   jpa:
     hibernate:
-      ddl-auto: validate  # 生产环境不自动更新表结构
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -37,8 +34,7 @@ spring:
           batch_size: 20
         order_inserts: true
         order_updates: true
-        
-  # Jackson配置
+
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
@@ -64,19 +60,16 @@ server:
     accept-count: 200
     max-connections: 20000
 
-# JWT配置
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
 
-# API客户端Token配置
 api:
   client:
     token:
-      expiration: ${API_CLIENT_TOKEN_EXPIRATION:7200000}  # 2小时（毫秒）
+      expiration: ${API_CLIENT_TOKEN_EXPIRATION:7200000}
       default-scopes: ${API_CLIENT_DEFAULT_SCOPES:read,write}
 
-# 日志配置（生产环境）
 logging:
   level:
     root: INFO
@@ -92,7 +85,6 @@ logging:
     max-history: 60
     total-size-cap: 5GB
 
-# AI配置
 ai:
   openai:
     api-key: ${OPENAI_API_KEY}
@@ -101,8 +93,6 @@ ai:
     max-tokens: 1000
     temperature: 0.7
 
-
-# MinIO配置
 minio:
   endpoint: ${MINIO_ENDPOINT}
   access-key: ${MINIO_ACCESS_KEY}
@@ -113,18 +103,6 @@ minio:
 di:
   url: ${DI_URLS}
 
-# ActiveMQ配置
-spring:
-  activemq:
-    broker-url: ${ACTIVEMQ_BROKER_URL}
-    user: ${ACTIVEMQ_USER}
-    password: ${ACTIVEMQ_PASSWORD}
-    packages:
-      trust-all: true
-  jms:
-    pub-sub-domain: false
-
-# Spring Boot Actuator配置（生产环境）
 management:
   endpoints:
     web:
@@ -140,7 +118,6 @@ management:
       prometheus:
         enabled: true
 
-# HTTP客户端配置（生产环境）
 http:
   connect-timeout: 30
   read-timeout: 60
