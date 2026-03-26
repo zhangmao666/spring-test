@@ -4,6 +4,7 @@ import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.modules.news.entity.DailyNews;
 import com.example.springboottest.modules.news.repository.DailyNewsRepository;
 import com.example.springboottest.modules.news.service.DailyNewsPushService;
+import com.example.springboottest.modules.news.service.NewsApiService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 资讯推送管理Controller
@@ -24,6 +26,7 @@ public class NewsController {
 
     private final DailyNewsPushService dailyNewsPushService;
     private final DailyNewsRepository dailyNewsRepository;
+    private final NewsApiService newsApiService;
 
     /**
      * 获取资讯列表
@@ -73,5 +76,19 @@ public class NewsController {
         log.info("手动获取资讯");
         new Thread(() -> dailyNewsPushService.fetchTodayNews()).start();
         return ApiResponse.success("获取任务已启动");
+    }
+
+    /**
+     * 获取热点新闻（NewsAPI.org）
+     */
+    @GetMapping("/hot")
+    public ApiResponse<Map<String, Object>> getHotNews(
+            @RequestParam(defaultValue = "general") String category,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "1") int page) {
+        log.info("获取热点新闻: category={}, q={}, page={}", category, q, page);
+        Map<String, Object> result = newsApiService.getTopHeadlines(category, q, pageSize, page);
+        return ApiResponse.success(result);
     }
 }

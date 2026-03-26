@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <el-container class="layout-container" :data-theme="currentTheme">
     <!-- 主题装饰效果 -->
     <ThemeDecorations />
@@ -29,30 +29,20 @@
               <template #title>数字化看板</template>
             </el-menu-item>
 
-            <el-menu-item index="/ai/chat">
-              <el-icon><Lightning /></el-icon>
-              <template #title>AI 灵感助手</template>
-            </el-menu-item>
-
-            <el-menu-item index="/ai/resume">
-              <el-icon><DocumentChecked /></el-icon>
-              <template #title>AI 简历助手</template>
-            </el-menu-item>
-
-
-            <el-menu-item index="/tools/word-counter">
-              <el-icon><EditPen /></el-icon>
-              <template #title>字数统计器</template>
-            </el-menu-item>
-
-            <el-sub-menu index="news">
+            <el-sub-menu index="ai">
               <template #title>
-                <el-icon><Bell /></el-icon>
-                <span>资讯中心</span>
+                <el-icon><Lightning /></el-icon>
+                <span>AI能力</span>
               </template>
-              <el-menu-item index="/news/daily">热点资讯</el-menu-item>
-              <el-menu-item index="/news/sentiment">AI 情绪分析仪</el-menu-item>
+              <el-menu-item index="/ai/chat">AI智能对话</el-menu-item>
+              <el-menu-item index="/ai/resume">AI简历助手</el-menu-item>
             </el-sub-menu>
+
+
+            <el-menu-item index="/news/hot">
+              <el-icon><Bell /></el-icon>
+              <template #title>热点新闻</template>
+            </el-menu-item>
 
             <el-sub-menu index="finance">
               <template #title>
@@ -77,10 +67,10 @@
             <el-sub-menu index="log">
               <template #title>
                 <el-icon><Tickets /></el-icon>
-                <span>时空日志</span>
+                <span>日志管理</span>
               </template>
-              <el-menu-item index="/log/login">登录审计</el-menu-item>
-              <el-menu-item index="/log/operation">操作溯源</el-menu-item>
+              <el-menu-item index="/log/login">登录日志</el-menu-item>
+              <el-menu-item index="/log/operation">操作日志</el-menu-item>
             </el-sub-menu>
           </el-menu>
         </div>
@@ -159,7 +149,7 @@ import { ElMessageBox } from 'element-plus'
 import {
   Monitor, DataLine, Lightning, FolderOpened, Tickets, TrendCharts,
   Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton,
-  ArrowRight, Bell, EditPen, DocumentChecked
+  ArrowRight, Bell, DocumentChecked
 } from '@element-plus/icons-vue'
 import { getWeatherByCity } from '@/api/weather'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
@@ -425,8 +415,8 @@ const handleCommand = (command) => {
 }
 
 .page-fade-enter-active, .page-fade-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.page-fade-enter-from { opacity: 0; transform: translateX(20px); }
-.page-fade-leave-to { opacity: 0; transform: translateX(-20px); }
+.page-fade-enter-from { opacity: 0; transform: scale(0.97) translateY(12px); }
+.page-fade-leave-to { opacity: 0; transform: scale(1.01) translateY(-8px); }
 </style>

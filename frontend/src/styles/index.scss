@@ -174,6 +174,56 @@ html, body, #app {
   to { opacity: 1; transform: translateY(0); }
 }
 
+// ==============================
+// 动态效果增强
+// ==============================
+
+// 全局淡入上升动画
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// 浮动动画（天气图标等）
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+// 按钮水波纹
+@keyframes ripple {
+  from { width: 0; height: 0; opacity: 0.8; margin: 0; }
+  to   { width: 200px; height: 200px; opacity: 0; margin: -100px; }
+}
+
+// 工具类
+.animate-fade-up {
+  animation: fadeInUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+// 按钮水波纹效果（覆盖已有的 .el-button 定义）
+.el-button:not(.el-button--text):not(.el-button--link) {
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  &:active::after {
+    animation: ripple 0.5s ease-out;
+  }
+}
+
 .flex-center {
   display: flex;
   align-items: center;

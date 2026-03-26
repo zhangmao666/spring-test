@@ -12,6 +12,7 @@
           <div class="weather-temp-wrap">
             <span class="weather-temp-value">{{ Math.round(weather.temperature) }}</span>
             <span class="weather-temp-unit">°C</span>
+            <el-icon :size="36" class="weather-float-icon"><Sunny /></el-icon>
           </div>
           <div class="weather-condition">{{ weather.description }}</div>
           <div class="weather-feels">体感 {{ Math.round(weather.feelsLike) }}°C</div>
@@ -55,32 +56,34 @@
 
     <!-- 统计卡片 -->
     <div class="stat-cards">
-      <div class="stat-card stat-card--success">
+      <div class="stat-card stat-card--success animate-fade-up" style="animation-delay: 0ms">
         <div class="stat-card__icon">
           <el-icon :size="24"><UserFilled /></el-icon>
         </div>
         <div class="stat-card__info">
-          <div class="stat-card__value">{{ stats.users }}</div>
+          <div class="stat-card__value">{{ displayUsers }}</div>
           <div class="stat-card__label">用户总数</div>
         </div>
         <div class="stat-card__trend trend--up">
           <el-icon><Top /></el-icon>
           <span>8%</span>
         </div>
+        <div ref="sparkline1Ref" class="stat-card__sparkline"></div>
       </div>
 
-      <div class="stat-card stat-card--danger">
+      <div class="stat-card stat-card--danger animate-fade-up" style="animation-delay: 120ms">
         <div class="stat-card__icon">
           <el-icon :size="24"><Files /></el-icon>
         </div>
         <div class="stat-card__info">
-          <div class="stat-card__value">{{ stats.dicts }}</div>
+          <div class="stat-card__value">{{ displayDicts }}</div>
           <div class="stat-card__label">字典总数</div>
         </div>
         <div class="stat-card__trend trend--up">
           <el-icon><Top /></el-icon>
           <span>5%</span>
         </div>
+        <div ref="sparkline2Ref" class="stat-card__sparkline"></div>
       </div>
     </div>
 
@@ -166,24 +169,28 @@
         </div>
       </template>
       <div class="activity-list">
-        <div 
-          v-for="(activity, index) in activities" 
-          :key="index" 
-          class="activity-item"
-        >
-          <div :class="['activity-dot', `activity-dot--${activity.type}`]"></div>
-          <div class="activity-content">
-            <div class="activity-text">{{ activity.content }}</div>
-            <div class="activity-time">{{ activity.time }}</div>
+        <transition-group name="activity-list">
+          <div
+            v-for="(activity, index) in activities"
+            :key="index"
+            class="activity-item animate-fade-up"
+            :style="{ animationDelay: `${index * 80}ms` }"
+          >
+            <div :class="['activity-dot', `activity-dot--${activity.type}`]"></div>
+            <div class="activity-content">
+              <div class="activity-text">{{ activity.content }}</div>
+              <div class="activity-time">{{ activity.time }}</div>
+            </div>
           </div>
-        </div>
+        </transition-group>
       </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import * as echarts from 'echarts'
 import { getWeatherByCity } from '@/api/weather'
 
 const username = computed(() => localStorage.getItem('username') || '管理员')
@@ -191,10 +198,14 @@ const username = computed(() => localStorage.getItem('username') || '管理员')
 const weather = ref(null)
 const weatherLoading = ref(false)
 
-const stats = ref({
-  users: 0,
-  dicts: 0
-})
+const stats = ref({ users: 0, dicts: 0 })
+const displayUsers = ref(0)
+const displayDicts = ref(0)
+
+const sparkline1Ref = ref(null)
+const sparkline2Ref = ref(null)
+let chart1 = null
+let chart2 = null
 
 const activities = ref([
   { content: '系统已成功启动', time: '刚刚', type: 'success' },
@@ -203,6 +214,51 @@ const activities = ref([
   { content: '缓存服务已启动', time: '15 分钟前', type: 'info' },
   { content: '定时任务执行完成', time: '30 分钟前', type: 'warning' }
 ])
+
+function easeOutQuad(t) {
+  return t * (2 - t)
+}
+
+function countUp(target, setter, duration = 1200) {
+  const startTime = performance.now()
+  function update(currentTime) {
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    setter(Math.floor(target * easeOutQuad(progress)))
+    if (progress < 1) requestAnimationFrame(update)
+  }
+  requestAnimationFrame(update)
+}
+
+function initSparkline(el, data, color) {
+  if (!el) return null
+  const chart = echarts.init(el)
+  chart.setOption({
+    animation: true,
+    animationDuration: 1000,
+    grid: { top: 4, bottom: 4, left: 4, right: 4 },
+    xAxis: { type: 'category', show: false, data: data.map((_, i) => i) },
+    yAxis: { type: 'value', show: false, min: Math.min(...data) * 0.95 },
+    series: [{
+      type: 'line',
+      data,
+      smooth: true,
+      symbol: 'none',
+      lineStyle: { color, width: 2 },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: color + '60' },
+            { offset: 1, color: color + '00' }
+          ]
+        }
+      }
+    }]
+  })
+  return chart
+}
 
 const loadWeather = async () => {
   weatherLoading.value = true
@@ -218,13 +274,22 @@ const loadWeather = async () => {
 
 onMounted(() => {
   loadWeather()
-  
+
   setTimeout(() => {
-    stats.value = {
-      users: 156,
-      dicts: 8
-    }
+    stats.value = { users: 156, dicts: 8 }
+    countUp(156, v => { displayUsers.value = v })
+    countUp(8, v => { displayDicts.value = v })
+
+    setTimeout(() => {
+      chart1 = initSparkline(sparkline1Ref.value, [120, 132, 135, 138, 140, 148, 156], '#10b981')
+      chart2 = initSparkline(sparkline2Ref.value, [5, 5, 6, 6, 7, 7, 8], '#ef4444')
+    }, 100)
   }, 300)
+})
+
+onBeforeUnmount(() => {
+  chart1?.dispose()
+  chart2?.dispose()
 })
 </script>
 
@@ -286,6 +351,14 @@ $info: #3b82f6;
         font-size: 24px;
         font-weight: 300;
         margin-top: 8px;
+      }
+
+      .weather-float-icon {
+        margin-left: 12px;
+        margin-top: 8px;
+        opacity: 0.85;
+        animation: float 3s ease-in-out infinite;
+        color: #fde68a;
       }
     }
 
@@ -467,6 +540,16 @@ $info: #3b82f6;
       color: $danger;
     }
   }
+
+  &__sparkline {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    pointer-events: none;
+    opacity: 0.7;
+  }
 }
 
 .content-row {
@@ -624,6 +707,21 @@ $info: #3b82f6;
 .activity-time {
   font-size: 12px;
   color: #94a3b8;
+}
+
+// 活动列表过渡动画
+.activity-list-enter-active {
+  transition: all 0.4s ease;
+}
+.activity-list-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+// 浮动动画（天气图标）
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
 }
 
 @media (max-width: 1200px) {

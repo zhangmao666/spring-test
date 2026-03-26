@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(ls:*)",
       "Bash(python -m json.tool:*)",
-      "Bash(node \"C:\\\\Users\\\\mao\\\\.claude\\\\skills\\\\system-time\\\\scripts\\\\get-time.js\" --format json --locale zh-CN)"
+      "Bash(node \"C:\\\\Users\\\\mao\\\\.claude\\\\skills\\\\system-time\\\\scripts\\\\get-time.js\" --format json --locale zh-CN)",
+      "Bash(find d:study_projectspring-boot-testfrontendsrc -type f \\\\\\(-name *.vue -o -name *.js -o -name *.json \\\\\\))"
     ],
     "deny": [],
     "ask": []

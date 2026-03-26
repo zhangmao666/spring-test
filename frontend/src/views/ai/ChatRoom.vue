@@ -1,22 +1,27 @@
 <template>
   <div class="chat-room" :class="`theme-${currentTheme}`">
-    <aside class="conversation-sidebar">
+    <aside :class="['conversation-sidebar', { collapsed: sidebarCollapsed }]">
       <div class="sidebar-header">
-        <div>
+        <div v-if="!sidebarCollapsed">
           <h3>对话历史</h3>
-          <p>切换会话时会恢复该会话最近使用的模型</p>
         </div>
-        <el-button type="primary" @click="createNewConversation">
-          <el-icon><Plus /></el-icon>
-          新对话
-        </el-button>
+        <div class="sidebar-header__actions">
+          <el-button v-if="!sidebarCollapsed" type="primary" @click="createNewConversation">
+            <el-icon><Plus /></el-icon>
+            新对话
+          </el-button>
+          <button class="icon-btn sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
+            <el-icon><ArrowLeft v-if="!sidebarCollapsed" /><ArrowRight v-else /></el-icon>
+          </button>
+        </div>
       </div>
 
-      <div class="conversation-list">
+      <div v-if="!sidebarCollapsed" class="conversation-list">
         <button
-          v-for="conv in conversations"
+          v-for="(conv, index) in conversations"
           :key="conv.conversationId"
           :class="['conversation-item', { active: currentConversationId === conv.conversationId }]"
+          :style="{ animationDelay: `${index * 60}ms` }"
           @click="switchConversation(conv.conversationId)"
         >
           <div class="conversation-item__top">
@@ -26,10 +31,12 @@
             </button>
           </div>
           <div class="conversation-item__meta">
-            <span>{{ conv.messageCount || 0 }} 条消息</span>
-            <span>{{ conv.modelDisplayName || conv.model || '默认模型' }}</span>
+            <span>{{ conv.messageCount || 0 }} 条</span>
+            <span class="meta-dot">·</span>
+            <span class="conversation-item__model">{{ conv.modelDisplayName || conv.model || '默认' }}</span>
+            <span class="meta-dot">·</span>
+            <span>{{ formatDate(conv.lastMessageTime) }}</span>
           </div>
-          <div class="conversation-item__time">{{ formatDate(conv.lastMessageTime) }}</div>
         </button>
       </div>
     </aside>
@@ -93,9 +100,10 @@
           </div>
         </div>
 
+        <transition-group name="msg" tag="div" class="messages-inner">
         <div
           v-for="(msg, index) in messages"
-          :key="index"
+          :key="msg.timestamp || index"
           :class="['message-row', msg.role === 'user' ? 'message-row--user' : 'message-row--assistant']"
         >
           <div class="message-avatar">
@@ -125,6 +133,7 @@
                 </div>
 
                 <div class="message-text markdown-body" v-html="msg.renderedHtml || ''"></div>
+                <span v-if="msg.isStreaming && msg.content" class="stream-cursor">|</span>
               </div>
             </div>
 
@@ -139,6 +148,7 @@
             </div>
           </div>
         </div>
+        </transition-group>
 
         <button v-if="userScrolledUp" class="scroll-bottom-btn" @click="scrollToBottom(true)">
           <el-icon><ArrowDown /></el-icon>
@@ -182,6 +192,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   ArrowUpBold,
   ChatDotRound,
@@ -205,10 +216,10 @@ const themeStore = useThemeStore()
 const currentTheme = computed(() => themeStore.currentTheme)
 
 const suggestionCards = [
-  { icon: '馃搳', text: '分析今天热门板块' },
-  { icon: '馃捇', text: '写一个快速排序算法' },
-  { icon: '馃摪', text: '总结最近的财报热点' },
-  { icon: '馃摎', text: '推荐几本金融入门书' }
+  { icon: '📊', text: '分析今天热门板块' },
+  { icon: '💻', text: '写一个快速排序算法' },
+  { icon: '📰', text: '总结最近的财报热点' },
+  { icon: '📚', text: '推荐几本金融入门书' }
 ]
 
 const md = new MarkdownIt({
@@ -250,6 +261,7 @@ const messagesContainer = ref(null)
 const currentConversationId = ref(null)
 const useWebSearch = ref(false)
 const useDeepThinking = ref(false)
+const sidebarCollapsed = ref(false)
 const userScrolledUp = ref(false)
 
 const selectedModel = computed(() => managedModels.value.find(item => item.id === selectedModelId.value) || null)
@@ -409,6 +421,7 @@ const switchConversation = async (conversationId) => {
     userScrolledUp.value = false
     await scrollToBottom(true)
   } catch (error) {
+    console.error('加载会话消息失败', error?.response?.status, error?.response?.data)
     ElMessage.error('加载会话消息失败')
   }
 }
@@ -667,10 +680,15 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .chat-room {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 18px;
   height: 100%;
   min-height: 0;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:has(.conversation-sidebar.collapsed) {
+    grid-template-columns: 52px 1fr;
+  }
 }
 
 .conversation-sidebar,
@@ -686,6 +704,15 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  &.collapsed {
+    .sidebar-header {
+      padding: 18px 10px;
+      justify-content: center;
+    }
+  }
 }
 
 .sidebar-header,
@@ -700,6 +727,27 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+  transition: all 0.3s ease;
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}
+
+.sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.16);
+  }
 }
 
 .sidebar-header h3,
@@ -728,12 +776,13 @@ onBeforeUnmount(() => {
   width: 100%;
   border: 1px solid transparent;
   background: #fff;
-  border-radius: 18px;
-  padding: 14px;
-  margin-bottom: 10px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
   text-align: left;
   cursor: pointer;
   transition: 0.2s ease;
+  animation: fadeInUp 0.3s ease both;
 }
 
 .conversation-item:hover,
@@ -778,6 +827,26 @@ onBeforeUnmount(() => {
 .message-actions {
   color: #64748b;
   font-size: 12px;
+}
+
+.conversation-item__meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.conversation-item__model {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+.meta-dot {
+  margin: 0 2px;
+  color: #94a3b8;
 }
 
 .chat-main {
@@ -848,8 +917,14 @@ onBeforeUnmount(() => {
 }
 
 .suggestion-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 32px rgba(99, 102, 241, 0.15);
+  border-color: rgba(99, 102, 241, 0.4);
+
+  .suggestion-card__icon {
+    display: inline-block;
+    animation: spin-once 0.4s ease;
+  }
 }
 
 .suggestion-card__icon {
@@ -939,15 +1014,60 @@ onBeforeUnmount(() => {
   height: 8px;
   border-radius: 50%;
   background: #3b82f6;
-  animation: pulse 1s infinite ease-in-out;
+  animation: thinking-wave 1.2s infinite ease-in-out;
 }
 
 .streaming-loader span:nth-child(2) {
   animation-delay: 0.15s;
+  background: #6366f1;
 }
 
 .streaming-loader span:nth-child(3) {
   animation-delay: 0.3s;
+  background: #8b5cf6;
+}
+
+@keyframes thinking-wave {
+  0%, 60%, 100% { transform: scale(0.8); opacity: 0.4; }
+  30%           { transform: scale(1.5); opacity: 1; }
+}
+
+// 消息气泡入场动画
+.msg-enter-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.msg-enter-from {
+  opacity: 0;
+  transform: translateY(16px) scale(0.95);
+}
+
+// 对话列表项动画
+.conversation-item {
+  animation: fadeInUp 0.3s ease both;
+}
+
+// 流式光标
+.stream-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #3b82f6;
+  font-weight: bold;
+  animation: cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin-once {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .scroll-bottom-btn,
@@ -1009,17 +1129,6 @@ onBeforeUnmount(() => {
 
 .markdown-body :deep(pre) {
   overflow-x: auto;
-}
-
-@keyframes pulse {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 @media (max-width: 1100px) {

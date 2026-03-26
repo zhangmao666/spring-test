@@ -92,22 +92,10 @@ const routes = [
         meta: { title: '基座模型管理', icon: 'Cpu' }
       },
       {
-        path: 'tools/word-counter',
-        name: 'WordCounter',
-        component: () => import('@/views/tools/WordCounter.vue'),
-        meta: { title: '字数统计器', icon: 'EditPen' }
-      },
-      {
-        path: 'news/daily',
-        name: 'DailyNews',
-        component: () => import('@/views/news/DailyNews.vue'),
-        meta: { title: '热点资讯', icon: 'Notification' }
-      },
-      {
-        path: 'news/sentiment',
-        name: 'SentimentAnalysis',
-        component: () => import('@/views/news/SentimentAnalysis.vue'),
-        meta: { title: 'AI 情绪分析仪', icon: 'TrendCharts' }
+        path: 'news/hot',
+        name: 'HotNews',
+        component: () => import('@/views/news/HotNews.vue'),
+        meta: { title: '热点新闻', icon: 'Notification' }
       }
     ]
   }
