@@ -2,9 +2,13 @@
   <div class="model-page">
     <div class="page-header">
       <div class="page-header__info">
-        <h2 class="page-header__title">基座模型管理</h2>
-        <p class="page-header__desc">统一维护 OpenAI 协议模型配置，并为聊天页提供可切换模型</p>
+        <div class="page-header__eyebrow">MODEL REGISTRY</div>
+        <h2 class="page-header__title">模型管理</h2>
+        <p class="page-header__desc">
+          统一维护 OpenAI 协议模型配置，为聊天页、测试连接和默认模型切换提供一个更清晰的控制台。
+        </p>
       </div>
+
       <div class="page-header__actions">
         <el-button @click="loadModels">刷新</el-button>
         <el-button type="primary" @click="handleAdd">
@@ -14,73 +18,97 @@
       </div>
     </div>
 
-    <el-card class="table-card" shadow="never">
-      <el-table :data="modelList" v-loading="loading" class="model-table">
-        <el-table-column label="模型" min-width="240">
-          <template #default="{ row }">
-            <div class="model-main">
-              <div class="model-name">{{ row.displayName }}</div>
-              <div class="model-meta">{{ row.provider }} / {{ row.modelName }}</div>
+    <el-card class="list-card" shadow="never">
+      <div class="list-card__meta">
+        <div>
+          <div class="list-card__label">当前配置</div>
+          <div class="list-card__title">已录入 {{ modelList.length }} 个模型配置</div>
+        </div>
+        <div class="list-card__hint">操作区已改为弹性卡片布局，避免按钮、标签和开关互相覆盖。</div>
+      </div>
+
+      <div class="model-grid" v-loading="loading">
+        <el-empty
+          v-if="!modelList.length"
+          description="还没有模型配置，可以先新增一个可用模型"
+        />
+
+        <article v-for="row in modelList" :key="row.id" class="model-card">
+          <div class="model-card__top">
+            <div class="model-identity">
+              <div class="model-identity__badge">{{ getModelInitial(row) }}</div>
+
+              <div class="model-identity__content">
+                <div class="model-identity__title-row">
+                  <h3 class="model-name">{{ row.displayName }}</h3>
+                  <el-tag v-if="row.isDefault" type="primary" effect="dark" round>默认模型</el-tag>
+                  <el-tag :type="row.enabled ? 'success' : 'info'" effect="plain" round>
+                    {{ row.enabled ? '已启用' : '已停用' }}
+                  </el-tag>
+                </div>
+
+                <div class="model-meta">{{ formatProvider(row.provider) }} / {{ row.modelName }}</div>
+                <p v-if="row.remark" class="model-remark">{{ row.remark }}</p>
+              </div>
             </div>
-          </template>
-        </el-table-column>
 
-        <el-table-column label="Base URL" min-width="220">
-          <template #default="{ row }">
-            <code class="mono">{{ row.baseUrl }}</code>
-          </template>
-        </el-table-column>
+            <div class="provider-pill">{{ formatProvider(row.provider) }}</div>
+          </div>
 
-        <el-table-column label="API Key" width="150">
-          <template #default="{ row }">
-            <span class="mono">{{ row.maskedApiKey || '未配置' }}</span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="能力" width="180">
-          <template #default="{ row }">
-            <div class="ability-tags">
-              <el-tag size="small" :type="row.supportsDeepThinking ? 'success' : 'info'" effect="plain">
-                深度思考
-              </el-tag>
-              <el-tag size="small" :type="row.supportsWebSearch ? 'warning' : 'info'" effect="plain">
-                联网搜索
-              </el-tag>
+          <div class="model-specs">
+            <div class="spec-card">
+              <div class="spec-card__label">Base URL</div>
+              <code class="mono spec-card__value">{{ row.baseUrl }}</code>
             </div>
-          </template>
-        </el-table-column>
 
-        <el-table-column label="状态" width="180">
-          <template #default="{ row }">
-            <div class="status-cell">
-              <el-tag :type="row.enabled ? 'success' : 'info'">
-                {{ row.enabled ? '启用' : '停用' }}
-              </el-tag>
-              <el-tag v-if="row.isDefault" type="primary">默认</el-tag>
+            <div class="spec-card">
+              <div class="spec-card__label">API Key</div>
+              <div class="spec-card__value mono">{{ row.maskedApiKey || '未配置' }}</div>
             </div>
-          </template>
-        </el-table-column>
 
-        <el-table-column label="操作" width="300" fixed="right">
-          <template #default="{ row }">
-            <div class="table-actions">
+            <div class="spec-card spec-card--capabilities">
+              <div class="spec-card__label">能力标签</div>
+              <div class="ability-tags">
+                <el-tag size="small" :type="row.supportsDeepThinking ? 'success' : 'info'" effect="plain" round>
+                  深度思考
+                </el-tag>
+                <el-tag size="small" :type="row.supportsWebSearch ? 'warning' : 'info'" effect="plain" round>
+                  联网搜索
+                </el-tag>
+              </div>
+            </div>
+          </div>
+
+          <div class="model-actions">
+            <div class="model-actions__group">
               <el-button size="small" plain @click="handleEdit(row)">编辑</el-button>
-              <el-button size="small" plain @click="handleTestRow(row)">测试</el-button>
-              <el-button size="small" type="primary" plain :disabled="row.isDefault" @click="handleSetDefault(row)">
+              <el-button size="small" plain @click="handleTestRow(row)">测试连接</el-button>
+            </div>
+
+            <div class="model-actions__group model-actions__group--secondary">
+              <el-button
+                size="small"
+                type="primary"
+                plain
+                :disabled="row.isDefault"
+                @click="handleSetDefault(row)"
+              >
                 设为默认
               </el-button>
-              <el-switch
-                :model-value="row.enabled"
-                inline-prompt
-                active-text="开"
-                inactive-text="关"
-                @change="value => handleToggleStatus(row, value)"
-              />
+
+              <div class="status-toggle">
+                <span class="status-toggle__label">{{ row.enabled ? '状态：启用' : '状态：停用' }}</span>
+                <el-switch
+                  :model-value="row.enabled"
+                  @change="value => handleToggleStatus(row, value)"
+                />
+              </div>
+
               <el-button size="small" type="danger" plain @click="handleDelete(row)">删除</el-button>
             </div>
-          </template>
-        </el-table-column>
-      </el-table>
+          </div>
+        </article>
+      </div>
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="720px" destroy-on-close>
@@ -101,7 +129,7 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="模型名称" prop="modelName">
-              <el-input v-model="form.modelName" placeholder="如：deepseek-v3.2" />
+              <el-input v-model="form.modelName" placeholder="如：gpt-5.2-chat" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -154,7 +182,7 @@
       <div class="test-panel">
         <div class="test-panel__status">
           <el-tag :type="connectionVerified ? 'success' : 'info'">
-            {{ connectionVerified ? '已通过连接测试' : '尚未测试或配置已变更' }}
+            {{ connectionVerified ? '已通过连接测试' : '尚未测试或配置已发生变更' }}
           </el-tag>
           <span v-if="lastTestMessage" class="test-panel__message">{{ lastTestMessage }}</span>
         </div>
@@ -250,6 +278,13 @@ const resetForm = () => {
   lastTestMessage.value = ''
 }
 
+const getModelInitial = (row) => {
+  const source = row.displayName || row.modelName || '?'
+  return source.trim().charAt(0).toUpperCase()
+}
+
+const formatProvider = (provider) => (provider ? provider.toUpperCase() : 'UNKNOWN')
+
 const loadModels = async () => {
   loading.value = true
   try {
@@ -300,6 +335,7 @@ const handleTestConnection = async () => {
   } catch (error) {
     connectionVerified.value = false
     lastTestMessage.value = ''
+    throw error
   } finally {
     testing.value = false
   }
@@ -390,61 +426,216 @@ onMounted(() => {
 .model-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 6px 2px 2px;
+}
+
+.page-header__eyebrow {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
 }
 
 .page-header__title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  margin: 8px 0 0;
+  color: #0f172a;
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
 }
 
 .page-header__desc {
-  margin: 6px 0 0;
+  margin: 12px 0 0;
+  max-width: 760px;
   color: #64748b;
+  font-size: 16px;
+  line-height: 1.75;
 }
 
 .page-header__actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.table-card {
-  border-radius: 20px;
+.list-card {
+  border-radius: 28px;
 }
 
-.model-main {
+.list-card__meta {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  flex-wrap: wrap;
+}
+
+.list-card__label {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.list-card__title {
+  margin-top: 6px;
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.list-card__hint {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.model-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.model-card {
+  position: relative;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+}
+
+.model-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.model-identity {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.model-identity__badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #1e293b, #475569);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.model-identity__content {
+  min-width: 0;
+}
+
+.model-identity__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .model-name {
-  font-weight: 700;
+  margin: 0;
   color: #0f172a;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.15;
 }
 
-.model-meta,
-.test-panel__message {
+.model-meta {
+  margin-top: 8px;
   color: #64748b;
-  font-size: 13px;
+  font-size: 15px;
+}
+
+.model-remark {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.provider-pill {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.model-specs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.spec-card {
+  min-width: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.spec-card__label {
+  margin-bottom: 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spec-card__value {
+  display: block;
+  min-width: 0;
+  color: #1e293b;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.spec-card--capabilities {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .mono {
   font-family: Consolas, Monaco, monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .ability-tags,
-.status-cell,
-.table-actions,
 .test-panel,
 .test-panel__status {
   display: flex;
@@ -452,15 +643,119 @@ onMounted(() => {
   gap: 8px;
 }
 
-.table-actions {
+.ability-tags {
   flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.model-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  flex-wrap: wrap;
+}
+
+.model-actions__group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.model-actions__group--secondary {
+  justify-content: flex-end;
+}
+
+.status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.92);
+}
+
+.status-toggle__label {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-card :deep(.el-button.el-button--small) {
+  height: 34px;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+}
+
+.model-card :deep(.el-switch) {
+  --el-switch-on-color: #0f766e;
+  --el-switch-off-color: #cbd5e1;
 }
 
 .test-panel {
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 12px;
   padding: 12px 14px;
   border-radius: 14px;
   background: #f8fafc;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.test-panel__message {
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 1080px) {
+  .model-specs {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-header__title {
+    font-size: 28px;
+  }
+
+  .model-card {
+    padding: 20px;
+  }
+
+  .model-card__top {
+    flex-direction: column;
+  }
+
+  .model-name {
+    font-size: 22px;
+  }
+
+  .model-specs {
+    grid-template-columns: 1fr;
+  }
+
+  .model-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .model-actions__group,
+  .model-actions__group--secondary {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .status-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 </style>

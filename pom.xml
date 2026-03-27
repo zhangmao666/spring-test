@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -15,7 +15,7 @@
     <artifactId>spring-boot-test</artifactId>
     <version>1.0.0</version>
     <name>spring-boot-test</name>
-    <description>Spring Boot 3 基础项目</description>
+    <description>Spring Boot 3 鍩虹椤圭洰</description>
 
     <properties>
         <java.version>17</java.version>
@@ -67,7 +67,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- MyBatis-Plus 保留，但排除旧版 mybatis-spring / mybatis -->
+        <!-- MyBatis-Plus 淇濈暀锛屼絾鎺掗櫎鏃х増 mybatis-spring / mybatis -->
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-boot-starter</artifactId>
@@ -84,7 +84,7 @@
             </exclusions>
         </dependency>
 
-        <!-- 对齐到 Spring 6/Boot 3 兼容版本 -->
+        <!-- 瀵归綈鍒?Spring 6/Boot 3 鍏煎鐗堟湰 -->
         <dependency>
             <groupId>org.mybatis</groupId>
             <artifactId>mybatis-spring</artifactId>
@@ -184,12 +184,6 @@
 
         <!-- MinIO Client -->
         <dependency>
-            <groupId>io.minio</groupId>
-            <artifactId>minio</artifactId>
-            <version>8.5.7</version>
-        </dependency>
-
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
@@ -197,21 +191,6 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
-        </dependency>
-
-        <!-- MapStruct 核心依赖 -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct</artifactId>
-            <version>1.5.5.Final</version> <!-- 推荐使用最新稳定版 -->
-        </dependency>
-
-        <!-- MapStruct 注解处理器（用于编译时生成实现类） -->
-        <dependency>
-            <groupId>org.mapstruct</groupId>
-            <artifactId>mapstruct-processor</artifactId>
-            <version>1.5.5.Final</version>
-            <scope>provided</scope>
         </dependency>
 
 
@@ -260,7 +239,7 @@
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
-            <version>2.0.53</version> <!-- 请使用最新稳定版 -->
+            <version>2.0.53</version> <!-- 璇蜂娇鐢ㄦ渶鏂扮ǔ瀹氱増 -->
         </dependency>
 
         <dependency>
@@ -272,12 +251,6 @@
             <groupId>com.google.zxing</groupId>
             <artifactId>javase</artifactId>
             <version>3.5.3</version>
-        </dependency>
-
-        <!-- WebSocket for real-time stock data push -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
         <!-- OpenAI SDK for Qwen compatible mode -->
@@ -294,7 +267,7 @@
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- Knife4j (Swagger UI 增强) -->
+        <!-- Knife4j (Swagger UI 澧炲己) -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
@@ -302,14 +275,14 @@
         </dependency>
 
 
-        <!-- 支付宝SDK -->
+        <!-- 鏀粯瀹漇DK -->
         <dependency>
             <groupId>com.alipay.sdk</groupId>
             <artifactId>alipay-sdk-java</artifactId>
             <version>4.39.79.ALL</version>
         </dependency>
 
-        <!-- 微信支付SDK -->
+        <!-- 寰俊鏀粯SDK -->
         <dependency>
             <groupId>com.github.wechatpay-apiv3</groupId>
             <artifactId>wechatpay-java</artifactId>
@@ -331,8 +304,8 @@
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
 
-        <!-- Spring-AI-Agent-Utils —— 提供 Agent Skill 支持 -->
-        <!-- Agent Skills 工具包 -->
+        <!-- Spring-AI-Agent-Utils 鈥斺€?鎻愪緵 Agent Skill 鏀寔 -->
+        <!-- Agent Skills 宸ュ叿鍖?-->
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-agent-utils</artifactId>
@@ -358,3 +331,4 @@
         </plugins>
     </build>
 </project>
+

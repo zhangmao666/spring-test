@@ -122,8 +122,6 @@ TOKEN=$(curl -X POST "http://localhost:8879/api/auth/login" \
   -d '{"username":"admin","password":"123456"}' \
   | jq -r '.data.token')
 
-curl -X GET "http://localhost:8879/api/stock/analysis/sh600000" \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 3. 验证响应格式

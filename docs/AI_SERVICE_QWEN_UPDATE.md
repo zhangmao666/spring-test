@@ -176,14 +176,7 @@ curl -X POST "http://localhost:8879/api/ai/chatAi" \
   }'
 ```
 
-### 2. 股票AI分析测试
-```bash
-# 测试股票AI分析（使用Qwen）
-curl -X GET "http://localhost:8879/api/stock/analysis/sh600000" \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### 3. 验证响应格式
+### 2. 验证响应格式
 期望的响应格式：
 ```json
 {
@@ -229,7 +222,6 @@ curl -X GET "http://localhost:8879/api/stock/analysis/sh600000" \
 - ✅ 无变化，完全向后兼容
 - ✅ `/api/ai/chatAi` - AI对话接口
 - ✅ `/api/ai/providers` - 获取提供商列表
-- ✅ `/api/stock/analysis/{stockCode}` - 股票分析接口
 
 ## 🚨 注意事项
 

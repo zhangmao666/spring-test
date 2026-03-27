@@ -20,30 +20,6 @@ const routes = [
         meta: { title: '首页', icon: 'HomeFilled' }
       },
       {
-        path: 'fund/ranking',
-        name: 'FundRanking',
-        component: () => import('@/views/finance/FundRanking.vue'),
-        meta: { title: '基金排行', icon: 'TrendCharts' }
-      },
-      {
-        path: 'fund/analysis',
-        name: 'FundAnalysis',
-        component: () => import('@/views/finance/FundAnalysis.vue'),
-        meta: { title: 'AI走势分析', icon: 'MagicStick' }
-      },
-      {
-        path: 'fund/analysis/:fundCode',
-        name: 'FundAnalysisDetail',
-        component: () => import('@/views/finance/FundAnalysis.vue'),
-        meta: { title: 'AI走势分析', icon: 'MagicStick' }
-      },
-      {
-        path: 'finance/fund-trend/:fundCode',
-        name: 'FundTrend',
-        component: () => import('@/views/finance/FundTrend.vue'),
-        meta: { title: '基金走势', icon: 'DataLine' }
-      },
-      {
         path: 'prompt',
         name: 'PromptTemplate',
         component: () => import('@/views/prompt/index.vue'),
@@ -89,7 +65,8 @@ const routes = [
         path: 'ai/models',
         name: 'AiModelManage',
         component: () => import('@/views/ai/ModelManage.vue'),
-        meta: { title: '基座模型管理', icon: 'Cpu' }
+        meta: { title: '' +
+              '模型管理', icon: 'Cpu' }
       },
       {
         path: 'news/hot',

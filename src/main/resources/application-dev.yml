@@ -118,22 +118,6 @@ ai:
     max-tokens: 1024
     temperature: 0.7
 
-agent:
-  default-model: default
-  skills:
-    directories:
-      - classpath:skills/
-    custom-dir: ./custom-skills
-    enable-shell-tools: true
-    enable-fs-tools: true
-
-minio:
-  endpoint: ${MINIO_ENDPOINT:http://222.173.143.39:29103}
-  access-key: ${MINIO_ACCESS_KEY:RvqM1kk8xaDPJNoE}
-  secret-key: ${MINIO_SECRET_KEY:ObLEive6MAlFj9cG}
-  bucket-name: ${MINIO_BUCKET_NAME:ObLEive6MAlFj9cG}
-  secure: false
-
 di:
   url:
     - http://192.168.1.1:8080
@@ -162,25 +146,6 @@ http:
   keep-alive-duration: 300
   enable-logging: true
   max-retries: 3
-
-stock:
-  data:
-    source: sina
-    fetch-interval: 5
-    trading-hours:
-      start: "09:30"
-      end: "15:00"
-    schedule-enabled: true
-
-  websocket:
-    allowed-origins: "*"
-    message-size-limit: 128
-
-  analysis:
-    interval: 15
-    provider: qwen
-    history-window: 7
-    enabled: true
 
 payment:
   alipay:

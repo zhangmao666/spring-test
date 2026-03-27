@@ -58,8 +58,6 @@ public class SecurityConfig {
                         .requestMatchers("/weather/**").permitAll()
                         // AI聊天接口 - 公开
                         .requestMatchers("/ai/**").permitAll()
-                        // 基金接口 - 公开
-                        .requestMatchers("/fund/**").permitAll()
                         // 资讯接口 - 公开
                         .requestMatchers("/news/**").permitAll()
                         // Swagger UI & Knife4j - 公开（仅开发环境使用）

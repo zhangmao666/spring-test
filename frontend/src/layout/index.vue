@@ -44,22 +44,13 @@
               <template #title>热点新闻</template>
             </el-menu-item>
 
-            <el-sub-menu index="finance">
-              <template #title>
-                <el-icon><TrendCharts /></el-icon>
-                <span>智能投研</span>
-              </template>
-              <el-menu-item index="/fund/ranking">基金排行</el-menu-item>
-              <el-menu-item index="/fund/analysis">AI走势分析</el-menu-item>
-            </el-sub-menu>
-
             <el-sub-menu index="management">
               <template #title>
                 <el-icon><FolderOpened /></el-icon>
                 <span>系统管理</span>
               </template>
               <el-menu-item index="/prompt">提示工程</el-menu-item>
-              <el-menu-item index="/ai/models">基座模型管理</el-menu-item>
+              <el-menu-item index="/ai/models">模型管理</el-menu-item>
               <el-menu-item index="/dict">数据字典</el-menu-item>
               <el-menu-item index="/user">用户管理</el-menu-item>
             </el-sub-menu>
@@ -147,9 +138,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import {
-  Monitor, DataLine, Lightning, FolderOpened, Tickets, TrendCharts,
+  Monitor, Lightning, FolderOpened, Tickets, TrendCharts,
   Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton,
-  ArrowRight, Bell, DocumentChecked
+  ArrowRight, Bell
 } from '@element-plus/icons-vue'
 import { getWeatherByCity } from '@/api/weather'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
