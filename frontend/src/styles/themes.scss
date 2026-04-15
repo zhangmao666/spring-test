@@ -1,177 +1,88 @@
-// 主题CSS变量定义
-
-// 极简主题 - 默认主题 (基于 Zen Master 风格优化)
 :root,
-[data-theme="minimal"] {
-  --primary-color: #6366F1;
-  --primary-light: #A5B4FC;
-  --primary-dark: #4338CA;
-  --primary-bg: rgba(99, 102, 241, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+[data-theme="professional"] {
+  --color-primary: #2f5bea;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: rgba(47, 91, 234, 0.1);
+  --color-primary-border: rgba(47, 91, 234, 0.22);
 
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #475569;
-  --sidebar-text-active: #6366F1;
-  --sidebar-hover-bg: #f8fafc;
-  --sidebar-active-bg: rgba(99, 102, 241, 0.1);
-  --sidebar-border: #e2e8f0;
+  --color-success: #0f9f6e;
+  --color-success-soft: rgba(15, 159, 110, 0.12);
+  --color-warning: #d97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.12);
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.12);
+  --color-info: #2563eb;
+  --color-info-soft: rgba(37, 99, 235, 0.12);
 
-  --header-bg: rgba(255, 255, 255, 0.8);
-  --header-text: #0f172a;
-
-  --content-bg: #f1f5f9;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --page-bg: #f3f6fb;
+  --page-bg-muted: #eef3fb;
+  --surface-base: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-emphasis: #eff4ff;
 
   --text-primary: #0f172a;
   --text-secondary: #475569;
-  --text-muted: #94a3b8;
+  --text-muted: #64748b;
+  --text-disabled: #94a3b8;
 
-  --decoration-display: none;
+  --border-subtle: #dbe3ef;
+  --border-strong: #c4d0df;
+  --border-soft: #edf2f7;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 10px 24px rgba(15, 23, 42, 0.06);
+  --shadow-base: 0 18px 40px rgba(15, 23, 42, 0.08);
+  --shadow-strong: 0 24px 56px rgba(15, 23, 42, 0.12);
+
+  --radius-sm: 12px;
+  --radius-base: 16px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+
+  --focus-ring: 0 0 0 4px rgba(47, 91, 234, 0.14);
+  --focus-ring-strong: rgba(47, 91, 234, 0.58);
 }
 
-// 青花瓷主题 - 雅致白瓷
-[data-theme="porcelain"] {
-  --primary-color: #0f4c81; // Classic Blue
-  --primary-light: #2c7da0;
-  --primary-dark: #002855;
-  --primary-bg: rgba(15, 76, 129, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #0f4c81 0%, #2c7da0 100%);
+[data-theme="professional-dark"] {
+  --color-primary: #7ea5ff;
+  --color-primary-strong: #b5c8ff;
+  --color-primary-soft: rgba(126, 165, 255, 0.14);
+  --color-primary-border: rgba(126, 165, 255, 0.28);
 
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #0f4c81;
-  --sidebar-text-active: #0f4c81;
-  --sidebar-active-bg: rgba(15, 76, 129, 0.08);
+  --color-success: #34d399;
+  --color-success-soft: rgba(52, 211, 153, 0.16);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgba(251, 191, 36, 0.16);
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.16);
+  --color-info: #60a5fa;
+  --color-info-soft: rgba(96, 165, 250, 0.16);
 
-  --header-bg: rgba(255, 255, 255, 0.9);
-  --content-bg: #f0f4f8;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 12px rgba(15, 76, 129, 0.08);
-  --card-border: 1px solid rgba(15, 76, 129, 0.1);
+  --page-bg: #0f172a;
+  --page-bg-muted: #111c31;
+  --surface-base: #142033;
+  --surface-muted: #1a2940;
+  --surface-emphasis: #1c3155;
 
-  --text-primary: #002855;
-  --text-secondary: #0f4c81;
+  --text-primary: #e5edf9;
+  --text-secondary: #c3d0e2;
+  --text-muted: #92a4bd;
+  --text-disabled: #6f8198;
 
-  --decoration-display: none;
-}
+  --border-subtle: #2a3a54;
+  --border-strong: #374965;
+  --border-soft: #203048;
 
-// 梦幻动漫主题 - 清新樱花
-[data-theme="anime"] {
-  --primary-color: #ec4899;
-  --primary-light: #f472b6;
-  --primary-dark: #be185d;
-  --primary-bg: rgba(236, 72, 153, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.24);
+  --shadow-base: 0 18px 40px rgba(0, 0, 0, 0.34);
+  --shadow-strong: 0 24px 56px rgba(0, 0, 0, 0.42);
 
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #831843;
-  --sidebar-text-active: #ec4899;
-  --sidebar-active-bg: rgba(236, 72, 153, 0.08);
+  --radius-sm: 12px;
+  --radius-base: 16px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
 
-  --header-bg: rgba(255, 255, 255, 0.8);
-  --content-bg: #fff5f7;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 20px rgba(236, 72, 153, 0.08);
-
-  --text-primary: #831843;
-  --text-secondary: #db2777;
-
-  --decoration-display: none;
-}
-
-// 现代科技主题 - 悦动青 (原 Cyberpunk)
-[data-theme="cyberpunk"] {
-  --primary-color: #06b6d4; // Cyan
-  --primary-light: #67e8f9;
-  --primary-dark: #0891b2;
-  --primary-bg: rgba(6, 182, 212, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #06b6d4 0%, #67e8f9 100%);
-
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #0e7490;
-  --sidebar-text-active: #06b6d4;
-  --sidebar-active-bg: rgba(6, 182, 212, 0.08);
-
-  --header-bg: rgba(255, 255, 255, 0.8);
-  --content-bg: #f0f9ff;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 15px rgba(6, 182, 212, 0.1);
-
-  --text-primary: #155e75;
-  --text-secondary: #0891b2;
-
-  --decoration-display: none;
-}
-
-// 仙踪主题 - 丁香紫 (原 刘亦菲)
-[data-theme="liuyifei"] {
-  --primary-color: #8b5cf6;
-  --primary-light: #ddd6fe;
-  --primary-dark: #6d28d9;
-  --primary-bg: rgba(139, 92, 246, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #4c1d95;
-  --sidebar-text-active: #8b5cf6;
-  --sidebar-active-bg: rgba(139, 92, 246, 0.08);
-
-  --header-bg: rgba(255, 255, 255, 0.8);
-  --content-bg: #f5f3ff;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 15px rgba(139, 92, 246, 0.08);
-
-  --text-primary: #2e1065;
-  --text-secondary: #5b21b6;
-
-  --decoration-display: none;
-}
-
-// 极简禅意主题 - 专业深邃 (用户满意，保留核心，优化变量)
-[data-theme="zen"] {
-  --primary-color: #475569;
-  --primary-light: #94a3b8;
-  --primary-dark: #1e293b;
-  --primary-bg: rgba(71, 85, 105, 0.08);
-  --btn-primary-bg: linear-gradient(135deg, #475569 0%, #64748b 100%);
-
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #475569;
-  --sidebar-text-active: #0f172a;
-  --sidebar-active-bg: #f1f5f9;
-
-  --header-bg: rgba(255, 255, 255, 0.85);
-  --content-bg: #f8fafc;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-
-  --decoration-display: none;
-}
-
-// 财富金主题 - 香槟金
-[data-theme="wealth"] {
-  --primary-color: #b59547;
-  --primary-light: #d4c18f;
-  --primary-dark: #8c7134;
-  --primary-bg: rgba(181, 149, 71, 0.1);
-  --btn-primary-bg: linear-gradient(135deg, #b59547 0%, #d4c18f 100%);
-
-  --sidebar-bg: #ffffff;
-  --sidebar-text: #785c18;
-  --sidebar-text-active: #b59547;
-  --sidebar-active-bg: rgba(181, 149, 71, 0.08);
-
-  --header-bg: rgba(255, 255, 255, 0.9);
-  --content-bg: #fcfaf2;
-  --card-bg: #ffffff;
-  --card-shadow: 0 4px 20px rgba(181, 149, 71, 0.08);
-  --card-border: 1px solid rgba(181, 149, 71, 0.1);
-
-  --text-primary: #453711;
-  --text-secondary: #785c18;
-
-  --decoration-display: none;
+  --focus-ring: 0 0 0 4px rgba(126, 165, 255, 0.16);
+  --focus-ring-strong: rgba(126, 165, 255, 0.62);
 }

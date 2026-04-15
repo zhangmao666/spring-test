@@ -1,238 +1,442 @@
-@import './variables.scss';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+@use './variables.scss' as *;
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 
-html, body, #app {
-  height: 100%;
+html,
+body,
+#app {
   width: 100%;
-  // 核心字体改用 Inter，提升数据可读性， headings 使用 Outfit 保持优雅
-  font-family: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--content-bg, #f1f5f9);
-  color: var(--text-primary);
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-// 滚动条现代化
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family: $font-family-sans;
+  background:
+    radial-gradient(circle at top left, rgba(47, 91, 234, 0.08), transparent 26%),
+    radial-gradient(circle at right center, rgba(15, 159, 110, 0.06), transparent 20%),
+    var(--page-bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(47, 91, 234, 0.18);
+}
+
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(99, 102, 241, 0.2);
-  border-radius: 10px;
-  
-  &:hover {
-    background-color: rgba(99, 102, 241, 0.4);
-  }
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.42);
 }
 
 ::-webkit-scrollbar-track {
-  background-color: transparent;
+  background: transparent;
 }
 
-// 全局玻璃拟态容器
-.glass-container {
-  background: var(--glass-bg, #{$glass-bg});
-  backdrop-filter: blur($glass-blur);
-  -webkit-backdrop-filter: blur($glass-blur);
-  border: 1px solid var(--glass-border, #{$glass-border});
-  box-shadow: var(--glass-shadow, #{$glass-shadow});
+:focus-visible {
+  outline: 2px solid var(--focus-ring-strong);
+  outline-offset: 2px;
 }
 
-// Element Plus 深度定制
 .el-card {
-  border: none !important;
-  border-radius: var(--card-border-radius, #{$radius-md}) !important;
-  box-shadow: var(--card-shadow, #{$shadow-base}) !important;
-  background: var(--card-bg, #fff) !important;
-  backdrop-filter: blur(10px);
-  transition: all $transition-base !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--surface-base) !important;
+  box-shadow: var(--shadow-sm) !important;
   overflow: hidden;
-  
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: $shadow-lg !important;
-  }
-  
-  .el-card__header {
-    padding: $spacing-md $spacing-lg !important;
-    border-bottom: 1px solid var(--border-light, #{$border-light}) !important;
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--text-primary);
-  }
-  
-  .el-card__body {
-    padding: $spacing-lg !important;
-  }
+}
+
+.el-card .el-card__header {
+  padding: 20px 24px !important;
+  border-bottom: 1px solid var(--border-soft) !important;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.el-card .el-card__body {
+  padding: 24px !important;
 }
 
 .el-button {
-  border-radius: $radius-base !important;
   height: 40px;
-  padding: 8px 20px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
   font-weight: 600;
-  border: none !important;
-  transition: all $transition-fast !important;
-  
-  &:active {
-    transform: scale(0.96);
-  }
-  
-  &--primary {
-    background: var(--btn-primary-bg, linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)) !important;
-    color: #fff !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
-    
-    &:hover, &:focus {
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
-      filter: brightness(1.1);
-    }
-  }
-  
-  &--text {
-    padding: 0 !important;
-    height: auto !important;
-  }
+  transition: transform $transition-fast, box-shadow $transition-fast, background-color $transition-fast, color $transition-fast !important;
 }
 
-.el-input__wrapper {
-  border-radius: $radius-base !important;
-  background: var(--input-bg, rgba(255, 255, 255, 0.6)) !important;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 0 0 1px var(--input-border, #{$border-color}) inset !important;
-  transition: all $transition-fast !important;
-  
-  &:hover {
-    box-shadow: 0 0 0 1px $primary-light inset !important;
-  }
-  
-  &.is-focus {
-    box-shadow: 0 0 0 2px $primary-color inset !important;
-    background: #fff !important;
-  }
+.el-button:not(.is-disabled):active {
+  transform: scale(0.98);
+}
+
+.el-button:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.el-button--primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(47, 91, 234, 0.22) !important;
+}
+
+.el-button--primary:not(.is-disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 28px rgba(47, 91, 234, 0.24) !important;
+}
+
+.el-button--default,
+.el-button.is-plain {
+  background: var(--surface-base) !important;
+  border-color: var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+
+.el-button--default:not(.is-disabled):hover,
+.el-button.is-plain:not(.is-disabled):hover {
+  border-color: var(--color-primary-border) !important;
+  color: var(--color-primary) !important;
+  background: var(--surface-emphasis) !important;
+}
+
+.el-button--text,
+.el-button--link {
+  height: auto;
+  padding: 0 !important;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: 14px !important;
+  box-shadow: 0 0 0 1px var(--border-subtle) inset !important;
+  background: var(--surface-base) !important;
+  transition: box-shadow $transition-fast, background-color $transition-fast !important;
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--color-primary-border) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 2px rgba(47, 91, 234, 0.18) inset !important;
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder {
+  color: var(--text-disabled);
+}
+
+.el-form-item__label {
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
 }
 
 .el-table {
-  --el-table-border-color: var(--table-border, #{$border-light});
-  --el-table-header-bg-color: var(--table-header-bg, #f8fafc);
+  --el-table-border-color: var(--border-soft);
+  --el-table-header-bg-color: var(--surface-muted);
+  --el-table-row-hover-bg-color: rgba(47, 91, 234, 0.04);
   background: transparent !important;
-  
-  &::before { display: none; }
-  
-  tr {
-    background: transparent !important;
-  }
-  
-  th.el-table__cell {
-    background: var(--table-header-bg, #f8fafc) !important;
-    color: var(--text-secondary);
-    font-weight: 700 !important;
-    padding: 16px 0 !important;
-  }
-  
-  td.el-table__cell {
-    padding: 16px 0 !important;
-  }
-  
-  .el-table__body tr:hover > td {
-    background: rgba(99, 102, 241, 0.05) !important;
-  }
+}
+
+.el-table::before {
+  display: none;
+}
+
+.el-table th.el-table__cell {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.el-table td.el-table__cell,
+.el-table th.el-table__cell {
+  padding: 14px 0 !important;
 }
 
 .el-dialog {
-  border-radius: $radius-lg !important;
-  background: var(--card-bg, rgba(255, 255, 255, 0.9)) !important;
-  backdrop-filter: blur(20px);
-  box-shadow: $shadow-xl !important;
-  
-  .el-dialog__header {
-    padding: 30px !important;
-    margin-right: 0 !important;
-    .el-dialog__title {
-      font-weight: 800;
-      font-size: 1.25rem;
-    }
-  }
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-strong) !important;
 }
 
-// 页面辅助类
-.page-container {
-  padding: $spacing-xl;
-  animation: fadeIn $transition-slow;
+.el-dialog .el-dialog__header {
+  margin-right: 0 !important;
+  padding: 24px 28px 8px !important;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.el-dialog .el-dialog__title {
+  color: var(--text-primary);
+  font-size: 1.12rem;
+  font-weight: 800;
 }
 
-// ==============================
-// 动态效果增强
-// ==============================
-
-// 全局淡入上升动画
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
+.el-dialog .el-dialog__body {
+  padding: 20px 28px 28px !important;
 }
 
-// 浮动动画（天气图标等）
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
+.el-dialog .el-dialog__footer {
+  padding: 0 28px 24px !important;
 }
 
-// 按钮水波纹
-@keyframes ripple {
-  from { width: 0; height: 0; opacity: 0.8; margin: 0; }
-  to   { width: 200px; height: 200px; opacity: 0; margin: -100px; }
+.el-tag {
+  border-radius: 999px;
+  font-weight: 600;
 }
 
-// 工具类
-.animate-fade-up {
-  animation: fadeInUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+.el-empty__description p {
+  color: var(--text-muted);
 }
 
-// 按钮水波纹效果（覆盖已有的 .el-button 定义）
-.el-button:not(.el-button--text):not(.el-button--link) {
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.35);
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-    width: 0;
-    height: 0;
-    opacity: 0;
-  }
-
-  &:active::after {
-    animation: ripple 0.5s ease-out;
-  }
+.el-dropdown-menu {
+  border-radius: 16px !important;
+  padding: 8px !important;
+  box-shadow: var(--shadow-base) !important;
 }
 
-.flex-center {
+.el-dropdown-menu__item {
+  min-height: 40px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.el-dropdown-menu__item:hover {
+  background: var(--surface-emphasis);
+  color: var(--color-primary);
+}
+
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-page__hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.app-page__eyebrow {
+  display: inline-block;
+  color: var(--text-disabled);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.app-page__title {
+  margin: 8px 0 0;
+  color: var(--text-primary);
+  font-size: clamp(1.85rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+}
+
+.app-page__desc {
+  margin: 10px 0 0;
+  max-width: 760px;
+  color: var(--text-muted);
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.app-page__actions {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.text-gradient {
-  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.app-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.app-metric-card {
+  padding: 16px 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff, var(--surface-muted));
+}
+
+.app-metric-card__label {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.app-metric-card__value {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-primary);
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.app-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-toolbar__fields,
+.app-toolbar__actions,
+.app-table-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.app-toolbar__fields {
+  flex: 1;
+}
+
+.app-result-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.app-inline-note {
+  color: var(--text-disabled);
+  font-size: 0.82rem;
+}
+
+.app-table-footer {
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.app-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.app-status-pill--success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.app-status-pill--warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.app-status-pill--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.app-status-pill--info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.app-empty-block {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 20px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .app-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-result-bar,
+  .app-table-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-page__hero {
+    flex-direction: column;
+  }
+
+  .app-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-toolbar,
+  .app-toolbar__fields,
+  .app-toolbar__actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

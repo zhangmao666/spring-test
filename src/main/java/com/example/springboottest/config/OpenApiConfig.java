@@ -23,7 +23,7 @@ public class OpenApiConfig {
         public OpenAPI customOpenAPI() {
                 return new OpenAPI()
                                 .info(new Info()
-                                                .title("Spring Boot 综合项目 API 文档")
+                                                .title("AI-world API 文档")
                                                 .version("1.0.0")
                                                 .description("基于 Spring Boot 3 和 Java 17 的综合性基础项目 API 接口文档\n\n" +
                                                                 "包含以下功能模块：\n" +
@@ -53,6 +53,6 @@ public class OpenApiConfig {
                                                                                 .description("请输入 JWT Token（不需要 Bearer 前缀）")))
                                 .externalDocs(new ExternalDocumentation()
                                                 .description("项目文档与源码")
-                                                .url("https://github.com/example/spring-boot-test"));
+                                                .url("https://github.com/example/ai-world"));
         }
 }

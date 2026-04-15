@@ -1,8 +1,8 @@
 <template>
-  <div class="chat-room" :class="`theme-${currentTheme}`">
+  <div class="chat-room">
     <aside :class="['conversation-sidebar', { collapsed: sidebarCollapsed }]">
       <div class="sidebar-header">
-        <div v-if="!sidebarCollapsed">
+        <div v-if="!sidebarCollapsed" class="sidebar-header__title">
           <h3>对话历史</h3>
         </div>
         <div class="sidebar-header__actions">
@@ -10,7 +10,7 @@
             <el-icon><Plus /></el-icon>
             新对话
           </el-button>
-          <button class="icon-btn sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
+          <button class="icon-btn sidebar-toggle" type="button" aria-label="切换会话侧栏" @click="sidebarCollapsed = !sidebarCollapsed">
             <el-icon><ArrowLeft v-if="!sidebarCollapsed" /><ArrowRight v-else /></el-icon>
           </button>
         </div>
@@ -26,7 +26,7 @@
         >
           <div class="conversation-item__top">
             <span class="conversation-item__title">{{ conv.title || '新对话' }}</span>
-            <button class="icon-btn" @click.stop="deleteConversation(conv.conversationId)">
+            <button class="icon-btn" type="button" aria-label="删除会话" @click.stop="deleteConversation(conv.conversationId)">
               <el-icon><Delete /></el-icon>
             </button>
           </div>
@@ -44,10 +44,10 @@
     <section class="chat-main">
       <header class="chat-header">
         <div class="chat-header__left">
-          <el-avatar :size="48" :src="aiAvatar" />
+          <el-avatar :size="42" :src="aiAvatar" />
           <div>
-            <h2>AI 智能助手</h2>
-            <p>{{ currentModelLabel }}</p>
+            <h2>AI-world</h2>
+            <p>{{ conversationSummary }}</p>
           </div>
         </div>
 
@@ -76,12 +76,13 @@
 
           <el-tag effect="plain">{{ currentModelLabel }}</el-tag>
 
-          <el-button circle @click="clearCurrentHistory">
+          <el-button circle aria-label="清空当前会话" @click="clearCurrentHistory">
             <el-icon><RefreshRight /></el-icon>
           </el-button>
         </div>
       </header>
 
+      <div class="messages-shell">
       <main ref="messagesContainer" class="messages-panel" @scroll="handleScroll">
         <div v-if="messages.length === 0" class="empty-state">
           <el-icon :size="42"><ChatDotRound /></el-icon>
@@ -92,9 +93,11 @@
               v-for="(item, index) in suggestionCards"
               :key="index"
               class="suggestion-card"
-              @click="inputToSent = item.text"
+              @click="handleSuggestionClick(item.text)"
             >
-              <span class="suggestion-card__icon">{{ item.icon }}</span>
+              <span class="suggestion-card__icon">
+                <el-icon><component :is="item.icon" /></el-icon>
+              </span>
               <span>{{ item.text }}</span>
             </button>
           </div>
@@ -138,10 +141,10 @@
             </div>
 
             <div class="message-actions" v-if="msg.content">
-              <button class="icon-btn" @click="copyMessage(msg.content)">
+              <button class="icon-btn" type="button" aria-label="复制消息" @click="copyMessage(msg.content)">
                 <el-icon><CopyDocument /></el-icon>
               </button>
-              <button class="icon-btn" :disabled="loading" @click="regenerateFromMessage(index)">
+              <button class="icon-btn" type="button" aria-label="重新生成消息" :disabled="loading" @click="regenerateFromMessage(index)">
                 <el-icon><RefreshRight /></el-icon>
               </button>
               <span>{{ formatTime(msg.timestamp) }}</span>
@@ -149,17 +152,18 @@
           </div>
         </div>
         </transition-group>
-
-        <button v-if="userScrolledUp" class="scroll-bottom-btn" @click="scrollToBottom(true)">
-          <el-icon><ArrowDown /></el-icon>
-        </button>
       </main>
+
+      <button v-if="userScrolledUp" class="scroll-bottom-btn" type="button" aria-label="scroll to bottom" @click="scrollToBottom(true)">
+        <el-icon><ArrowDown /></el-icon>
+      </button>
+      </div>
 
       <footer class="chat-input">
         <el-input
           v-model="inputToSent"
           type="textarea"
-          :autosize="{ minRows: 2, maxRows: 6 }"
+          :autosize="{ minRows: 1, maxRows: 5 }"
           placeholder="输入消息，按 Enter 发送"
           resize="none"
           @keydown.enter.exact.prevent="handleSend"
@@ -167,11 +171,11 @@
 
         <div class="chat-input__actions">
           <div class="toggle-group">
-            <button :class="['toggle-chip', { active: useDeepThinking }]" @click="useDeepThinking = !useDeepThinking">
+            <button :class="['toggle-chip', { active: useDeepThinking }]" type="button" @click="useDeepThinking = !useDeepThinking">
               <el-icon><Cpu /></el-icon>
               深度思考
             </button>
-            <button :class="['toggle-chip', { active: useWebSearch }]" @click="useWebSearch = !useWebSearch">
+            <button :class="['toggle-chip', { active: useWebSearch }]" type="button" @click="useWebSearch = !useWebSearch">
               <el-icon><Compass /></el-icon>
               联网搜索
             </button>
@@ -199,9 +203,13 @@ import {
   Compass,
   CopyDocument,
   Cpu,
+  DataAnalysis,
   Delete,
+  Document,
   Plus,
+  Reading,
   RefreshRight,
+  TrendCharts,
   UserFilled
 } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
@@ -210,16 +218,12 @@ import 'highlight.js/styles/github.css'
 import axios from 'axios'
 import aiAvatar from '@/assets/ai_avatar.png'
 import { getAiModelList } from '@/api/ai-model'
-import { useThemeStore } from '@/stores/theme'
-
-const themeStore = useThemeStore()
-const currentTheme = computed(() => themeStore.currentTheme)
 
 const suggestionCards = [
-  { icon: '📊', text: '分析今天热门板块' },
-  { icon: '💻', text: '写一个快速排序算法' },
-  { icon: '📰', text: '总结最近的财报热点' },
-  { icon: '📚', text: '推荐几本金融入门书' }
+  { icon: DataAnalysis, text: '分析今天热门板块' },
+  { icon: Document, text: '写一个快速排序算法' },
+  { icon: TrendCharts, text: '总结最近的财报热点' },
+  { icon: Reading, text: '推荐几本金融入门书' }
 ]
 
 const md = new MarkdownIt({
@@ -269,6 +273,11 @@ const currentModelLabel = computed(() => {
   if (selectedModel.value) return selectedModel.value.displayName
   if (managedModels.value.length === 0) return '配置文件默认模型'
   return '未选择模型'
+})
+const conversationSummary = computed(() => {
+  const count = conversations.value.length
+  const model = currentModelLabel.value
+  return `当前模型：${model} · 已保存 ${count} 个会话`
 })
 
 let renderTimer = null
@@ -499,6 +508,12 @@ const regenerateFromMessage = async (index) => {
   await handleSend()
 }
 
+const handleSuggestionClick = async (prompt) => {
+  if (!prompt || loading.value) return
+  inputToSent.value = prompt
+  await handleSend()
+}
+
 const handleSend = async () => {
   const content = inputToSent.value.trim()
   if (!content || loading.value) return
@@ -680,14 +695,16 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .chat-room {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 18px;
+  grid-template-columns: 232px 1fr;
+  gap: 14px;
   height: 100%;
+  max-height: 100%;
   min-height: 0;
+  overflow: hidden;
   transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:has(.conversation-sidebar.collapsed) {
-    grid-template-columns: 52px 1fr;
+    grid-template-columns: 48px 1fr;
   }
 }
 
@@ -695,7 +712,7 @@ onBeforeUnmount(() => {
 .chat-main {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 24px;
+  border-radius: 20px;
   backdrop-filter: blur(18px);
   overflow: hidden;
 }
@@ -718,7 +735,7 @@ onBeforeUnmount(() => {
 .sidebar-header,
 .chat-header,
 .chat-input {
-  padding: 18px 20px;
+  padding: 14px 16px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 
@@ -728,6 +745,11 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 12px;
   transition: all 0.3s ease;
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+  }
 
   &__actions {
     display: flex;
@@ -753,23 +775,31 @@ onBeforeUnmount(() => {
 .sidebar-header h3,
 .chat-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f172a;
 }
 
+.sidebar-header h3 {
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sidebar-header p,
 .chat-header p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .conversation-list {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 12px;
+  padding: 10px;
 }
 
 .conversation-item {
@@ -777,8 +807,8 @@ onBeforeUnmount(() => {
   border: 1px solid transparent;
   background: #fff;
   border-radius: 14px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
   text-align: left;
   cursor: pointer;
   transition: 0.2s ease;
@@ -826,7 +856,7 @@ onBeforeUnmount(() => {
 .model-option__meta,
 .message-actions {
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .conversation-item__meta {
@@ -853,6 +883,14 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative;
+}
+
+.messages-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -863,18 +901,21 @@ onBeforeUnmount(() => {
 .chat-header__right {
   flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
 }
 
 .model-select {
-  width: 260px;
+  width: 220px;
 }
 
 .messages-panel {
   position: relative;
-  flex: 1;
+  height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 20px;
+  padding: 16px 18px 20px;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background:
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
     radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 22%),
@@ -917,24 +958,30 @@ onBeforeUnmount(() => {
 }
 
 .suggestion-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 16px 32px rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.4);
-
-  .suggestion-card__icon {
-    display: inline-block;
-    animation: spin-once 0.4s ease;
-  }
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.28);
 }
 
 .suggestion-card__icon {
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.suggestion-card__icon :deep(.el-icon) {
+  font-size: 18px;
 }
 
 .message-row {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .message-row--user {
@@ -957,12 +1004,12 @@ onBeforeUnmount(() => {
 }
 
 .message-body {
-  max-width: min(72%, 920px);
+  max-width: min(84%, 1120px);
 }
 
 .message-bubble {
-  border-radius: 22px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
@@ -977,12 +1024,12 @@ onBeforeUnmount(() => {
 .thought-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .thought-card {
   border-radius: 16px;
-  padding: 12px;
+  padding: 10px 12px;
   background: #eff6ff;
 }
 
@@ -1000,7 +1047,7 @@ onBeforeUnmount(() => {
 }
 
 .message-text {
-  line-height: 1.7;
+  line-height: 1.65;
   word-break: break-word;
 }
 
@@ -1065,11 +1112,6 @@ onBeforeUnmount(() => {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes spin-once {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
 .scroll-bottom-btn,
 .icon-btn {
   border: none;
@@ -1088,9 +1130,10 @@ onBeforeUnmount(() => {
 }
 
 .scroll-bottom-btn {
-  position: sticky;
-  left: calc(100% - 54px);
-  bottom: 12px;
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
   width: 42px;
   height: 42px;
   display: inline-flex;
@@ -1099,6 +1142,11 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: #0f172a;
   color: #fff;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+}
+
+.messages-panel > .scroll-bottom-btn {
+  display: none;
 }
 
 .chat-input {
@@ -1106,7 +1154,13 @@ onBeforeUnmount(() => {
   border-bottom: none;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
+}
+
+.chat-input :deep(.el-textarea__inner) {
+  padding: 10px 12px;
+  line-height: 1.6;
+  border-radius: 14px;
 }
 
 .toggle-chip {
@@ -1117,7 +1171,7 @@ onBeforeUnmount(() => {
   background: #fff;
   color: #334155;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 7px 12px;
   cursor: pointer;
 }
 

@@ -128,9 +128,9 @@
               </template>
             </el-table-column>
 
-            <el-table-column prop="sort" label="排序" width="88" align="center">
+            <el-table-column prop="itemSort" label="排序" width="88" align="center">
               <template #default="{ row }">
-                <span class="sort-badge">{{ row.sort }}</span>
+                <span class="sort-badge">{{ row.itemSort }}</span>
               </template>
             </el-table-column>
 
@@ -193,8 +193,8 @@
         <el-form-item label="字典标签" prop="itemLabel">
           <el-input v-model="itemForm.itemLabel" placeholder="请输入字典标签" />
         </el-form-item>
-        <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="itemForm.sort" :min="0" :max="999" />
+        <el-form-item label="排序" prop="itemSort">
+          <el-input-number v-model="itemForm.itemSort" :min="0" :max="999" />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="itemForm.status">
@@ -263,7 +263,7 @@ const itemForm = reactive({
   dictId: null,
   itemValue: '',
   itemLabel: '',
-  sort: 0,
+  itemSort: 0,
   status: 1
 })
 
@@ -419,7 +419,7 @@ const handleAddItem = () => {
     dictId: currentDict.value.id,
     itemValue: '',
     itemLabel: '',
-    sort: 0,
+    itemSort: 0,
     status: 1
   })
   itemDialogVisible.value = true
@@ -432,7 +432,7 @@ const handleEditItem = (row) => {
     dictId: row.dictId,
     itemValue: row.itemValue,
     itemLabel: row.itemLabel,
-    sort: row.sort,
+    itemSort: row.itemSort,
     status: row.status
   })
   itemDialogVisible.value = true

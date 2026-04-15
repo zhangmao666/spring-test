@@ -1,7 +1,7 @@
 # 开发环境配置
 spring:
   application:
-    name: spring-boot-test
+    name: AI-world
 
   ai:
     openai:
@@ -25,7 +25,7 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-test-query: SELECT 1
-      pool-name: SpringBootTestHikariCP
+      pool-name: AIWorldHikariCP
 
   mybatis-plus:
     mapper-locations: classpath:mapper/*.xml
@@ -101,7 +101,7 @@ logging:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
   file:
-    name: logs/spring-boot-test.log
+    name: logs/ai-world.log
   logback:
     rollingpolicy:
       max-file-size: 10MB

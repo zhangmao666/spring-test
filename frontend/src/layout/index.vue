@@ -1,128 +1,146 @@
 <template>
-  <el-container class="layout-container" :data-theme="currentTheme">
-    <!-- 主题装饰效果 -->
-    <ThemeDecorations />
-    
-    <!-- 侧边栏 - 悬浮设计 -->
-    <el-aside :width="isCollapse ? '80px' : '260px'" class="sidebar-wrapper">
-      <div class="sidebar glass-container">
-        <div class="logo">
-          <div class="logo-icon">
-            <img v-if="currentTheme === 'liuyifei'" src="/themes/liuyifei.jpg" class="theme-logo-img" />
-            <el-icon v-else size="24"><TrendCharts /></el-icon>
+  <el-container class="layout-shell">
+    <el-aside :width="isCollapse ? '88px' : '252px'" class="sidebar-shell">
+      <div class="sidebar-panel">
+        <div class="brand-block">
+          <div class="brand-mark">
+            <el-icon :size="22"><TrendCharts /></el-icon>
           </div>
           <transition name="fade-text">
-            <span v-show="!isCollapse" class="logo-text">{{ currentTheme === 'liuyifei' ? '亦菲·仙踪' : 'Premium Admin' }}</span>
+            <div v-show="!isCollapse" class="brand-copy">
+              <span class="brand-title">AI-world</span>
+              <span class="brand-subtitle">基于 AI 的世界</span>
+            </div>
           </transition>
         </div>
-        
-        <div class="menu-wrapper">
+
+        <div class="menu-section">
+          <span v-show="!isCollapse" class="menu-section__label">工作台</span>
           <el-menu
             :default-active="activeMenu"
+            :default-openeds="defaultOpeneds"
             :collapse="isCollapse"
             :collapse-transition="false"
-            active-text-color="#ffffff"
             router
           >
             <el-menu-item index="/dashboard">
               <el-icon><Monitor /></el-icon>
-              <template #title>数字化看板</template>
+              <template #title>系统概览</template>
             </el-menu-item>
+          </el-menu>
+        </div>
 
-            <el-sub-menu index="ai">
-              <template #title>
-                <el-icon><Lightning /></el-icon>
-                <span>AI能力</span>
-              </template>
-              <el-menu-item index="/ai/chat">AI智能对话</el-menu-item>
-              <el-menu-item index="/ai/resume">AI简历助手</el-menu-item>
-            </el-sub-menu>
-
-
+        <div class="menu-section">
+          <span v-show="!isCollapse" class="menu-section__label">内容与 AI</span>
+          <el-menu
+            :default-active="activeMenu"
+            :default-openeds="defaultOpeneds"
+            :collapse="isCollapse"
+            :collapse-transition="false"
+            router
+          >
             <el-menu-item index="/news/hot">
               <el-icon><Bell /></el-icon>
               <template #title>热点新闻</template>
             </el-menu-item>
-
-            <el-sub-menu index="management">
+            <el-sub-menu index="content-ai">
               <template #title>
-                <el-icon><FolderOpened /></el-icon>
-                <span>系统管理</span>
+                <el-icon><Lightning /></el-icon>
+                <span>AI 工作区</span>
               </template>
-              <el-menu-item index="/prompt">提示工程</el-menu-item>
+              <el-menu-item index="/ai/chat">AI 聊天</el-menu-item>
+              <el-menu-item index="/ai/resume">简历助手</el-menu-item>
               <el-menu-item index="/ai/models">模型管理</el-menu-item>
-              <el-menu-item index="/dict">数据字典</el-menu-item>
-              <el-menu-item index="/user">用户管理</el-menu-item>
+              <el-menu-item index="/prompt">提示工程</el-menu-item>
             </el-sub-menu>
+          </el-menu>
+        </div>
 
-            <el-sub-menu index="log">
+        <div class="menu-section">
+          <span v-show="!isCollapse" class="menu-section__label">系统管理</span>
+          <el-menu
+            :default-active="activeMenu"
+            :default-openeds="defaultOpeneds"
+            :collapse="isCollapse"
+            :collapse-transition="false"
+            router
+          >
+            <el-menu-item index="/user">
+              <el-icon><UserFilled /></el-icon>
+              <template #title>用户管理</template>
+            </el-menu-item>
+            <el-menu-item index="/dict">
+              <el-icon><FolderOpened /></el-icon>
+              <template #title>字典管理</template>
+            </el-menu-item>
+            <el-sub-menu index="system-log">
               <template #title>
                 <el-icon><Tickets /></el-icon>
-                <span>日志管理</span>
+                <span>日志审计</span>
               </template>
               <el-menu-item index="/log/login">登录日志</el-menu-item>
               <el-menu-item index="/log/operation">操作日志</el-menu-item>
             </el-sub-menu>
           </el-menu>
         </div>
-        
+
         <div class="sidebar-footer">
-          <div class="collapse-trigger" @click="toggleCollapse">
-            <el-icon :size="20">
+          <button class="collapse-button" type="button" @click="toggleCollapse">
+            <el-icon :size="18">
               <Expand v-if="isCollapse" />
               <Fold v-else />
             </el-icon>
-          </div>
+            <span v-show="!isCollapse">收起导航</span>
+          </button>
         </div>
       </div>
     </el-aside>
 
-    <el-container class="main-wrapper">
-      <!-- 顶部导航 - 玻璃特效 -->
-      <el-header class="header glass-container">
-        <div class="header-left">
-          <div class="breadcrumb-custom">
-            <span class="active-page">{{ $route.meta.title || '概览' }}</span>
-            <div class="breadcrumb-path">
-              <span>系统</span>
-              <el-icon :size="10"><ArrowRight /></el-icon>
-              <span>{{ $route.meta.title }}</span>
-            </div>
-          </div>
+    <el-container :class="['workspace-shell', { 'workspace-shell--chat': isAiChatRoute }]">
+      <el-header v-if="!isAiChatRoute" class="workspace-header">
+        <div class="workspace-header__left">
+          <span class="page-kicker">当前页面</span>
+          <h1 class="page-title">{{ pageTitle }}</h1>
+          <p class="page-description">{{ pageDescription }}</p>
+
+          <el-breadcrumb separator="/" class="page-breadcrumb">
+            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
+              {{ item.title }}
+            </el-breadcrumb-item>
+          </el-breadcrumb>
         </div>
-        
-        <div class="header-right">
-          <div class="header-tools">
-            <div class="weather-pill" v-if="weather">
-              <el-icon><Sunny /></el-icon>
-              <span>{{ weather.city }} · {{ Math.round(weather.temperature) }}°C</span>
-            </div>
-            
-            <ThemeSwitcher />
-            
-            <el-divider direction="vertical" />
-            
-            <el-dropdown @command="handleCommand" trigger="click">
-              <div class="user-pill glass-container">
-                <el-avatar :size="32" class="user-avatar" :src="currentTheme === 'liuyifei' ? '/themes/liuyifei.jpg' : ''">
-                  <el-icon v-if="currentTheme !== 'liuyifei'"><UserFilled /></el-icon>
-                </el-avatar>
-                <span class="name-text">{{ username }}</span>
-                <el-icon><ArrowDown /></el-icon>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu class="premium-dropdown">
-                  <el-dropdown-item command="profile"><el-icon><User /></el-icon>账户详情</el-dropdown-item>
-                  <el-dropdown-item command="logout" divided><el-icon><SwitchButton /></el-icon>安全退出</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
+
+        <div class="workspace-header__right">
+          <router-link class="header-shortcut" to="/user">
+            <el-icon><UserFilled /></el-icon>
+            <span>用户中心</span>
+          </router-link>
+
+          <el-dropdown trigger="click" @command="handleCommand">
+            <button class="user-chip" type="button">
+              <el-avatar :size="34" class="user-chip__avatar">
+                <el-icon><UserFilled /></el-icon>
+              </el-avatar>
+              <span class="user-chip__name">{{ username }}</span>
+              <el-icon><ArrowDown /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <el-icon><User /></el-icon>
+                  账户信息
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
+                  <el-icon><SwitchButton /></el-icon>
+                  安全退出
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
 
-      <!-- 主内容区 -->
-      <el-main class="main-content">
+      <el-main :class="['workspace-main', { 'workspace-main--chat': isAiChatRoute }]">
         <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
             <component :is="Component" />
@@ -134,280 +152,386 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Monitor, Lightning, FolderOpened, Tickets, TrendCharts,
-  Expand, Fold, Sunny, UserFilled, ArrowDown, User, SwitchButton,
-  ArrowRight, Bell
+  ArrowDown,
+  Bell,
+  Expand,
+  Fold,
+  FolderOpened,
+  Lightning,
+  Monitor,
+  SwitchButton,
+  Tickets,
+  TrendCharts,
+  User,
+  UserFilled
 } from '@element-plus/icons-vue'
-import { getWeatherByCity } from '@/api/weather'
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
-import ThemeDecorations from '@/components/ThemeDecorations.vue'
-import { useThemeStore } from '@/stores/theme'
 
 const route = useRoute()
 const router = useRouter()
-const themeStore = useThemeStore()
 const isCollapse = ref(false)
-const weather = ref(null)
 
-const currentTheme = computed(() => themeStore.currentTheme)
 const activeMenu = computed(() => route.path)
 const username = computed(() => localStorage.getItem('username') || 'Guest')
+const pageTitle = computed(() => route.meta.title || '工作台')
+const pageDescription = computed(() => route.meta.description || '')
+const defaultOpeneds = ['content-ai', 'system-log']
+const isAiChatRoute = computed(() => route.name === 'AiChat')
 
-const loadWeather = async () => {
-  try {
-    const res = await getWeatherByCity('北京')
-    weather.value = res.data
-  } catch (error) {
-    console.error('Weather sync failed:', error)
-  }
-}
-
-onMounted(() => {
-  loadWeather()
+const breadcrumbs = computed(() => {
+  return route.matched
+    .filter((item) => item.meta?.title)
+    .map((item) => ({
+      path: item.path,
+      title: item.meta.title
+    }))
 })
 
 const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
 }
 
-const handleCommand = (command) => {
+const handleCommand = async (command) => {
+  if (command === 'profile') {
+    ElMessage.info('账户详情入口可继续接入个人中心页面。')
+    return
+  }
+
   if (command === 'logout') {
-    ElMessageBox.confirm('准备离开了吗？您的会话将被清除。', '登出账户', {
-      confirmButtonText: '确定登出',
-      cancelButtonText: '再待一会儿',
-      type: 'info',
-      confirmButtonClass: 'premium-btn'
-    }).then(() => {
+    try {
+      await ElMessageBox.confirm(
+        '退出后将清除本地登录状态，需要重新输入账号密码才能继续操作。',
+        '确认退出登录',
+        {
+          confirmButtonText: '退出登录',
+          cancelButtonText: '再看看',
+          type: 'warning'
+        }
+      )
+
       localStorage.removeItem('token')
       localStorage.removeItem('username')
       router.push('/login')
-    })
+    } catch (error) {
+      if (error !== 'cancel') {
+        ElMessage.error('退出登录失败，请稍后重试。')
+      }
+    }
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.layout-container {
-  height: 100vh;
-  display: flex;
-  background: var(--content-bg);
-  padding: 20px;
-  gap: 20px;
+.layout-shell {
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 18px;
+  gap: 18px;
   overflow: hidden;
 }
 
-.sidebar-wrapper {
-  transition: width $transition-base;
-  height: 100%;
-  
-  .sidebar {
-    height: 100%;
-    border-radius: $radius-lg;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--sidebar-bg, rgba(255, 255, 255, 0.8));
-  }
-
-  .logo {
-    height: 90px;
-    padding: 0 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    
-    .logo-icon {
-      width: 44px;
-      height: 44px;
-      background: var(--primary-color);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-      overflow: hidden;
-      
-      .theme-logo-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-    }
-
-    .logo-text {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--text-primary);
-      letter-spacing: -0.5px;
-    }
-  }
-
-  .menu-wrapper {
-    flex: 1;
-    min-height: 0;
-    padding: 12px;
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba(99, 102, 241, 0.18);
-      border-radius: 999px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: rgba(99, 102, 241, 0.32);
-    }
-    
-    :deep(.el-menu) {
-      border: none;
-      background: transparent;
-      
-      .el-menu-item, .el-sub-menu__title {
-        height: 54px;
-        margin-bottom: 6px;
-        border-radius: 14px;
-        color: var(--text-secondary);
-        font-weight: 500;
-        
-        &:hover {
-          background: rgba(99, 102, 241, 0.08) !important;
-          color: var(--primary-color);
-        }
-        
-        &.is-active {
-          background: var(--primary-color) !important;
-          color: #fff !important;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-        
-        .el-icon {
-          font-size: 20px;
-          margin-right: 12px;
-        }
-      }
-    }
-  }
-
-  .sidebar-footer {
-    padding: 20px;
-    .collapse-trigger {
-      height: 48px;
-      background: rgba(0,0,0,0.03);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--text-secondary);
-      transition: all $transition-fast;
-      
-      &:hover {
-        background: rgba(99, 102, 241, 0.1);
-        color: var(--primary-color);
-      }
-    }
-  }
+.sidebar-shell,
+.workspace-shell {
+  min-height: 0;
 }
 
-.main-wrapper {
+.sidebar-panel,
+.workspace-header,
+.workspace-main {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px;
+  border-radius: 24px;
+}
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 12px 18px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(47, 91, 234, 0.24);
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.brand-title {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.brand-subtitle {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.menu-section {
+  margin-bottom: 12px;
+}
+
+.menu-section__label {
+  display: block;
+  margin: 0 12px 8px;
+  color: var(--text-disabled);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.menu-section :deep(.el-menu) {
+  border: none;
+  background: transparent;
+}
+
+.menu-section :deep(.el-menu-item),
+.menu-section :deep(.el-sub-menu__title) {
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.menu-section :deep(.el-menu-item:hover),
+.menu-section :deep(.el-sub-menu__title:hover) {
+  background: var(--surface-emphasis);
+  color: var(--color-primary);
+}
+
+.menu-section :deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(47, 91, 234, 0.22);
+}
+
+.menu-section :deep(.el-menu-item .el-icon),
+.menu-section :deep(.el-sub-menu__title .el-icon) {
+  margin-right: 12px;
+  font-size: 18px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.collapse-button {
+  width: 100%;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.collapse-button:hover {
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  background: var(--surface-emphasis);
+}
+
+.workspace-shell {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  height: 100%;
+  gap: 18px;
 }
 
-.header {
-  height: $header-height !important;
-  border-radius: $radius-lg;
+.workspace-shell--chat {
+  gap: 0;
+}
+
+.workspace-header {
+  height: auto !important;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-radius: 24px;
+  gap: 20px;
+}
+
+.workspace-header__left {
+  min-width: 0;
+}
+
+.page-kicker {
+  display: inline-block;
+  color: var(--text-disabled);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.page-title {
+  margin: 6px 0 0;
+  color: var(--text-primary);
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.12;
+}
+
+.page-description {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.page-breadcrumb {
+  margin-top: 12px;
+}
+
+.page-breadcrumb :deep(.el-breadcrumb__item) {
+  font-size: 0.82rem;
+}
+
+.page-breadcrumb :deep(.el-breadcrumb__inner) {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.page-breadcrumb :deep(.el-breadcrumb__inner.is-link:hover) {
+  color: var(--color-primary);
+}
+
+.workspace-header__right {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 30px;
-  background: var(--header-bg, rgba(255,255,255,0.8));
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
-  .breadcrumb-custom {
-    display: flex;
+.header-shortcut,
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-shortcut:hover,
+.user-chip:hover {
+  border-color: var(--color-primary-border);
+  color: var(--color-primary);
+  background: var(--surface-emphasis);
+}
+
+.user-chip__avatar {
+  background: linear-gradient(135deg, var(--color-primary-soft), rgba(47, 91, 234, 0.18));
+  color: var(--color-primary);
+}
+
+.user-chip__name {
+  font-weight: 700;
+}
+
+.workspace-main {
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+  border-radius: 24px;
+  overflow: auto;
+}
+
+.workspace-main--chat {
+  padding: 12px;
+}
+
+.fade-text-enter-active,
+.fade-text-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-text-enter-from,
+.fade-text-leave-to {
+  opacity: 0;
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@media (max-width: 1180px) {
+  .layout-shell {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .workspace-header {
     flex-direction: column;
-    
-    .active-page {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: var(--text-primary);
-    }
-    
-    .breadcrumb-path {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      opacity: 0.6;
-      font-weight: 500;
-      margin-top: 2px;
-      
-      .el-icon {
-        margin-top: 1px;
-      }
-    }
-  }
-
-  .header-tools {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    
-    .weather-pill {
-      background: rgba(0,0,0,0.04);
-      padding: 8px 16px;
-      border-radius: 100px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-secondary);
-      
-      .el-icon { color: #f59e0b; font-size: 1.1rem; }
-    }
-    
-    .user-pill {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 14px 6px 6px;
-      border-radius: 100px;
-      cursor: pointer;
-      transition: all $transition-fast;
-      
-      &:hover { transform: scale(1.02); filter: brightness(1.05); }
-      
-      .user-avatar { border: 2px solid #fff; }
-      .name-text { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); }
-    }
   }
 }
 
-.main-content {
-  padding: 0 !important;
-  border-radius: $radius-lg;
-  overflow-y: auto;
-  
-  &::-webkit-scrollbar { width: 0; }
-}
+@media (max-width: 960px) {
+  .layout-shell {
+    height: auto;
+    min-height: 100dvh;
+    flex-direction: column;
+    overflow: visible;
+  }
 
-.page-fade-enter-active, .page-fade-leave-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  .sidebar-shell {
+    width: 100% !important;
+  }
+
+  .sidebar-panel {
+    height: auto;
+  }
+
+  .workspace-main {
+    padding: 18px;
+  }
+
+  .workspace-main--chat {
+    padding: 12px;
+  }
 }
-.page-fade-enter-from { opacity: 0; transform: scale(0.97) translateY(12px); }
-.page-fade-leave-to { opacity: 0; transform: scale(1.01) translateY(-8px); }
 </style>

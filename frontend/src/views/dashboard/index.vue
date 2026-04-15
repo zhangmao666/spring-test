@@ -1,735 +1,617 @@
 <template>
-  <div class="dashboard">
-    <!-- 天气详情模块 -->
-    <div class="weather-section" v-loading="weatherLoading">
-      <div class="weather-card-new" v-if="weather">
-        <!-- 左侧主要信息 -->
-        <div class="weather-primary">
-          <div class="weather-location">
-            <el-icon :size="16"><Location /></el-icon>
-            <span>{{ weather.city }}, {{ weather.country }}</span>
-          </div>
-          <div class="weather-temp-wrap">
-            <span class="weather-temp-value">{{ Math.round(weather.temperature) }}</span>
-            <span class="weather-temp-unit">°C</span>
-            <el-icon :size="36" class="weather-float-icon"><Sunny /></el-icon>
-          </div>
-          <div class="weather-condition">{{ weather.description }}</div>
-          <div class="weather-feels">体感 {{ Math.round(weather.feelsLike) }}°C</div>
-        </div>
-        
-        <!-- 右侧详细指标 -->
-        <div class="weather-metrics">
-          <div class="metric-item">
-            <div class="metric-icon humidity">
-              <el-icon :size="18"><Drizzling /></el-icon>
-            </div>
-            <div class="metric-data">
-              <span class="metric-value">{{ weather.humidity }}%</span>
-              <span class="metric-label">湿度</span>
-            </div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-icon wind">
-              <el-icon :size="18"><WindPower /></el-icon>
-            </div>
-            <div class="metric-data">
-              <span class="metric-value">{{ weather.windSpeed }}</span>
-              <span class="metric-label">风速 m/s</span>
-            </div>
-          </div>
-          <div class="metric-item">
-            <div class="metric-icon pressure">
-              <el-icon :size="18"><Odometer /></el-icon>
-            </div>
-            <div class="metric-data">
-              <span class="metric-value">{{ weather.pressure }}</span>
-              <span class="metric-label">气压 hPa</span>
-            </div>
-          </div>
-        </div>
+  <div class="dashboard-page">
+    <section class="overview-panel">
+      <div class="overview-panel__copy">
+        <span class="section-kicker">SYSTEM OVERVIEW</span>
+        <h2 class="section-title">工作台</h2>
+        <p class="section-desc">
+          查看系统关键数据、常用入口和最近状态。
+        </p>
       </div>
-      <div v-else class="weather-loading">
-        <span>加载天气中...</span>
-      </div>
-    </div>
 
-    <!-- 统计卡片 -->
-    <div class="stat-cards">
-      <div class="stat-card stat-card--success animate-fade-up" style="animation-delay: 0ms">
+      <div class="overview-panel__actions">
+        <el-button type="primary" @click="$router.push('/user')">
+          <el-icon><UserFilled /></el-icon>
+          进入用户管理
+        </el-button>
+        <el-button @click="$router.push('/dict')">
+          <el-icon><Collection /></el-icon>
+          查看字典配置
+        </el-button>
+      </div>
+    </section>
+
+    <section class="stat-grid">
+      <article
+        v-for="card in statCards"
+        :key="card.key"
+        class="stat-card"
+        :class="`stat-card--${card.tone}`"
+      >
         <div class="stat-card__icon">
-          <el-icon :size="24"><UserFilled /></el-icon>
+          <el-icon :size="20"><component :is="card.icon" /></el-icon>
         </div>
-        <div class="stat-card__info">
-          <div class="stat-card__value">{{ displayUsers }}</div>
-          <div class="stat-card__label">用户总数</div>
+        <div class="stat-card__body">
+          <span class="stat-card__label">{{ card.label }}</span>
+          <strong class="stat-card__value">{{ card.value }}</strong>
+          <span class="stat-card__hint">{{ card.hint }}</span>
         </div>
-        <div class="stat-card__trend trend--up">
-          <el-icon><Top /></el-icon>
-          <span>8%</span>
-        </div>
-        <div ref="sparkline1Ref" class="stat-card__sparkline"></div>
-      </div>
+      </article>
+    </section>
 
-      <div class="stat-card stat-card--danger animate-fade-up" style="animation-delay: 120ms">
-        <div class="stat-card__icon">
-          <el-icon :size="24"><Files /></el-icon>
-        </div>
-        <div class="stat-card__info">
-          <div class="stat-card__value">{{ displayDicts }}</div>
-          <div class="stat-card__label">字典总数</div>
-        </div>
-        <div class="stat-card__trend trend--up">
-          <el-icon><Top /></el-icon>
-          <span>5%</span>
-        </div>
-        <div ref="sparkline2Ref" class="stat-card__sparkline"></div>
-      </div>
-    </div>
-
-    <div class="content-row">
-      <!-- 快捷操作 -->
-      <div class="quick-section">
-        <el-card>
-          <template #header>
-            <div class="section-header">
-              <div class="section-title">
-                <el-icon><Grid /></el-icon>
-                <span>快捷入口</span>
-              </div>
-            </div>
-          </template>
-          <div class="quick-grid">
-            <div class="quick-item" @click="$router.push('/dict')">
-              <div class="quick-item__icon quick-item__icon--success">
-                <el-icon :size="24"><Files /></el-icon>
-              </div>
-              <div class="quick-item__text">字典管理</div>
-            </div>
-            <div class="quick-item" @click="$router.push('/user')">
-              <div class="quick-item__icon quick-item__icon--info">
-                <el-icon :size="24"><UserFilled /></el-icon>
-              </div>
-              <div class="quick-item__text">用户管理</div>
+    <section class="content-grid">
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <h3>快捷入口</h3>
+              <p>快速进入常用模块。</p>
             </div>
           </div>
-        </el-card>
-      </div>
+        </template>
 
-      <!-- 系统信息 -->
-      <div class="info-section">
-        <el-card>
-          <template #header>
-            <div class="section-header">
-              <div class="section-title">
-                <el-icon><InfoFilled /></el-icon>
-                <span>系统信息</span>
-              </div>
-            </div>
-          </template>
-          <div class="info-list">
-            <div class="info-item">
-              <span class="info-item__label">系统名称</span>
-              <span class="info-item__value">Admin Pro 管理系统</span>
-            </div>
-            <div class="info-item">
-              <span class="info-item__label">系统版本</span>
-              <span class="info-item__value">
-                <el-tag size="small" type="primary">v1.0.0</el-tag>
-              </span>
-            </div>
-            <div class="info-item">
-              <span class="info-item__label">前端框架</span>
-              <span class="info-item__value">Vue 3 + Element Plus</span>
-            </div>
-            <div class="info-item">
-              <span class="info-item__label">后端框架</span>
-              <span class="info-item__value">Spring Boot 3</span>
-            </div>
-            <div class="info-item">
-              <span class="info-item__label">当前用户</span>
-              <span class="info-item__value">
-                <el-tag size="small">{{ username }}</el-tag>
-              </span>
-            </div>
-          </div>
-        </el-card>
-      </div>
-    </div>
-
-    <!-- 最近活动 -->
-    <el-card class="activity-card">
-      <template #header>
-        <div class="section-header">
-          <div class="section-title">
-            <el-icon><Clock /></el-icon>
-            <span>最近活动</span>
-          </div>
-          <el-button type="primary" link>查看全部</el-button>
-        </div>
-      </template>
-      <div class="activity-list">
-        <transition-group name="activity-list">
-          <div
-            v-for="(activity, index) in activities"
-            :key="index"
-            class="activity-item animate-fade-up"
-            :style="{ animationDelay: `${index * 80}ms` }"
+        <div class="quick-grid">
+          <button
+            v-for="action in quickActions"
+            :key="action.title"
+            class="quick-card"
+            type="button"
+            @click="$router.push(action.to)"
           >
-            <div :class="['activity-dot', `activity-dot--${activity.type}`]"></div>
-            <div class="activity-content">
-              <div class="activity-text">{{ activity.content }}</div>
-              <div class="activity-time">{{ activity.time }}</div>
+            <div class="quick-card__icon">
+              <el-icon><component :is="action.icon" /></el-icon>
+            </div>
+            <div class="quick-card__copy">
+              <span class="quick-card__title">{{ action.title }}</span>
+              <span class="quick-card__desc">{{ action.desc }}</span>
+            </div>
+          </button>
+        </div>
+      </el-card>
+
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <h3>当前重点</h3>
+              <p>近期需要关注的数据状态。</p>
+            </div>
+            <span class="summary-timestamp">更新于 {{ lastUpdatedLabel }}</span>
+          </div>
+        </template>
+
+        <div class="focus-list">
+          <div class="focus-item">
+            <span class="focus-item__label">启用用户</span>
+            <strong class="focus-item__value">{{ stats.activeUsers }}</strong>
+            <span class="focus-item__desc">当前可正常使用系统的账号数量。</span>
+          </div>
+          <div class="focus-item">
+            <span class="focus-item__label">启用字典</span>
+            <strong class="focus-item__value">{{ stats.enabledDicts }}</strong>
+            <span class="focus-item__desc">当前生效中的字典配置数量。</span>
+          </div>
+          <div class="focus-item">
+            <span class="focus-item__label">停用对象</span>
+            <strong class="focus-item__value">{{ inactiveSummary }}</strong>
+            <span class="focus-item__desc">包含禁用用户和停用字典。</span>
+          </div>
+        </div>
+
+        <div class="summary-note">
+          <el-icon><InfoFilled /></el-icon>
+          <span>{{ summaryNote }}</span>
+        </div>
+      </el-card>
+    </section>
+
+    <section class="detail-grid">
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <h3>数据概览</h3>
+              <p>展示当前主要管理对象的数量。</p>
             </div>
           </div>
-        </transition-group>
-      </div>
-    </el-card>
+        </template>
+
+        <div class="status-metrics">
+          <div class="status-metric">
+            <span class="status-metric__label">用户总数</span>
+            <strong class="status-metric__value">{{ stats.userTotal }}</strong>
+          </div>
+          <div class="status-metric">
+            <span class="status-metric__label">禁用用户</span>
+            <strong class="status-metric__value">{{ stats.disabledUsers }}</strong>
+          </div>
+          <div class="status-metric">
+            <span class="status-metric__label">字典总数</span>
+            <strong class="status-metric__value">{{ stats.dictTotal }}</strong>
+          </div>
+          <div class="status-metric">
+            <span class="status-metric__label">停用字典</span>
+            <strong class="status-metric__value">{{ stats.disabledDicts }}</strong>
+          </div>
+        </div>
+      </el-card>
+
+      <el-card shadow="never">
+        <template #header>
+          <div class="card-header">
+            <div>
+              <h3>模块摘要</h3>
+              <p>当前主要模块的用途概览。</p>
+            </div>
+          </div>
+        </template>
+
+        <div class="tips-list">
+          <div class="tip-item">
+            <strong>用户管理</strong>
+            <span>管理账号状态、角色信息和基础安全操作。</span>
+          </div>
+          <div class="tip-item">
+            <strong>字典管理</strong>
+            <span>维护系统基础配置及字典项内容。</span>
+          </div>
+          <div class="tip-item">
+            <strong>AI 与热点</strong>
+            <span>用于内容辅助、信息查看和模型能力管理。</span>
+          </div>
+        </div>
+      </el-card>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import * as echarts from 'echarts'
-import { getWeatherByCity } from '@/api/weather'
+import { computed, onMounted, ref } from 'vue'
+import {
+  Collection,
+  Compass,
+  Cpu,
+  InfoFilled,
+  Notification,
+  UserFilled
+} from '@element-plus/icons-vue'
+import { getDictList } from '@/api/dict'
+import { getUserList } from '@/api/user'
 
-const username = computed(() => localStorage.getItem('username') || '管理员')
+const loading = ref(false)
+const lastUpdatedAt = ref(null)
 
-const weather = ref(null)
-const weatherLoading = ref(false)
+const stats = ref({
+  userTotal: 0,
+  activeUsers: 0,
+  disabledUsers: 0,
+  dictTotal: 0,
+  enabledDicts: 0,
+  disabledDicts: 0
+})
 
-const stats = ref({ users: 0, dicts: 0 })
-const displayUsers = ref(0)
-const displayDicts = ref(0)
+const quickActions = [
+  { title: '用户管理', desc: '查看账号状态、角色和安全操作', to: '/user', icon: UserFilled },
+  { title: '字典管理', desc: '维护系统基础配置和字典项', to: '/dict', icon: Collection },
+  { title: 'AI 聊天', desc: '处理文本问答和辅助内容生成', to: '/ai/chat', icon: Cpu },
+  { title: '热点新闻', desc: '快速查看多平台实时热点', to: '/news/hot', icon: Notification }
+]
 
-const sparkline1Ref = ref(null)
-const sparkline2Ref = ref(null)
-let chart1 = null
-let chart2 = null
-
-const activities = ref([
-  { content: '系统已成功启动', time: '刚刚', type: 'success' },
-  { content: '用户登录系统', time: '5 分钟前', type: 'primary' },
-  { content: '数据库连接正常', time: '10 分钟前', type: 'success' },
-  { content: '缓存服务已启动', time: '15 分钟前', type: 'info' },
-  { content: '定时任务执行完成', time: '30 分钟前', type: 'warning' }
+const statCards = computed(() => [
+  {
+    key: 'users',
+    label: '用户总数',
+    value: stats.value.userTotal,
+    hint: `${stats.value.activeUsers} 位启用中`,
+    tone: 'primary',
+    icon: UserFilled
+  },
+  {
+    key: 'dicts',
+    label: '字典总数',
+    value: stats.value.dictTotal,
+    hint: `${stats.value.enabledDicts} 个启用中`,
+    tone: 'success',
+    icon: Collection
+  },
+  {
+    key: 'disabledUsers',
+    label: '禁用用户',
+    value: stats.value.disabledUsers,
+    hint: '当前处于禁用状态的账号',
+    tone: 'warning',
+    icon: Compass
+  },
+  {
+    key: 'disabledDicts',
+    label: '停用字典',
+    value: stats.value.disabledDicts,
+    hint: '当前未启用的字典配置',
+    tone: 'neutral',
+    icon: InfoFilled
+  }
 ])
 
-function easeOutQuad(t) {
-  return t * (2 - t)
-}
+const inactiveSummary = computed(() => stats.value.disabledUsers + stats.value.disabledDicts)
 
-function countUp(target, setter, duration = 1200) {
-  const startTime = performance.now()
-  function update(currentTime) {
-    const elapsed = currentTime - startTime
-    const progress = Math.min(elapsed / duration, 1)
-    setter(Math.floor(target * easeOutQuad(progress)))
-    if (progress < 1) requestAnimationFrame(update)
+const lastUpdatedLabel = computed(() => {
+  if (!lastUpdatedAt.value) return '刚刚'
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(lastUpdatedAt.value)
+})
+
+const summaryNote = computed(() => {
+  if (inactiveSummary.value > 0) {
+    return `当前共有 ${inactiveSummary.value} 个停用对象。`
   }
-  requestAnimationFrame(update)
+  return '当前系统状态正常。'
+})
+
+const extractList = (payload) => {
+  if (Array.isArray(payload?.records)) return payload.records
+  if (Array.isArray(payload?.list)) return payload.list
+  if (Array.isArray(payload?.items)) return payload.items
+  if (Array.isArray(payload)) return payload
+  return []
 }
 
-function initSparkline(el, data, color) {
-  if (!el) return null
-  const chart = echarts.init(el)
-  chart.setOption({
-    animation: true,
-    animationDuration: 1000,
-    grid: { top: 4, bottom: 4, left: 4, right: 4 },
-    xAxis: { type: 'category', show: false, data: data.map((_, i) => i) },
-    yAxis: { type: 'value', show: false, min: Math.min(...data) * 0.95 },
-    series: [{
-      type: 'line',
-      data,
-      smooth: true,
-      symbol: 'none',
-      lineStyle: { color, width: 2 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: color + '60' },
-            { offset: 1, color: color + '00' }
-          ]
-        }
-      }
-    }]
-  })
-  return chart
+const extractTotal = (payload, fallback = 0) => {
+  return typeof payload?.total === 'number' ? payload.total : fallback
 }
 
-const loadWeather = async () => {
-  weatherLoading.value = true
+const loadDashboard = async () => {
+  loading.value = true
+
   try {
-    const res = await getWeatherByCity('成都')
-    weather.value = res.data
-  } catch (error) {
-    console.error('获取天气失败:', error)
+    const [userResult, dictResult] = await Promise.allSettled([
+      getUserList({ page: 1, size: 200 }),
+      getDictList({ page: 0, size: 200 })
+    ])
+
+    const userPayload = userResult.status === 'fulfilled' ? userResult.value.data : null
+    const dictPayload = dictResult.status === 'fulfilled' ? dictResult.value.data : null
+
+    const users = extractList(userPayload)
+    const dicts = extractList(dictPayload)
+
+    stats.value = {
+      userTotal: extractTotal(userPayload, users.length),
+      activeUsers: users.filter((item) => item.status === 1).length,
+      disabledUsers: users.filter((item) => item.status !== 1).length,
+      dictTotal: extractTotal(dictPayload, dicts.length),
+      enabledDicts: dicts.filter((item) => item.status === 1).length,
+      disabledDicts: dicts.filter((item) => item.status !== 1).length
+    }
   } finally {
-    weatherLoading.value = false
+    lastUpdatedAt.value = new Date()
+    loading.value = false
   }
 }
 
 onMounted(() => {
-  loadWeather()
-
-  setTimeout(() => {
-    stats.value = { users: 156, dicts: 8 }
-    countUp(156, v => { displayUsers.value = v })
-    countUp(8, v => { displayDicts.value = v })
-
-    setTimeout(() => {
-      chart1 = initSparkline(sparkline1Ref.value, [120, 132, 135, 138, 140, 148, 156], '#10b981')
-      chart2 = initSparkline(sparkline2Ref.value, [5, 5, 6, 6, 7, 7, 8], '#ef4444')
-    }, 100)
-  }, 300)
-})
-
-onBeforeUnmount(() => {
-  chart1?.dispose()
-  chart2?.dispose()
+  loadDashboard()
 })
 </script>
 
 <style lang="scss" scoped>
-$primary: #6366f1;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-$info: #3b82f6;
-
-.dashboard {
+.dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-}
-
-.weather-section {
-  margin-bottom: 0;
-}
-
-.weather-card-new {
-  display: flex;
-  align-items: stretch;
-  background: #fff;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-
-  .weather-primary {
-    flex: 0 0 280px;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    padding: 28px 32px;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-
-    .weather-location {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      opacity: 0.9;
-      margin-bottom: 12px;
-    }
-
-    .weather-temp-wrap {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 8px;
-
-      .weather-temp-value {
-        font-size: 64px;
-        font-weight: 300;
-        line-height: 1;
-        letter-spacing: -2px;
-      }
-
-      .weather-temp-unit {
-        font-size: 24px;
-        font-weight: 300;
-        margin-top: 8px;
-      }
-
-      .weather-float-icon {
-        margin-left: 12px;
-        margin-top: 8px;
-        opacity: 0.85;
-        animation: float 3s ease-in-out infinite;
-        color: #fde68a;
-      }
-    }
-
-    .weather-condition {
-      font-size: 18px;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-
-    .weather-feels {
-      font-size: 13px;
-      opacity: 0.8;
-    }
-  }
-
-  .weather-metrics {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    padding: 24px 40px;
-    background: #fff;
-
-    .metric-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-
-      .metric-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &.humidity {
-          background: rgba(59, 130, 246, 0.1);
-          color: #3b82f6;
-        }
-
-        &.wind {
-          background: rgba(16, 185, 129, 0.1);
-          color: #10b981;
-        }
-
-        &.pressure {
-          background: rgba(245, 158, 11, 0.1);
-          color: #f59e0b;
-        }
-      }
-
-      .metric-data {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-
-        .metric-value {
-          font-size: 20px;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .metric-label {
-          font-size: 12px;
-          color: #94a3b8;
-        }
-      }
-    }
-  }
-}
-
-.weather-loading {
-  background: #fff;
-  border-radius: 16px;
-  padding: 48px;
-  text-align: center;
-  color: #94a3b8;
-}
-
-.stat-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
 }
 
-.stat-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    transform: translate(30%, -30%);
-    opacity: 0.1;
-  }
-
-  &--primary {
-    &::before { background: $primary; }
-    .stat-card__icon { background: rgba($primary, 0.1); color: $primary; }
-  }
-
-  &--success {
-    &::before { background: $success; }
-    .stat-card__icon { background: rgba($success, 0.1); color: $success; }
-  }
-
-  &--warning {
-    &::before { background: $warning; }
-    .stat-card__icon { background: rgba($warning, 0.1); color: $warning; }
-  }
-
-  &--danger {
-    &::before { background: $danger; }
-    .stat-card__icon { background: rgba($danger, 0.1); color: $danger; }
-  }
-
-  &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__info {
-    flex: 1;
-  }
-
-  &__value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #1e293b;
-    line-height: 1.2;
-  }
-
-  &__label {
-    font-size: 14px;
-    color: #64748b;
-    margin-top: 4px;
-  }
-
-  &__trend {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 6px;
-
-    &.trend--up {
-      background: rgba($success, 0.1);
-      color: $success;
-    }
-
-    &.trend--down {
-      background: rgba($danger, 0.1);
-      color: $danger;
-    }
-  }
-
-  &__sparkline {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 52px;
-    pointer-events: none;
-    opacity: 0.7;
-  }
-}
-
-.content-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.section-header {
+.overview-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92)),
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(16, 185, 129, 0.14));
+  color: #fff;
+}
 
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1e293b;
+.overview-panel__copy {
+  max-width: 720px;
+}
 
-    .el-icon {
-      color: $primary;
-    }
-  }
+.section-kicker {
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.section-title {
+  margin: 8px 0 0;
+  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+  line-height: 1.15;
+}
+
+.section-desc {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.7;
+}
+
+.overview-panel__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.overview-panel__actions :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+
+.stat-grid,
+.content-grid,
+.detail-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.content-grid,
+.detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 128px;
+  padding: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 20px;
+  background: #fff;
+}
+
+.stat-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  flex-shrink: 0;
+}
+
+.stat-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card__label {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.stat-card__value {
+  color: #0f172a;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.stat-card__hint {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.stat-card--primary .stat-card__icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.stat-card--success .stat-card__icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.stat-card--warning .stat-card__icon {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.stat-card--neutral .stat-card__icon {
+  background: rgba(71, 85, 105, 0.12);
+  color: #475569;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.card-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.summary-timestamp {
+  color: #94a3b8;
+  font-size: 0.8rem;
 }
 
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.quick-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 24px 16px;
-  background: #f8fafc;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: #f1f5f9;
-    transform: translateY(-2px);
-
-    .quick-item__icon {
-      transform: scale(1.1);
-    }
-  }
-
-  &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s ease;
-
-    &--primary { background: rgba($primary, 0.1); color: $primary; }
-    &--success { background: rgba($success, 0.1); color: $success; }
-    &--warning { background: rgba($warning, 0.1); color: $warning; }
-    &--info { background: rgba($info, 0.1); color: $info; }
-  }
-
-  &__text {
-    font-size: 14px;
-    font-weight: 500;
-    color: #475569;
-  }
 }
 
-.info-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.info-item {
+.quick-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 14px 0;
-  border-bottom: 1px solid #f1f5f9;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &__label {
-    font-size: 14px;
-    color: #64748b;
-  }
-
-  &__value {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1e293b;
-  }
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.activity-card {
-  :deep(.el-card__body) {
-    padding: 0 !important;
-  }
+.quick-card:hover {
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
 }
 
-.activity-list {
-  max-height: 300px;
-  overflow-y: auto;
+.quick-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  flex-shrink: 0;
 }
 
-.activity-item {
+.quick-card__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quick-card__title {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.quick-card__desc {
+  color: #64748b;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.focus-list,
+.status-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.status-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.focus-item,
+.status-metric,
+.tip-item {
+  padding: 18px;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.focus-item__label,
+.status-metric__label {
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.focus-item__value,
+.status-metric__value {
+  display: block;
+  margin-top: 10px;
+  color: #0f172a;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.focus-item__desc {
+  display: block;
+  margin-top: 10px;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.summary-note {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
-  padding: 16px 24px;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: #f8fafc;
-  }
-
-  &:not(:last-child) {
-    border-bottom: 1px solid #f1f5f9;
-  }
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1e40af;
+  line-height: 1.6;
 }
 
-.activity-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 6px;
-  flex-shrink: 0;
-
-  &--primary { background: $primary; }
-  &--success { background: $success; }
-  &--warning { background: $warning; }
-  &--danger { background: $danger; }
-  &--info { background: $info; }
+.tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.activity-content {
-  flex: 1;
+.tip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.activity-text {
-  font-size: 14px;
-  color: #1e293b;
-  margin-bottom: 4px;
+.tip-item strong {
+  color: #0f172a;
+  font-size: 0.95rem;
 }
 
-.activity-time {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-// 活动列表过渡动画
-.activity-list-enter-active {
-  transition: all 0.4s ease;
-}
-.activity-list-enter-from {
-  opacity: 0;
-  transform: translateX(-20px);
-}
-
-// 浮动动画（天气图标）
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
+.tip-item span {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.6;
 }
 
 @media (max-width: 1200px) {
-  .stat-cards {
-    grid-template-columns: repeat(2, 1fr);
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .content-grid,
+  .detail-grid,
+  .quick-grid,
+  .focus-list,
+  .status-metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .overview-panel {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .content-row {
+  .stat-grid {
     grid-template-columns: 1fr;
   }
 }

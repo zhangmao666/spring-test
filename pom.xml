@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>spring-boot-test</artifactId>
+    <artifactId>ai-world</artifactId>
     <version>1.0.0</version>
-    <name>spring-boot-test</name>
-    <description>Spring Boot 3 鍩虹椤圭洰</description>
+    <name>AI-world</name>
+    <description>AI-world: An AI-powered world</description>
 
     <properties>
         <java.version>17</java.version>

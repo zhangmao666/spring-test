@@ -1,7 +1,7 @@
 # 生产环境配置
 spring:
   application:
-    name: spring-boot-test
+    name: AI-world
 
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
@@ -15,7 +15,7 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-test-query: SELECT 1
-      pool-name: SpringBootTestHikariCP
+      pool-name: AIWorldHikariCP
       leak-detection-threshold: 60000
 
   jpa:
@@ -80,7 +80,7 @@ logging:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
   file:
-    name: /var/log/spring-boot-test/application.log
+    name: /var/log/ai-world/application.log
     max-size: 50MB
     max-history: 60
     total-size-cap: 5GB

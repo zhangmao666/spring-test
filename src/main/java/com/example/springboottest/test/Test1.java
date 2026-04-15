@@ -44,6 +44,15 @@ public class Test1 {
         System.out.println(prompt);
     }
 
+
+    public static void function3(){
+        String prompt = """
+                你是一个基金分析专家，请分析以下基金的基本情况和投资价值：
+                """;
+
+        System.out.println(prompt);
+    }
+
     public static void main(String[] args) {
         function1();
     }

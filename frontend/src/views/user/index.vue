@@ -1,115 +1,150 @@
 <template>
   <div class="user-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="page-header__info">
-        <h2 class="page-header__title">用户管理</h2>
-        <p class="page-header__desc">管理系统用户账户和权限配置</p>
+    <section class="page-hero">
+      <div class="page-hero__copy">
+        <span class="page-hero__eyebrow">USER OPERATIONS</span>
+        <h2 class="page-hero__title">用户管理</h2>
+        <p class="page-hero__desc">统一查看账号状态、角色分布和安全操作，避免误改用户权限。</p>
       </div>
       <el-button type="primary" @click="handleAdd">
         <el-icon><Plus /></el-icon>
         新增用户
       </el-button>
-    </div>
+    </section>
 
-    <!-- 筛选区域 -->
-    <el-card class="filter-card">
-      <div class="filter-form">
-        <el-input 
-          v-model="searchForm.username" 
-          placeholder="搜索用户名..." 
-          clearable
-          class="search-input"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
-        <el-input 
-          v-model="searchForm.email" 
-          placeholder="搜索邮箱..." 
-          clearable
-          class="email-input"
-        />
-        <el-select v-model="searchForm.status" placeholder="用户状态" clearable class="status-select">
-          <el-option label="启用" :value="1" />
-          <el-option label="禁用" :value="0" />
-        </el-select>
-        <el-button type="primary" @click="handleSearch">搜索</el-button>
-        <el-button @click="resetSearch">重置</el-button>
+    <section class="metric-strip">
+      <article class="metric-chip">
+        <span class="metric-chip__label">用户总数</span>
+        <strong class="metric-chip__value">{{ summary.total }}</strong>
+      </article>
+      <article class="metric-chip">
+        <span class="metric-chip__label">启用中</span>
+        <strong class="metric-chip__value">{{ summary.active }}</strong>
+      </article>
+      <article class="metric-chip">
+        <span class="metric-chip__label">禁用中</span>
+        <strong class="metric-chip__value">{{ summary.disabled }}</strong>
+      </article>
+      <article class="metric-chip">
+        <span class="metric-chip__label">管理员</span>
+        <strong class="metric-chip__value">{{ summary.admin }}</strong>
+      </article>
+    </section>
+
+    <el-card class="filter-card" shadow="never">
+      <div class="filter-toolbar">
+        <div class="filter-toolbar__fields">
+          <el-input
+            v-model="searchForm.username"
+            placeholder="按用户名搜索"
+            clearable
+            class="filter-input filter-input--wide"
+            @keyup.enter="handleSearch"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+
+          <el-input
+            v-model="searchForm.email"
+            placeholder="按邮箱搜索"
+            clearable
+            class="filter-input"
+            @keyup.enter="handleSearch"
+          />
+
+          <el-select
+            v-model="searchForm.status"
+            placeholder="用户状态"
+            clearable
+            class="filter-select"
+          >
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
+          </el-select>
+        </div>
+
+        <div class="filter-toolbar__actions">
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </div>
+      </div>
+
+      <div class="filter-result">
+        <span>当前共找到 <strong>{{ pagination.total }}</strong> 位用户</span>
+        <span>默认按列表结果进行状态管理与安全操作</span>
       </div>
     </el-card>
 
-    <!-- 用户列表 -->
-    <el-card class="table-card">
-      <el-table :data="tableData" v-loading="loading" class="user-table">
-        <el-table-column prop="username" label="用户" min-width="200">
+    <el-card class="table-card" shadow="never">
+      <el-table :data="tableData" v-loading="loading" class="user-table" empty-text="暂无符合条件的用户">
+        <el-table-column prop="username" label="用户信息" min-width="240">
           <template #default="{ row }">
             <div class="cell-user">
-              <el-avatar :size="40" class="cell-user__avatar">
+              <el-avatar :size="42" class="cell-user__avatar">
                 <el-icon :size="20"><UserFilled /></el-icon>
               </el-avatar>
               <div class="cell-user__info">
                 <span class="cell-user__name">{{ row.username }}</span>
-                <span class="cell-user__email">{{ row.email }}</span>
+                <span class="cell-user__email">{{ row.email || '未填写邮箱' }}</span>
               </div>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="phone" label="手机号" width="140">
+
+        <el-table-column prop="phone" label="手机号" min-width="150">
           <template #default="{ row }">
-            <span class="cell-phone">{{ row.phone || '-' }}</span>
+            <span class="cell-phone">{{ row.phone || '未填写' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="role" label="角色" width="120">
+
+        <el-table-column prop="role" label="角色" width="140">
           <template #default="{ row }">
-            <span :class="['role-tag', `role-tag--${row.role?.toLowerCase()}`]">
+            <span :class="['role-tag', `role-tag--${String(row.role || '').toLowerCase()}`]">
               {{ getRoleText(row.role) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+
+        <el-table-column prop="status" label="状态" width="190">
           <template #default="{ row }">
-            <el-switch 
-              v-model="row.status" 
-              :active-value="1" 
-              :inactive-value="0"
-              @change="handleStatusChange(row)"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="170">
-          <template #default="{ row }">
-            <div class="cell-time">
-              <el-icon><Clock /></el-icon>
-              <span>{{ row.createTime }}</span>
+            <div class="status-cell">
+              <span :class="['status-badge', row.status === 1 ? 'status-badge--active' : 'status-badge--inactive']">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </span>
+              <el-switch
+                v-model="row.status"
+                :active-value="1"
+                :inactive-value="0"
+                @change="handleStatusChange(row)"
+              />
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+
+        <el-table-column prop="createdAt" label="创建时间" min-width="180">
+          <template #default="{ row }">
+            <div class="cell-time">
+              <el-icon><Clock /></el-icon>
+              <span>{{ formatTime(row.createdAt) }}</span>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" min-width="250" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
-              <el-tooltip content="编辑" placement="top">
-                <el-button type="primary" link @click="handleEdit(row)">
-                  <el-icon><Edit /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="重置密码" placement="top">
-                <el-button type="warning" link @click="handleResetPwd(row)">
-                  <el-icon><Key /></el-icon>
-                </el-button>
-              </el-tooltip>
-              <el-tooltip content="删除" placement="top">
-                <el-button type="danger" link @click="handleDelete(row)">
-                  <el-icon><Delete /></el-icon>
-                </el-button>
-              </el-tooltip>
+              <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+              <el-button link type="warning" @click="handleResetPwd(row)">重置密码</el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="pagination-container">
+        <span class="pagination-tip">每次操作前，请先确认用户角色和状态是否正确。</span>
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -117,18 +152,19 @@
           :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
+          @current-change="loadData"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
 
-    <!-- 新增/编辑对话框 -->
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="550px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" destroy-on-close>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="88px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名" />
         </el-form-item>
         <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
+          <el-input v-model="form.email" placeholder="请输入邮箱地址" />
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" placeholder="请输入手机号" />
@@ -141,7 +177,7 @@
           </el-select>
         </el-form-item>
         <el-form-item v-if="!form.id" label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password />
+          <el-input v-model="form.password" type="password" placeholder="请输入初始密码" show-password />
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="form.status">
@@ -152,16 +188,24 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <el-button type="primary" @click="handleSubmit">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { Clock, Plus, Search, UserFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserList, createUser, updateUser, deleteUser, updateUserStatus, resetPassword } from '@/api/user'
+import {
+  createUser,
+  deleteUser,
+  getUserList,
+  resetPassword,
+  updateUser,
+  updateUserStatus
+} from '@/api/user'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -194,24 +238,34 @@ const form = reactive({
 const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在3-20个字符', trigger: 'blur' }
+    { min: 3, max: 20, message: '用户名长度需在 3 到 20 个字符之间', trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入初始密码', trigger: 'blur' }]
 }
 
-const getRoleType = (role) => {
-  const types = { 'ADMIN': 'danger', 'TEACHER': 'warning', 'STUDENT': '' }
-  return types[role] || ''
-}
+const summary = computed(() => ({
+  total: pagination.total,
+  active: tableData.value.filter((item) => item.status === 1).length,
+  disabled: tableData.value.filter((item) => item.status === 0).length,
+  admin: tableData.value.filter((item) => item.role === 'ADMIN').length
+}))
 
 const getRoleText = (role) => {
-  const texts = { 'ADMIN': '管理员', 'TEACHER': '教师', 'STUDENT': '学生' }
-  return texts[role] || role
+  const texts = { ADMIN: '管理员', TEACHER: '教师', STUDENT: '学生' }
+  return texts[role] || role || '未分配角色'
+}
+
+const formatTime = (time) => {
+  if (!time) return '未记录'
+  const date = new Date(time)
+  if (Number.isNaN(date.getTime())) return time
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 const loadData = async () => {
@@ -224,10 +278,11 @@ const loadData = async () => {
       email: searchForm.email || undefined,
       status: searchForm.status
     })
+
     tableData.value = res.data?.records || res.data?.list || res.data || []
     pagination.total = res.data?.total || tableData.value.length
   } catch (error) {
-    console.error('加载用户列表失败:', error)
+    ElMessage.error('加载用户列表失败，请稍后重试。')
   } finally {
     loading.value = false
   }
@@ -246,9 +301,23 @@ const resetSearch = () => {
   loadData()
 }
 
+const handleSizeChange = (size) => {
+  pagination.size = size
+  pagination.page = 1
+  loadData()
+}
+
 const handleAdd = () => {
   dialogTitle.value = '新增用户'
-  Object.assign(form, { id: null, username: '', email: '', phone: '', role: 'STUDENT', password: '', status: 1 })
+  Object.assign(form, {
+    id: null,
+    username: '',
+    email: '',
+    phone: '',
+    role: 'STUDENT',
+    password: '',
+    status: 1
+  })
   dialogVisible.value = true
 }
 
@@ -259,34 +328,51 @@ const handleEdit = (row) => {
 }
 
 const handleStatusChange = async (row) => {
+  const nextStatus = row.status
+  const previousStatus = nextStatus === 1 ? 0 : 1
+
   try {
-    await updateUserStatus(row.id, row.status)
-    const statusText = row.status === 1 ? '启用' : '禁用'
-    ElMessage.success(`用户已${statusText}`)
+    await updateUserStatus(row.id, nextStatus)
+    ElMessage.success(`用户已${nextStatus === 1 ? '启用' : '禁用'}`)
   } catch (error) {
-    row.status = row.status === 1 ? 0 : 1
-    console.error('状态更新失败:', error)
+    row.status = previousStatus
+    ElMessage.error('状态更新失败，请稍后重试。')
   }
 }
 
 const handleResetPwd = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要重置用户"${row.username}"的密码吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确认要将用户“${row.username}”的密码重置为默认密码吗？此操作会影响该用户的后续登录。`,
+      '确认重置密码',
+      { type: 'warning', confirmButtonText: '确认重置', cancelButtonText: '取消' }
+    )
     await resetPassword(row.id)
-    ElMessage.success('密码已重置为: 123456')
+    ElMessage.success('密码已重置为默认值：123456')
   } catch (error) {
-    if (error !== 'cancel') console.error('重置密码失败:', error)
+    if (error !== 'cancel') {
+      ElMessage.error('重置密码失败，请稍后重试。')
+    }
   }
 }
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定要删除用户"${row.username}"吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(
+      `确认删除用户“${row.username}”吗？删除后该账号将无法继续登录后台。`,
+      '确认删除用户',
+      { type: 'warning', confirmButtonText: '删除用户', cancelButtonText: '取消' }
+    )
     await deleteUser(row.id)
-    ElMessage.success('删除成功')
+    ElMessage.success('用户删除成功')
+    if (tableData.value.length === 1 && pagination.page > 1) {
+      pagination.page -= 1
+    }
     loadData()
   } catch (error) {
-    if (error !== 'cancel') console.error('删除失败:', error)
+    if (error !== 'cancel') {
+      ElMessage.error('删除用户失败，请稍后重试。')
+    }
   }
 }
 
@@ -295,15 +381,16 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     if (form.id) {
       await updateUser(form.id, form)
-      ElMessage.success('更新成功')
+      ElMessage.success('用户信息已更新')
     } else {
       await createUser(form)
-      ElMessage.success('创建成功')
+      ElMessage.success('用户创建成功')
     }
     dialogVisible.value = false
     loadData()
   } catch (error) {
-    console.error('提交失败:', error)
+    if (error?.message) return
+    ElMessage.error('保存失败，请检查表单后重试。')
   }
 }
 
@@ -313,95 +400,187 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-$primary: #6366f1;
-$success: #10b981;
-$warning: #f59e0b;
-$danger: #ef4444;
-
 .user-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.page-header {
+.page-hero {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 4px 0;
-
-  &__title {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0 0 4px 0;
-  }
-
-  &__desc {
-    font-size: 14px;
-    color: #64748b;
-    margin: 0;
-  }
+  gap: 20px;
 }
 
-.filter-card {
-  :deep(.el-card__body) {
-    padding: 16px 20px !important;
-  }
+.page-hero__eyebrow {
+  display: inline-block;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
-.filter-form {
+.page-hero__title {
+  margin: 8px 0 0;
+  color: #0f172a;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.page-hero__desc {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-chip {
+  padding: 16px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.metric-chip__label {
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.metric-chip__value {
+  display: block;
+  margin-top: 10px;
+  color: #0f172a;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.filter-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.filter-toolbar__fields,
+.filter-toolbar__actions {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  .search-input, .email-input {
-    width: 200px;
-  }
-
-  .status-select {
-    width: 120px;
-  }
+  flex-wrap: wrap;
 }
 
-.user-table {
-  :deep(.el-table__header th) {
-    background: #f8fafc !important;
-    font-weight: 600;
-  }
+.filter-toolbar__fields {
+  flex: 1;
+}
+
+.filter-input {
+  width: 220px;
+}
+
+.filter-input--wide {
+  width: 280px;
+}
+
+.filter-select {
+  width: 140px;
+}
+
+.filter-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.filter-result strong {
+  color: #0f172a;
 }
 
 .cell-user {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  &__avatar {
-    background: linear-gradient(135deg, $primary, #818cf8);
-    color: #fff;
-    flex-shrink: 0;
-  }
-
-  &__info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  &__name {
-    font-weight: 600;
-    color: #1e293b;
-  }
-
-  &__email {
-    font-size: 12px;
-    color: #94a3b8;
-  }
 }
 
+.cell-user__avatar {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.cell-user__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cell-user__name {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.cell-user__email,
 .cell-phone {
   color: #64748b;
+  font-size: 0.88rem;
+}
+
+.role-tag,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.role-tag--admin {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.role-tag--teacher {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.role-tag--student {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-badge--active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.status-badge--inactive {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
 }
 
 .cell-time {
@@ -409,55 +588,57 @@ $danger: #ef4444;
   align-items: center;
   gap: 6px;
   color: #64748b;
-  font-size: 13px;
-
-  .el-icon {
-    font-size: 14px;
-  }
-}
-
-.role-tag {
-  display: inline-flex;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-
-  &--admin {
-    background: rgba($danger, 0.1);
-    color: $danger;
-  }
-
-  &--teacher {
-    background: rgba($warning, 0.1);
-    color: $warning;
-  }
-
-  &--student {
-    background: rgba($primary, 0.1);
-    color: $primary;
-  }
+  font-size: 0.84rem;
 }
 
 .action-buttons {
   display: flex;
   align-items: center;
-  gap: 4px;
-
-  .el-button {
-    padding: 6px;
-    
-    .el-icon {
-      font-size: 16px;
-    }
-  }
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .pagination-container {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid #f1f5f9;
+}
+
+.pagination-tip {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1100px) {
+  .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-toolbar,
+  .filter-result,
+  .pagination-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-hero {
+    flex-direction: column;
+  }
+
+  .metric-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-input,
+  .filter-input--wide,
+  .filter-select {
+    width: 100%;
+  }
 }
 </style>

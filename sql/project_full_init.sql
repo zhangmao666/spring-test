@@ -1,4 +1,4 @@
--- Full database bootstrap script for spring-boot-test
+-- Full database bootstrap script for AI-world
 -- Recommended for a clean MySQL 8.x database.
 
 CREATE DATABASE IF NOT EXISTS `spring_boot_test`
