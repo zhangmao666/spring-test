@@ -135,8 +135,63 @@
                   <div v-show="msg.thoughtExpanded" class="thought-card__content markdown-body" v-html="msg.renderedThoughtHtml || ''"></div>
                 </div>
 
+                <div v-if="shouldShowSearchCard(msg)" class="search-card">
+                  <div class="search-card__header">
+                    <div class="search-card__title">
+                      <el-icon><Compass /></el-icon>
+                      <span>联网搜索</span>
+                    </div>
+                    <el-tag size="small" :type="getSearchStatusTagType(msg.searchStatus)" effect="plain">
+                      {{ getSearchStatusLabel(msg.searchStatus) }}
+                    </el-tag>
+                  </div>
+                  <div v-if="msg.searchQuery" class="search-card__query">
+                    检索词：{{ msg.searchQuery }}
+                  </div>
+                  <div v-if="msg.searchStatus === 'SUCCESS' && msg.sources?.length" class="search-source-list">
+                    <a
+                      v-for="(source, sourceIndex) in msg.sources"
+                      :key="`${source.url || source.title}-${sourceIndex}`"
+                      class="search-source"
+                      :href="source.url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <div class="search-source__top">
+                        <span class="search-source__title">{{ source.title || source.url }}</span>
+                        <span class="search-source__domain">{{ source.domain || '来源链接' }}</span>
+                      </div>
+                      <p class="search-source__snippet">{{ source.snippet }}</p>
+                    </a>
+                  </div>
+                  <div v-else class="search-card__fallback">
+                    {{ getSearchFallbackText(msg.searchStatus) }}
+                  </div>
+                </div>
+
                 <div class="message-text markdown-body" v-html="msg.renderedHtml || ''"></div>
                 <span v-if="msg.isStreaming && msg.content" class="stream-cursor">|</span>
+              </div>
+            </div>
+
+            <div
+              v-if="msg.role === 'assistant' && msg.content && !msg.isStreaming && (msg.suggestionsLoading || msg.suggestions?.length)"
+              class="message-suggestions"
+            >
+              <div class="message-suggestions__label">推荐追问</div>
+              <div v-if="msg.suggestionsLoading && !msg.suggestions?.length" class="message-suggestions__loading">
+                正在生成推荐问题...
+              </div>
+              <div v-else-if="msg.suggestions?.length" class="message-suggestions__list">
+                <button
+                  v-for="(suggestion, suggestionIndex) in msg.suggestions"
+                  :key="`${msg.timestamp}-${suggestionIndex}`"
+                  class="message-suggestion-chip"
+                  type="button"
+                  @click="handleSuggestionClick(suggestion)"
+                >
+                  {{ suggestion }}
+                </button>
               </div>
             </div>
 
@@ -175,7 +230,13 @@
               <el-icon><Cpu /></el-icon>
               深度思考
             </button>
-            <button :class="['toggle-chip', { active: useWebSearch }]" type="button" @click="useWebSearch = !useWebSearch">
+            <button
+              :class="['toggle-chip', { active: useWebSearch, 'toggle-chip--disabled': !webSearchAvailable }]"
+              type="button"
+              :disabled="!webSearchAvailable"
+              :title="webSearchAvailable ? '使用系统联网搜索' : webSearchUnavailableReason"
+              @click="useWebSearch = !useWebSearch"
+            >
               <el-icon><Compass /></el-icon>
               联网搜索
             </button>
@@ -217,7 +278,7 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import axios from 'axios'
 import aiAvatar from '@/assets/ai_avatar.png'
-import { getAiModelList } from '@/api/ai-model'
+import { getAiCapabilities, getAiModelList } from '@/api/ai-model'
 
 const suggestionCards = [
   { icon: DataAnalysis, text: '分析今天热门板块' },
@@ -267,8 +328,14 @@ const useWebSearch = ref(false)
 const useDeepThinking = ref(false)
 const sidebarCollapsed = ref(false)
 const userScrolledUp = ref(false)
+const aiCapabilities = ref({
+  webSearchEnabled: false,
+  webSearchMode: 'system-searxng'
+})
 
 const selectedModel = computed(() => managedModels.value.find(item => item.id === selectedModelId.value) || null)
+const webSearchAvailable = computed(() => Boolean(aiCapabilities.value?.webSearchEnabled))
+const webSearchUnavailableReason = computed(() => webSearchAvailable.value ? '' : '当前系统未配置 SearXNG 联网搜索')
 const currentModelLabel = computed(() => {
   if (selectedModel.value) return selectedModel.value.displayName
   if (managedModels.value.length === 0) return '配置文件默认模型'
@@ -282,6 +349,8 @@ const conversationSummary = computed(() => {
 
 let renderTimer = null
 let scrollTimer = null
+let requestSequence = 0
+let activeRequestId = 0
 
 const copyMessage = (content) => {
   navigator.clipboard.writeText(content).then(() => {
@@ -311,6 +380,12 @@ const finalRender = (msg) => {
   }
   doRender(msg)
   msg.isStreaming = false
+}
+
+const setLoadingForRequest = (requestId, nextLoading) => {
+  if (activeRequestId === requestId) {
+    loading.value = nextLoading
+  }
 }
 
 const throttledScroll = () => {
@@ -364,6 +439,46 @@ const formatDate = (datetime) => {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
+const normalizeSources = (sources) => Array.isArray(sources) ? sources : []
+
+const shouldShowSearchCard = (msg) => ['SEARCHING', 'SUCCESS', 'FALLBACK_NO_RESULT', 'FALLBACK_ERROR'].includes(msg?.searchStatus)
+
+const getSearchStatusLabel = (status) => ({
+  SEARCHING: '搜索中',
+  SUCCESS: '已引用来源',
+  FALLBACK_NO_RESULT: '未找到结果',
+  FALLBACK_ERROR: '搜索失败'
+}[status] || '未搜索')
+
+const getSearchStatusTagType = (status) => ({
+  SEARCHING: 'info',
+  SUCCESS: 'success',
+  FALLBACK_NO_RESULT: 'warning',
+  FALLBACK_ERROR: 'danger'
+}[status] || 'info')
+
+const getSearchFallbackText = (status) => ({
+  SEARCHING: '正在联网检索，请稍候...',
+  FALLBACK_NO_RESULT: '未检索到有效结果，已自动降级为普通回答。',
+  FALLBACK_ERROR: '联网搜索失败，已自动降级为普通回答。'
+}[status] || '')
+
+const loadCapabilities = async () => {
+  try {
+    const res = await getAiCapabilities()
+    aiCapabilities.value = res.data || aiCapabilities.value
+    if (!aiCapabilities.value.webSearchEnabled) {
+      useWebSearch.value = false
+    }
+  } catch (error) {
+    aiCapabilities.value = {
+      webSearchEnabled: false,
+      webSearchMode: 'system-searxng'
+    }
+    useWebSearch.value = false
+  }
+}
+
 const loadManagedModels = async () => {
   try {
     const res = await getAiModelList({ enabledOnly: true })
@@ -409,10 +524,16 @@ const mapHistoryMessage = (msg) => {
     content: msg.content,
     thought: msg.thought,
     thinkingTime: msg.thinkingTime,
+    usedWebSearch: Boolean(msg.usedWebSearch) || ['SUCCESS', 'FALLBACK_NO_RESULT', 'FALLBACK_ERROR'].includes(msg.searchStatus),
+    searchQuery: msg.searchQuery || '',
+    searchStatus: msg.searchStatus || 'NOT_REQUESTED',
+    sources: normalizeSources(msg.sources),
     timestamp: new Date(msg.timestamp).getTime(),
     thoughtExpanded: false,
     isThinking: false,
     isStreaming: false,
+    suggestions: [],
+    suggestionsLoading: false,
     fullText: '',
     renderedHtml: '',
     renderedThoughtHtml: ''
@@ -471,12 +592,11 @@ const clearCurrentHistory = () => {
 }
 
 const normalizeCapabilitiesBeforeSend = () => {
-  if (!selectedModel.value) return
-  if (useDeepThinking.value && !selectedModel.value.supportsDeepThinking) {
+  if (selectedModel.value && useDeepThinking.value && !selectedModel.value.supportsDeepThinking) {
     useDeepThinking.value = false
     ElMessage.warning('当前模型不支持深度思考，已自动关闭')
   }
-  if (useWebSearch.value && !selectedModel.value.supportsWebSearch) {
+  if (useWebSearch.value && !webSearchAvailable.value) {
     useWebSearch.value = false
     ElMessage.warning('当前模型不支持联网搜索，已自动关闭')
   }
@@ -527,6 +647,8 @@ const handleSend = async () => {
   })
 
   inputToSent.value = ''
+  const requestId = ++requestSequence
+  activeRequestId = requestId
   loading.value = true
   userScrolledUp.value = false
   await scrollToBottom(true)
@@ -536,9 +658,15 @@ const handleSend = async () => {
     role: 'assistant',
     thought: '',
     content: '',
+    usedWebSearch: useWebSearch.value,
+    searchQuery: '',
+    searchStatus: useWebSearch.value ? 'SEARCHING' : 'NOT_REQUESTED',
+    sources: [],
     fullText: '',
     isThinking: false,
     isStreaming: true,
+    suggestions: [],
+    suggestionsLoading: true,
     thoughtExpanded: true,
     thinkingTime: 0,
     timestamp: Date.now(),
@@ -602,8 +730,38 @@ const handleSend = async () => {
             ElMessage.error(json.error || 'AI 服务出错')
             targetMsg.content = `[错误] ${json.error || '系统繁忙，请稍后再试'}`
             targetMsg.isThinking = false
+            targetMsg.suggestionsLoading = false
             finalRender(targetMsg)
+            setLoadingForRequest(requestId, false)
             return
+          }
+
+          if (currentEvent === 'search') {
+            targetMsg.usedWebSearch = Boolean(json.usedWebSearch)
+            targetMsg.searchQuery = json.searchQuery || ''
+            targetMsg.searchStatus = json.searchStatus || 'NOT_REQUESTED'
+            targetMsg.sources = normalizeSources(json.sources)
+            throttledScroll()
+            continue
+          }
+
+          if (currentEvent === 'done') {
+            if (thoughtTimer) clearInterval(thoughtTimer)
+            targetMsg.isThinking = false
+            targetMsg.suggestionsLoading = Boolean(targetMsg.content)
+            finalRender(targetMsg)
+            setLoadingForRequest(requestId, false)
+            throttledScroll()
+            continue
+          }
+
+          if (currentEvent === 'suggestions') {
+            targetMsg.suggestions = Array.isArray(json.suggestions)
+              ? json.suggestions.filter(item => typeof item === 'string' && item.trim())
+              : []
+            targetMsg.suggestionsLoading = false
+            throttledScroll()
+            continue
           }
 
           const delta = json.choices?.[0]?.delta
@@ -667,20 +825,25 @@ const handleSend = async () => {
     }
 
     if (thoughtTimer) clearInterval(thoughtTimer)
-    finalRender(targetMsg)
+    if (targetMsg.isStreaming) {
+      finalRender(targetMsg)
+    }
+    targetMsg.suggestionsLoading = false
     await loadConversations()
     resolveConversationModel(conversations.value.find(item => item.conversationId === currentConversationId.value), true)
   } catch (error) {
     ElMessage.error('服务连接失败')
     const errMsg = messages.value[aiIndex]
     errMsg.content = '抱歉，系统暂时无法响应您的请求。'
+    errMsg.suggestionsLoading = false
     finalRender(errMsg)
   } finally {
-    loading.value = false
+    setLoadingForRequest(requestId, false)
   }
 }
 
 onMounted(async () => {
+  await loadCapabilities()
   await loadManagedModels()
   await loadConversations()
   createNewConversation()
@@ -1051,6 +1214,52 @@ onBeforeUnmount(() => {
   word-break: break-word;
 }
 
+.message-suggestions {
+  margin-top: 10px;
+}
+
+.message-suggestions__label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.message-suggestions__loading {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px dashed rgba(148, 163, 184, 0.4);
+  color: #64748b;
+  font-size: 13px;
+}
+
+.message-suggestions__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.message-suggestion-chip {
+  max-width: 100%;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.92));
+  color: #0f172a;
+  border-radius: 999px;
+  padding: 10px 14px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.message-suggestion-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.32);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+}
+
 .streaming-loader {
   display: inline-flex;
   gap: 6px;
@@ -1179,6 +1388,85 @@ onBeforeUnmount(() => {
   border-color: rgba(37, 99, 235, 0.4);
   background: rgba(37, 99, 235, 0.1);
   color: #1d4ed8;
+}
+
+.toggle-chip--disabled,
+.toggle-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.search-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(14, 116, 144, 0.14);
+  background:
+    linear-gradient(135deg, rgba(240, 249, 255, 0.92), rgba(248, 250, 252, 0.96));
+}
+
+.search-card__header,
+.search-source__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.search-card__query {
+  margin-top: 8px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.search-source-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.search-source {
+  display: block;
+  padding: 12px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-source:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.search-source__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.search-source__domain {
+  font-size: 12px;
+  color: #0f766e;
+}
+
+.search-source__snippet,
+.search-card__fallback {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .markdown-body :deep(pre) {

@@ -8,6 +8,13 @@ export function getAiModelList(params) {
   })
 }
 
+export function getAiCapabilities() {
+  return request({
+    url: '/ai/capabilities',
+    method: 'get'
+  })
+}
+
 export function testAiModel(data) {
   return request({
     url: '/ai/models/test',

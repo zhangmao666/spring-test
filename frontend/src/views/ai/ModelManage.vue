@@ -24,7 +24,7 @@
           <div class="list-card__label">当前配置</div>
           <div class="list-card__title">已录入 {{ modelList.length }} 个模型配置</div>
         </div>
-        <div class="list-card__hint">操作区已改为弹性卡片布局，避免按钮、标签和开关互相覆盖。</div>
+<!--        <div class="list-card__hint">操作区已改为弹性卡片布局，避免按钮、标签和开关互相覆盖。</div>-->
       </div>
 
       <div class="model-grid" v-loading="loading">

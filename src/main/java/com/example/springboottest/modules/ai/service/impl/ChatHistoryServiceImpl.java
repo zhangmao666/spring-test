@@ -2,12 +2,16 @@ package com.example.springboottest.modules.ai.service.impl;
 
 import com.example.springboottest.modules.ai.dto.ConversationVO;
 import com.example.springboottest.modules.ai.dto.MessageVO;
+import com.example.springboottest.modules.ai.dto.SearchStatus;
+import com.example.springboottest.modules.ai.dto.WebSearchSource;
 import com.example.springboottest.modules.ai.entity.ChatConversation;
 import com.example.springboottest.modules.ai.entity.ChatMessage;
 import com.example.springboottest.modules.ai.mapper.ChatConversationMapper;
 import com.example.springboottest.modules.ai.mapper.ChatMessageMapper;
 import com.example.springboottest.modules.ai.service.ChatHistoryService;
 import com.example.springboottest.util.SecurityUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,8 +26,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatHistoryServiceImpl implements ChatHistoryService {
 
+    private static final TypeReference<List<WebSearchSource>> SOURCE_LIST_TYPE = new TypeReference<>() {
+    };
+
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
+    private final ObjectMapper objectMapper;
 
     @Override
     public List<ConversationVO> getAllConversations() {
@@ -82,7 +90,15 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
 
     @Override
     @Transactional
-    public void saveAssistantMessage(String conversationId, String content, String thought, Integer thinkingTime) {
+    public void saveAssistantMessage(String conversationId,
+                                     String content,
+                                     String thought,
+                                     Integer thinkingTime,
+                                     boolean usedWebSearch,
+                                     boolean usedDeepThinking,
+                                     String searchQuery,
+                                     SearchStatus searchStatus,
+                                     List<WebSearchSource> sources) {
         ChatConversation conversation = getOrCreateConversation(conversationId);
         int messageIndex = conversation.getMessageCount() == null ? 0 : conversation.getMessageCount();
 
@@ -92,6 +108,11 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .content(content)
                 .thought(thought)
                 .thinkingTime(thinkingTime)
+                .usedWebSearch(usedWebSearch)
+                .usedDeepThinking(usedDeepThinking)
+                .searchQuery(searchQuery)
+                .searchStatus(searchStatus)
+                .sourcePayload(writeSources(sources))
                 .messageIndex(messageIndex)
                 .build();
 
@@ -114,7 +135,7 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
     public ConversationVO createConversation(String conversationId, String title, String provider, String model) {
         ChatConversation conversation = ChatConversation.builder()
                 .conversationId(conversationId)
-                .title(title != null ? title : "新对话")
+                .title(title != null ? title : "鏂板璇?")
                 .provider(provider)
                 .model(model)
                 .messageCount(0)
@@ -151,7 +172,7 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
         }
         ChatConversation entity = ChatConversation.builder()
                 .conversationId(conversationId)
-                .title("新对话")
+                .title("鏂板璇?")
                 .messageCount(0)
                 .lastMessageTime(LocalDateTime.now())
                 .deleted(false)
@@ -190,8 +211,32 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 .thinkingTime(entity.getThinkingTime())
                 .usedWebSearch(entity.getUsedWebSearch())
                 .usedDeepThinking(entity.getUsedDeepThinking())
+                .searchQuery(entity.getSearchQuery())
+                .searchStatus(entity.getSearchStatus())
+                .sources(readSources(entity.getSourcePayload()))
                 .timestamp(entity.getCreatedAt())
                 .messageIndex(entity.getMessageIndex())
                 .build();
+    }
+
+    private String writeSources(List<WebSearchSource> sources) {
+        try {
+            return objectMapper.writeValueAsString(sources == null ? List.of() : sources);
+        } catch (Exception e) {
+            log.warn("Failed to serialize search sources", e);
+            return "[]";
+        }
+    }
+
+    private List<WebSearchSource> readSources(String sourcePayload) {
+        if (sourcePayload == null || sourcePayload.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(sourcePayload, SOURCE_LIST_TYPE);
+        } catch (Exception e) {
+            log.warn("Failed to deserialize search sources", e);
+            return List.of();
+        }
     }
 }

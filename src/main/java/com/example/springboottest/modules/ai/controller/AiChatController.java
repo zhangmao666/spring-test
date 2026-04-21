@@ -4,6 +4,7 @@ import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.entity.DTO.AiChatRequest;
 import com.example.springboottest.entity.DTO.AiChatResponse;
 import com.example.springboottest.entity.DTO.AiProviderInfo;
+import com.example.springboottest.modules.ai.dto.AiCapabilitiesResponse;
 import com.example.springboottest.modules.ai.dto.EssayGenerateRequest;
 import com.example.springboottest.modules.ai.dto.EssayGenerateResponse;
 import com.example.springboottest.modules.ai.dto.ResumeGenerateRequest;
@@ -11,6 +12,7 @@ import com.example.springboottest.modules.ai.dto.ResumeGenerateResponse;
 import com.example.springboottest.modules.ai.dto.ResumeOptimizeRequest;
 import com.example.springboottest.modules.ai.dto.ResumeOptimizeResponse;
 import com.example.springboottest.modules.ai.service.AiChatService;
+import com.example.springboottest.modules.ai.websearch.WebSearchService;
 import com.example.springboottest.modules.prompt.service.PromptTemplateService;
 import com.example.springboottest.modules.prompt.support.PromptTemplateCodes;
 import com.example.springboottest.modules.prompt.support.PromptTemplateDefaults;
@@ -50,6 +52,7 @@ public class AiChatController {
 
     private final AiChatService aiChatService;
     private final PromptTemplateService promptTemplateService;
+    private final WebSearchService webSearchService;
     private static final int ESSAY_TIMEOUT_SECONDS = 180;
 
     @Operation(summary = "AI聊天", description = "发送消息给AI并获取回复（非流式）")
@@ -81,6 +84,15 @@ public class AiChatController {
     public ApiResponse<List<AiProviderInfo>> getProviders() {
         List<AiProviderInfo> providers = aiChatService.getAvailableProviders();
         return ApiResponse.success(providers);
+    }
+
+    @Operation(summary = "Get AI capabilities", description = "Returns lightweight capability flags for the chat client")
+    @GetMapping("/capabilities")
+    public ApiResponse<AiCapabilitiesResponse> getCapabilities() {
+        return ApiResponse.success(AiCapabilitiesResponse.builder()
+                .webSearchEnabled(webSearchService.isEnabled())
+                .webSearchMode("system-searxng")
+                .build());
     }
 
     @Operation(summary = "检查AI模型状态", description = "检查指定AI服务提供商是否可用")

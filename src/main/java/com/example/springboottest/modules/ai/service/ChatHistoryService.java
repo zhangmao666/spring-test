@@ -1,7 +1,9 @@
 package com.example.springboottest.modules.ai.service;
 
 import com.example.springboottest.modules.ai.dto.ConversationVO;
+import com.example.springboottest.modules.ai.dto.SearchStatus;
 import com.example.springboottest.modules.ai.dto.MessageVO;
+import com.example.springboottest.modules.ai.dto.WebSearchSource;
 
 import java.util.List;
 
@@ -17,7 +19,15 @@ public interface ChatHistoryService {
 
     void saveUserMessage(String conversationId, String content, boolean useWebSearch, boolean useDeepThinking);
 
-    void saveAssistantMessage(String conversationId, String content, String thought, Integer thinkingTime);
+    void saveAssistantMessage(String conversationId,
+                              String content,
+                              String thought,
+                              Integer thinkingTime,
+                              boolean usedWebSearch,
+                              boolean usedDeepThinking,
+                              String searchQuery,
+                              SearchStatus searchStatus,
+                              List<WebSearchSource> sources);
 
     void bindConversationModel(String conversationId, Long modelId, String provider, String model, String modelDisplayName);
 

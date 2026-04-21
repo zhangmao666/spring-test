@@ -12,6 +12,9 @@
         <result column="thinking_time" property="thinkingTime"/>
         <result column="used_web_search" property="usedWebSearch"/>
         <result column="used_deep_thinking" property="usedDeepThinking"/>
+        <result column="search_query" property="searchQuery"/>
+        <result column="search_status" property="searchStatus"/>
+        <result column="source_payload" property="sourcePayload"/>
         <result column="created_at" property="createdAt"/>
         <result column="message_index" property="messageIndex"/>
     </resultMap>
@@ -27,10 +30,12 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO chat_messages (
             conversation_id, role, content, thought, thinking_time,
-            used_web_search, used_deep_thinking, message_index
+            used_web_search, used_deep_thinking, search_query, search_status,
+            source_payload, message_index
         ) VALUES (
             #{conversationId}, #{role}, #{content}, #{thought}, #{thinkingTime},
-            #{usedWebSearch}, #{usedDeepThinking}, #{messageIndex}
+            #{usedWebSearch}, #{usedDeepThinking}, #{searchQuery}, #{searchStatus},
+            #{sourcePayload}, #{messageIndex}
         )
     </insert>
 

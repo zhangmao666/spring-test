@@ -25,3 +25,15 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+
+ai:
+  web-search:
+    fallback-to-chat-without-search: true
+    searxng:
+      enabled: ${WEB_SEARCH_ENABLED:true}
+      base-url: ${SEARXNG_BASE_URL:http://127.0.0.1:8080}
+      timeout-ms: ${SEARXNG_TIMEOUT_MS:8000}
+      max-results: ${SEARXNG_MAX_RESULTS:8}
+      fetch-top-n: ${SEARXNG_FETCH_TOP_N:3}
+      language: ${SEARXNG_LANGUAGE:zh-CN}
+      safe-search: ${SEARXNG_SAFE_SEARCH:1}

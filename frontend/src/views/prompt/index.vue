@@ -52,9 +52,11 @@
             </template>
           </el-table-column>
 
-          <el-table-column prop="promptName" label="名称" min-width="180">
+          <el-table-column prop="promptName" label="名称" min-width="320">
             <template #default="{ row }">
-              <span class="prompt-name">{{ row.promptName }}</span>
+              <div class="prompt-name-wrap">
+                <span class="prompt-name">{{ row.promptName || '-' }}</span>
+              </div>
             </template>
           </el-table-column>
 
@@ -552,6 +554,7 @@ onMounted(() => {
     font-size: 14px;
     border-bottom: 1px solid #e2e8f0;
     padding: 12px 0;
+    white-space: nowrap;
   }
 
   :deep(.el-table__row) {
@@ -575,8 +578,21 @@ onMounted(() => {
 }
 
 .prompt-name {
+  display: inline-block;
   font-weight: 600;
   color: #1e293b;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.prompt-name-wrap {
+  display: flex;
+  align-items: center;
+  min-width: max-content;
+  min-height: 28px;
+  padding: 2px 0;
 }
 
 .custom-tag {

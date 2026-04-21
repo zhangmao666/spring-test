@@ -71,10 +71,10 @@
         </div>
       </div>
 
-      <div class="filter-result">
-        <span>当前共找到 <strong>{{ pagination.total }}</strong> 位用户</span>
-        <span>默认按列表结果进行状态管理与安全操作</span>
-      </div>
+<!--      <div class="filter-result">-->
+<!--        <span>当前共找到 <strong>{{ pagination.total }}</strong> 位用户</span>-->
+<!--        <span>默认按列表结果进行状态管理与安全操作</span>-->
+<!--      </div>-->
     </el-card>
 
     <el-card class="table-card" shadow="never">

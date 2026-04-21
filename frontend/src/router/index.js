@@ -72,6 +72,24 @@ const routes = [
         name: 'HotNews',
         component: () => import('@/views/news/HotNews.vue'),
         meta: { title: '热点新闻', icon: 'Notification', description: '查看多平台实时热点与趋势' }
+      },
+      {
+        path: 'tools/password',
+        name: 'PasswordGenerator',
+        component: () => import('@/views/tools/PasswordGenerator.vue'),
+        meta: { title: '密码生成器', icon: 'Lock', description: '本地生成高强度密码并快速复制使用' }
+      },
+      {
+        path: 'tools/word-counter',
+        name: 'WordCounter',
+        component: () => import('@/views/tools/WordCounter.vue'),
+        meta: { title: '字数统计器', icon: 'EditPen', description: '统计文本字数、结构和阅读时长' }
+      },
+      {
+        path: 'tools/kinship',
+        name: 'KinshipCalculator',
+        component: () => import('@/views/tools/KinshipCalculator.vue'),
+        meta: { title: '亲戚计算器', icon: 'Connection', description: '输入中文亲属关系并推导最终称谓' }
       }
     ]
   }

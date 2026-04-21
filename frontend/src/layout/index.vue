@@ -14,74 +14,97 @@
           </transition>
         </div>
 
-        <div class="menu-section">
-          <span v-show="!isCollapse" class="menu-section__label">工作台</span>
-          <el-menu
-            :default-active="activeMenu"
-            :default-openeds="defaultOpeneds"
-            :collapse="isCollapse"
-            :collapse-transition="false"
-            router
-          >
-            <el-menu-item index="/dashboard">
-              <el-icon><Monitor /></el-icon>
-              <template #title>系统概览</template>
-            </el-menu-item>
-          </el-menu>
-        </div>
+        <div class="sidebar-nav">
+          <div class="menu-section">
+            <span v-show="!isCollapse" class="menu-section__label">工作台</span>
+            <el-menu
+              :default-active="activeMenu"
+              :default-openeds="defaultOpeneds"
+              :collapse="isCollapse"
+              :collapse-transition="false"
+              router
+            >
+              <el-menu-item index="/dashboard">
+                <el-icon><Monitor /></el-icon>
+                <template #title>系统概览</template>
+              </el-menu-item>
+            </el-menu>
+          </div>
 
-        <div class="menu-section">
-          <span v-show="!isCollapse" class="menu-section__label">内容与 AI</span>
-          <el-menu
-            :default-active="activeMenu"
-            :default-openeds="defaultOpeneds"
-            :collapse="isCollapse"
-            :collapse-transition="false"
-            router
-          >
-            <el-menu-item index="/news/hot">
-              <el-icon><Bell /></el-icon>
-              <template #title>热点新闻</template>
-            </el-menu-item>
-            <el-sub-menu index="content-ai">
-              <template #title>
-                <el-icon><Lightning /></el-icon>
-                <span>AI 工作区</span>
-              </template>
-              <el-menu-item index="/ai/chat">AI 聊天</el-menu-item>
-              <el-menu-item index="/ai/resume">简历助手</el-menu-item>
-              <el-menu-item index="/ai/models">模型管理</el-menu-item>
-              <el-menu-item index="/prompt">提示工程</el-menu-item>
-            </el-sub-menu>
-          </el-menu>
-        </div>
+          <div class="menu-section">
+            <span v-show="!isCollapse" class="menu-section__label">内容与 AI</span>
+            <el-menu
+              :default-active="activeMenu"
+              :default-openeds="defaultOpeneds"
+              :collapse="isCollapse"
+              :collapse-transition="false"
+              router
+            >
+              <el-menu-item index="/news/hot">
+                <el-icon><Bell /></el-icon>
+                <template #title>热点新闻</template>
+              </el-menu-item>
+              <el-sub-menu index="content-ai">
+                <template #title>
+                  <el-icon><Lightning /></el-icon>
+                  <span>AI 工作区</span>
+                </template>
+                <el-menu-item index="/ai/chat">AI 聊天</el-menu-item>
+                <el-menu-item index="/ai/resume">简历助手</el-menu-item>
+                <el-menu-item index="/ai/models">模型管理</el-menu-item>
+                <el-menu-item index="/prompt">提示工程</el-menu-item>
+              </el-sub-menu>
+            </el-menu>
+          </div>
 
-        <div class="menu-section">
-          <span v-show="!isCollapse" class="menu-section__label">系统管理</span>
-          <el-menu
-            :default-active="activeMenu"
-            :default-openeds="defaultOpeneds"
-            :collapse="isCollapse"
-            :collapse-transition="false"
-            router
-          >
-            <el-menu-item index="/user">
-              <el-icon><UserFilled /></el-icon>
-              <template #title>用户管理</template>
-            </el-menu-item>
-            <el-menu-item index="/dict">
-              <el-icon><FolderOpened /></el-icon>
-              <template #title>字典管理</template>
-            </el-menu-item>
-            <el-sub-menu index="system-log">
-              <template #title>
-                <el-icon><Tickets /></el-icon>
-                <span>日志审计</span>
-              </template>
-              <el-menu-item index="/log/login">登录日志</el-menu-item>
-              <el-menu-item index="/log/operation">操作日志</el-menu-item>
-            </el-sub-menu>
-          </el-menu>
+          <div class="menu-section">
+            <span v-show="!isCollapse" class="menu-section__label">系统管理</span>
+            <el-menu
+              :default-active="activeMenu"
+              :default-openeds="defaultOpeneds"
+              :collapse="isCollapse"
+              :collapse-transition="false"
+              router
+            >
+              <el-menu-item index="/user">
+                <el-icon><UserFilled /></el-icon>
+                <template #title>用户管理</template>
+              </el-menu-item>
+              <el-menu-item index="/dict">
+                <el-icon><FolderOpened /></el-icon>
+                <template #title>字典管理</template>
+              </el-menu-item>
+              <el-sub-menu index="system-log">
+                <template #title>
+                  <el-icon><Tickets /></el-icon>
+                  <span>日志审计</span>
+                </template>
+                <el-menu-item index="/log/login">登录日志</el-menu-item>
+                <el-menu-item index="/log/operation">操作日志</el-menu-item>
+              </el-sub-menu>
+            </el-menu>
+          </div>
+
+          <div class="menu-section">
+            <span v-show="!isCollapse" class="menu-section__label">工具中心</span>
+            <el-menu
+              :default-active="activeMenu"
+              :default-openeds="defaultOpeneds"
+              :collapse="isCollapse"
+              :collapse-transition="false"
+              router
+            >
+              <el-sub-menu index="toolbox">
+                <template #title>
+                  <el-icon><MagicStick /></el-icon>
+                  <span>实用工具</span>
+                </template>
+                <el-menu-item index="/tools/password">密码生成器</el-menu-item>
+                <el-menu-item index="/tools/word-counter">字数统计器</el-menu-item>
+                <el-menu-item index="/tools/kinship">亲戚计算器</el-menu-item>
+              </el-sub-menu>
+            </el-menu>
+          </div>
         </div>
 
         <div class="sidebar-footer">
@@ -99,15 +122,15 @@
     <el-container :class="['workspace-shell', { 'workspace-shell--chat': isAiChatRoute }]">
       <el-header v-if="!isAiChatRoute" class="workspace-header">
         <div class="workspace-header__left">
-          <span class="page-kicker">当前页面</span>
+<!--          <span class="page-kicker">当前页面</span>-->
           <h1 class="page-title">{{ pageTitle }}</h1>
           <p class="page-description">{{ pageDescription }}</p>
 
-          <el-breadcrumb separator="/" class="page-breadcrumb">
-            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">
-              {{ item.title }}
-            </el-breadcrumb-item>
-          </el-breadcrumb>
+<!--          <el-breadcrumb separator="/" class="page-breadcrumb">-->
+<!--            <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.path">-->
+<!--              {{ item.title }}-->
+<!--            </el-breadcrumb-item>-->
+<!--          </el-breadcrumb>-->
         </div>
 
         <div class="workspace-header__right">
@@ -162,6 +185,7 @@ import {
   Fold,
   FolderOpened,
   Lightning,
+  MagicStick,
   Monitor,
   SwitchButton,
   Tickets,
@@ -178,7 +202,7 @@ const activeMenu = computed(() => route.path)
 const username = computed(() => localStorage.getItem('username') || 'Guest')
 const pageTitle = computed(() => route.meta.title || '工作台')
 const pageDescription = computed(() => route.meta.description || '')
-const defaultOpeneds = ['content-ai', 'system-log']
+const defaultOpeneds = ['content-ai', 'toolbox', 'system-log']
 const isAiChatRoute = computed(() => route.name === 'AiChat')
 
 const breadcrumbs = computed(() => {
@@ -252,6 +276,28 @@ const handleCommand = async (command) => {
   height: 100%;
   padding: 14px;
   border-radius: 24px;
+  overflow: hidden;
+}
+
+.sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .brand-block {
@@ -317,6 +363,17 @@ const handleCommand = async (command) => {
   font-weight: 600;
 }
 
+.menu-section :deep(.el-sub-menu) {
+  margin-bottom: 4px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.menu-section :deep(.el-sub-menu.is-opened) {
+  background: linear-gradient(180deg, rgba(244, 247, 255, 0.96), rgba(237, 242, 255, 0.88));
+  box-shadow: inset 0 0 0 1px rgba(116, 143, 252, 0.12);
+}
+
 .menu-section :deep(.el-menu-item:hover),
 .menu-section :deep(.el-sub-menu__title:hover) {
   background: var(--surface-emphasis);
@@ -333,6 +390,42 @@ const handleCommand = async (command) => {
 .menu-section :deep(.el-sub-menu__title .el-icon) {
   margin-right: 12px;
   font-size: 18px;
+}
+
+.menu-section :deep(.el-sub-menu .el-menu) {
+  background: transparent;
+}
+
+.menu-section :deep(.el-menu--inline) {
+  padding: 2px 8px 8px;
+  overflow: hidden;
+}
+
+.menu-section :deep(.el-menu--inline .el-menu-item) {
+  height: 42px;
+  margin: 4px 0 0;
+  padding-left: 52px !important;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--text-secondary);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+  box-sizing: border-box;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.menu-section :deep(.el-menu--inline .el-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-primary);
+}
+
+.menu-section :deep(.el-menu--inline .el-menu-item.is-active) {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(47, 91, 234, 0.18);
 }
 
 .sidebar-footer {
