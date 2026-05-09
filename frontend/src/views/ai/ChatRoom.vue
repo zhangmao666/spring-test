@@ -83,6 +83,44 @@
       </header>
 
       <div class="messages-shell">
+      <div
+        v-if="useAgent || agentTimeline.length"
+        :class="['agent-workbench', { 'agent-workbench--collapsed': agentWorkbenchCollapsed }]"
+      >
+        <div class="agent-workbench__header">
+          <div class="agent-workbench__header-copy">
+            <h3>AgentScope 执行轨迹</h3>
+            <p>{{ agentStatusText }}</p>
+          </div>
+          <div class="agent-workbench__header-actions">
+            <el-tag size="small" :type="agentStatusTagType" effect="plain">
+              {{ agentStatusLabel }}
+            </el-tag>
+            <button
+              class="icon-btn agent-workbench__toggle"
+              type="button"
+              :aria-label="agentWorkbenchCollapsed ? '展开 AgentScope 执行轨迹' : '收起 AgentScope 执行轨迹'"
+              @click="agentWorkbenchCollapsed = !agentWorkbenchCollapsed"
+            >
+              <el-icon :class="{ rotated: !agentWorkbenchCollapsed }"><ArrowDown /></el-icon>
+            </button>
+          </div>
+        </div>
+        <div v-if="!agentWorkbenchCollapsed && agentTimeline.length" class="agent-timeline">
+          <div
+            v-for="(item, index) in agentTimeline"
+            :key="`${item.timestamp}-${index}`"
+            class="agent-timeline__item"
+          >
+            <span class="agent-timeline__type">{{ item.typeLabel }}</span>
+            <p class="agent-timeline__text">{{ item.text }}</p>
+          </div>
+        </div>
+        <div v-else-if="!agentWorkbenchCollapsed" class="agent-workbench__empty">
+          打开 AgentScope 模式后，系统会在这里显示规划、工具调用和结果摘要。
+        </div>
+      </div>
+
       <main ref="messagesContainer" class="messages-panel" @scroll="handleScroll">
         <div v-if="messages.length === 0" class="empty-state">
           <el-icon :size="42"><ChatDotRound /></el-icon>
@@ -226,15 +264,25 @@
 
         <div class="chat-input__actions">
           <div class="toggle-group">
-            <button :class="['toggle-chip', { active: useDeepThinking }]" type="button" @click="useDeepThinking = !useDeepThinking">
+            <button :class="['toggle-chip', 'toggle-chip--agent', { active: useAgent }]" type="button" @click="toggleAgentMode">
+              <el-icon><ChatDotRound /></el-icon>
+              AgentScope 模式
+            </button>
+            <button
+              :class="['toggle-chip', { active: useDeepThinking, 'toggle-chip--disabled': useAgent }]"
+              type="button"
+              :disabled="useAgent"
+              :title="useAgent ? 'AgentScope 模式暂不支持深度思考模型的多轮工具调用' : '启用深度思考'"
+              @click="useDeepThinking = !useDeepThinking"
+            >
               <el-icon><Cpu /></el-icon>
               深度思考
             </button>
             <button
-              :class="['toggle-chip', { active: useWebSearch, 'toggle-chip--disabled': !webSearchAvailable }]"
+              :class="['toggle-chip', { active: useWebSearch, 'toggle-chip--disabled': useAgent || !webSearchAvailable }]"
               type="button"
-              :disabled="!webSearchAvailable"
-              :title="webSearchAvailable ? '使用系统联网搜索' : webSearchUnavailableReason"
+              :disabled="useAgent || !webSearchAvailable"
+              :title="useAgent ? 'AgentScope 模式首版暂不接入联网搜索' : (webSearchAvailable ? '使用系统联网搜索' : webSearchUnavailableReason)"
               @click="useWebSearch = !useWebSearch"
             >
               <el-icon><Compass /></el-icon>
@@ -249,6 +297,7 @@
         </div>
       </footer>
     </section>
+
   </div>
 </template>
 
@@ -324,10 +373,15 @@ const inputToSent = ref('')
 const loading = ref(false)
 const messagesContainer = ref(null)
 const currentConversationId = ref(null)
+const useAgent = ref(false)
 const useWebSearch = ref(false)
 const useDeepThinking = ref(false)
 const sidebarCollapsed = ref(false)
 const userScrolledUp = ref(false)
+const agentTimeline = ref([])
+const agentWorkbenchCollapsed = ref(false)
+const agentStatus = ref('idle')
+const agentStatusText = ref('AgentScope 模式已关闭，当前为普通聊天模式。')
 const aiCapabilities = ref({
   webSearchEnabled: false,
   webSearchMode: 'system-searxng'
@@ -336,6 +390,18 @@ const aiCapabilities = ref({
 const selectedModel = computed(() => managedModels.value.find(item => item.id === selectedModelId.value) || null)
 const webSearchAvailable = computed(() => Boolean(aiCapabilities.value?.webSearchEnabled))
 const webSearchUnavailableReason = computed(() => webSearchAvailable.value ? '' : '当前系统未配置 SearXNG 联网搜索')
+const agentStatusLabel = computed(() => ({
+  idle: '未启用',
+  running: '执行中',
+  completed: '已完成',
+  failed: '失败'
+}[agentStatus.value] || '处理中'))
+const agentStatusTagType = computed(() => ({
+  idle: 'info',
+  running: 'warning',
+  completed: 'success',
+  failed: 'danger'
+}[agentStatus.value] || 'info'))
 const currentModelLabel = computed(() => {
   if (selectedModel.value) return selectedModel.value.displayName
   if (managedModels.value.length === 0) return '配置文件默认模型'
@@ -364,6 +430,27 @@ const doRender = (msg) => {
   if (msg.content) msg.renderedHtml = md.render(msg.content)
   if (msg.thought) msg.renderedThoughtHtml = md.render(msg.thought)
 }
+
+const createAssistantMessage = () => ({
+  role: 'assistant',
+  thought: '',
+  content: '',
+  usedWebSearch: useWebSearch.value,
+  searchQuery: '',
+  searchStatus: useWebSearch.value ? 'SEARCHING' : 'NOT_REQUESTED',
+  sources: [],
+  fullText: '',
+  isThinking: false,
+  isStreaming: true,
+  suggestions: [],
+  suggestionsLoading: false,
+  thoughtExpanded: true,
+  thinkingTime: 0,
+  timestamp: Date.now(),
+  renderedHtml: '',
+  renderedThoughtHtml: '',
+  agentEvents: []
+})
 
 const throttledRender = (msg) => {
   if (renderTimer) return
@@ -441,6 +528,56 @@ const formatDate = (datetime) => {
 
 const normalizeSources = (sources) => Array.isArray(sources) ? sources : []
 
+const resetAgentRuntime = () => {
+  agentTimeline.value = []
+  agentWorkbenchCollapsed.value = false
+  agentStatus.value = useAgent.value ? 'idle' : 'idle'
+  agentStatusText.value = useAgent.value
+    ? '等待发送消息后启动 AgentScope。'
+    : 'AgentScope 模式已关闭，当前为普通聊天模式。'
+}
+
+const pushAgentTimeline = (type, payload = {}, targetMsg = null) => {
+  const text = buildAgentTimelineText(type, payload)
+  const item = {
+    type,
+    typeLabel: buildAgentTimelineLabel(type),
+    text,
+    timestamp: Date.now()
+  }
+  agentTimeline.value.push(item)
+  if (targetMsg) {
+    if (!Array.isArray(targetMsg.agentEvents)) {
+      targetMsg.agentEvents = []
+    }
+    targetMsg.agentEvents.push(item)
+  }
+}
+
+const buildAgentTimelineLabel = (type) => ({
+  agent_plan: '规划',
+  agent_tool_call: '工具调用',
+  agent_tool_result: '工具结果',
+  agent_status: '状态'
+}[type] || 'AgentScope')
+
+const buildAgentTimelineText = (type, payload = {}) => {
+  if (type === 'agent_plan') {
+    return payload.summary || 'AgentScope 已生成执行计划。'
+  }
+  if (type === 'agent_tool_call') {
+    const args = payload.arguments ? JSON.stringify(payload.arguments) : '{}'
+    return `${payload.toolName || '未知工具'} ${args}`
+  }
+  if (type === 'agent_tool_result') {
+    return `${payload.toolName || '未知工具'}：${payload.result || '已完成'}`
+  }
+  if (type === 'agent_status') {
+    return payload.message || payload.status || '状态已更新'
+  }
+  return 'AgentScope 事件'
+}
+
 const shouldShowSearchCard = (msg) => ['SEARCHING', 'SUCCESS', 'FALLBACK_NO_RESULT', 'FALLBACK_ERROR'].includes(msg?.searchStatus)
 
 const getSearchStatusLabel = (status) => ({
@@ -502,6 +639,17 @@ const loadConversations = async () => {
   }
 }
 
+const loadConversationMessages = async (conversationId) => {
+  if (!conversationId) return []
+  try {
+    const response = await axios.get(`/api/ai/history/conversations/${conversationId}/messages`)
+    return response.data.data || []
+  } catch (error) {
+    console.error('加载会话消息失败', error?.response?.status, error?.response?.data)
+    return []
+  }
+}
+
 const resolveConversationModel = (conversation, silent = false) => {
   if (!conversation?.modelId) {
     selectedModelId.value = defaultModelId.value
@@ -536,7 +684,8 @@ const mapHistoryMessage = (msg) => {
     suggestionsLoading: false,
     fullText: '',
     renderedHtml: '',
-    renderedThoughtHtml: ''
+    renderedThoughtHtml: '',
+    agentEvents: []
   }
   if (msg.role !== 'user') doRender(item)
   return item
@@ -544,10 +693,11 @@ const mapHistoryMessage = (msg) => {
 
 const switchConversation = async (conversationId) => {
   currentConversationId.value = conversationId
+  resetAgentRuntime()
   resolveConversationModel(conversations.value.find(item => item.conversationId === conversationId))
   try {
-    const response = await axios.get(`/api/ai/history/conversations/${conversationId}/messages`)
-    messages.value = (response.data.data || []).map(mapHistoryMessage)
+    const historyMessages = await loadConversationMessages(conversationId)
+    messages.value = historyMessages.map(mapHistoryMessage)
     userScrolledUp.value = false
     await scrollToBottom(true)
   } catch (error) {
@@ -556,11 +706,29 @@ const switchConversation = async (conversationId) => {
   }
 }
 
+const recoverAssistantMessageFromHistory = async (conversationId, targetMsg) => {
+  if (!conversationId || !targetMsg) return false
+  const historyMessages = await loadConversationMessages(conversationId)
+  const latestAssistant = [...historyMessages].reverse().find(item => item.role === 'assistant' && item.content)
+  if (!latestAssistant) return false
+
+  targetMsg.content = latestAssistant.content || targetMsg.content
+  targetMsg.thought = latestAssistant.thought || targetMsg.thought
+  targetMsg.thinkingTime = latestAssistant.thinkingTime || targetMsg.thinkingTime
+  targetMsg.usedWebSearch = Boolean(latestAssistant.usedWebSearch) || targetMsg.usedWebSearch
+  targetMsg.searchQuery = latestAssistant.searchQuery || targetMsg.searchQuery
+  targetMsg.searchStatus = latestAssistant.searchStatus || targetMsg.searchStatus
+  targetMsg.sources = normalizeSources(latestAssistant.sources)
+  finalRender(targetMsg)
+  return true
+}
+
 const createNewConversation = () => {
   currentConversationId.value = crypto.randomUUID()
   messages.value = []
   selectedModelId.value = defaultModelId.value
   userScrolledUp.value = false
+  resetAgentRuntime()
 }
 
 const handleModelChange = () => {
@@ -589,9 +757,18 @@ const clearCurrentHistory = () => {
   messages.value = []
   currentConversationId.value = null
   selectedModelId.value = defaultModelId.value
+  resetAgentRuntime()
 }
 
 const normalizeCapabilitiesBeforeSend = () => {
+  if (useAgent.value && useDeepThinking.value) {
+    useDeepThinking.value = false
+    ElMessage.warning('AgentScope 模式暂不支持深度思考模型，已自动关闭深度思考')
+  }
+  if (useAgent.value && useWebSearch.value) {
+    useWebSearch.value = false
+    ElMessage.warning('AgentScope 模式首版暂不接入联网搜索，已自动关闭联网搜索')
+  }
   if (selectedModel.value && useDeepThinking.value && !selectedModel.value.supportsDeepThinking) {
     useDeepThinking.value = false
     ElMessage.warning('当前模型不支持深度思考，已自动关闭')
@@ -634,6 +811,19 @@ const handleSuggestionClick = async (prompt) => {
   await handleSend()
 }
 
+const toggleAgentMode = () => {
+  useAgent.value = !useAgent.value
+  if (useAgent.value && useDeepThinking.value) {
+    useDeepThinking.value = false
+    ElMessage.info('AgentScope 模式暂不支持深度思考模型，已自动关闭深度思考')
+  }
+  if (useAgent.value && useWebSearch.value) {
+    useWebSearch.value = false
+    ElMessage.info('AgentScope 模式首版暂不接入联网搜索，已自动关闭联网搜索')
+  }
+  resetAgentRuntime()
+}
+
 const handleSend = async () => {
   const content = inputToSent.value.trim()
   if (!content || loading.value) return
@@ -654,29 +844,27 @@ const handleSend = async () => {
   await scrollToBottom(true)
 
   const aiIndex = messages.value.length
-  messages.value.push({
-    role: 'assistant',
-    thought: '',
-    content: '',
-    usedWebSearch: useWebSearch.value,
-    searchQuery: '',
-    searchStatus: useWebSearch.value ? 'SEARCHING' : 'NOT_REQUESTED',
-    sources: [],
-    fullText: '',
-    isThinking: false,
-    isStreaming: true,
-    suggestions: [],
-    suggestionsLoading: true,
-    thoughtExpanded: true,
-    thinkingTime: 0,
-    timestamp: Date.now(),
-    renderedHtml: '',
-    renderedThoughtHtml: ''
-  })
+  messages.value.push(createAssistantMessage())
 
   if (!currentConversationId.value) {
     currentConversationId.value = crypto.randomUUID()
   }
+
+  if (useAgent.value) {
+    agentTimeline.value = []
+    agentWorkbenchCollapsed.value = false
+    agentStatus.value = 'running'
+    agentStatusText.value = 'AgentScope 正在分析问题并按需调用工具。'
+  } else {
+    resetAgentRuntime()
+  }
+
+  await handleClassicSend(content, requestId, aiIndex)
+}
+
+const handleClassicSend = async (content, requestId, aiIndex) => {
+  const targetMsg = messages.value[aiIndex]
+  targetMsg.suggestionsLoading = true
 
   try {
     const token = localStorage.getItem('token')
@@ -692,6 +880,7 @@ const handleSend = async () => {
         model: selectedModel.value?.modelName,
         modelId: selectedModelId.value,
         conversationId: currentConversationId.value,
+        useAgent: useAgent.value,
         useWebSearch: useWebSearch.value,
         useDeepThinking: useDeepThinking.value
       })
@@ -731,9 +920,27 @@ const handleSend = async () => {
             targetMsg.content = `[错误] ${json.error || '系统繁忙，请稍后再试'}`
             targetMsg.isThinking = false
             targetMsg.suggestionsLoading = false
+            if (useAgent.value) {
+              agentStatus.value = 'failed'
+              agentStatusText.value = json.error || 'AgentScope 执行失败'
+            }
             finalRender(targetMsg)
             setLoadingForRequest(requestId, false)
             return
+          }
+
+          if (currentEvent === 'agent_status') {
+            agentStatus.value = json.status || 'running'
+            agentStatusText.value = json.message || 'AgentScope 状态已更新'
+            pushAgentTimeline(currentEvent, json, targetMsg)
+            throttledScroll()
+            continue
+          }
+
+          if (currentEvent === 'agent_plan' || currentEvent === 'agent_tool_call' || currentEvent === 'agent_tool_result') {
+            pushAgentTimeline(currentEvent, json, targetMsg)
+            throttledScroll()
+            continue
           }
 
           if (currentEvent === 'search') {
@@ -749,6 +956,10 @@ const handleSend = async () => {
             if (thoughtTimer) clearInterval(thoughtTimer)
             targetMsg.isThinking = false
             targetMsg.suggestionsLoading = Boolean(targetMsg.content)
+             if (useAgent.value && agentStatus.value !== 'failed') {
+              agentStatus.value = 'completed'
+              agentStatusText.value = 'AgentScope 已完成本轮任务。'
+            }
             finalRender(targetMsg)
             setLoadingForRequest(requestId, false)
             throttledScroll()
@@ -826,7 +1037,18 @@ const handleSend = async () => {
 
     if (thoughtTimer) clearInterval(thoughtTimer)
     if (targetMsg.isStreaming) {
-      finalRender(targetMsg)
+      const recovered = useAgent.value && !targetMsg.content
+        ? await recoverAssistantMessageFromHistory(currentConversationId.value, targetMsg)
+        : false
+      if (!recovered) {
+        finalRender(targetMsg)
+      }
+      if (useAgent.value && agentStatus.value === 'running') {
+        agentStatus.value = recovered ? 'completed' : 'failed'
+        agentStatusText.value = recovered
+          ? 'AgentScope 已完成本轮任务。'
+          : 'AgentScope 已结束，但未收到完整的流式收尾事件。'
+      }
     }
     targetMsg.suggestionsLoading = false
     await loadConversations()
@@ -836,6 +1058,10 @@ const handleSend = async () => {
     const errMsg = messages.value[aiIndex]
     errMsg.content = '抱歉，系统暂时无法响应您的请求。'
     errMsg.suggestionsLoading = false
+    if (useAgent.value) {
+      agentStatus.value = 'failed'
+      agentStatusText.value = 'AgentScope 服务连接失败'
+    }
     finalRender(errMsg)
   } finally {
     setLoadingForRequest(requestId, false)
@@ -847,6 +1073,7 @@ onMounted(async () => {
   await loadManagedModels()
   await loadConversations()
   createNewConversation()
+  resetAgentRuntime()
 })
 
 onBeforeUnmount(() => {
@@ -1054,6 +1281,8 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-header {
@@ -1067,13 +1296,104 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+.agent-workbench {
+  margin: 14px 18px 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.72), transparent 40%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
+  flex: 0 0 auto;
+}
+
+.agent-workbench--collapsed {
+  padding-bottom: 12px;
+}
+
+.agent-workbench__header,
+.agent-timeline__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-workbench__header-copy {
+  min-width: 0;
+}
+
+.agent-workbench__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.agent-workbench__header h3 {
+  margin: 0;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.agent-workbench__header p,
+.agent-workbench__empty {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.agent-workbench__toggle {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  color: #2563eb;
+}
+
+.agent-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.agent-timeline__item {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.agent-timeline__type {
+  flex: 0 0 auto;
+  min-width: 52px;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.agent-timeline__text {
+  flex: 1;
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
 .model-select {
   width: 220px;
 }
 
 .messages-panel {
   position: relative;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 16px 18px 20px;
@@ -1390,6 +1710,17 @@ onBeforeUnmount(() => {
   color: #1d4ed8;
 }
 
+.toggle-chip--agent {
+  border-color: rgba(14, 116, 144, 0.22);
+  color: #0f766e;
+}
+
+.toggle-chip--agent.active {
+  border-color: rgba(13, 148, 136, 0.4);
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
 .toggle-chip--disabled,
 .toggle-chip:disabled {
   opacity: 0.55;
@@ -1488,6 +1819,18 @@ onBeforeUnmount(() => {
 
   .suggestion-grid {
     grid-template-columns: 1fr;
+  }
+
+  .agent-workbench {
+    margin: 10px 12px 0;
+  }
+
+  .agent-workbench__header {
+    align-items: center;
+  }
+
+  .agent-timeline__item {
+    flex-direction: column;
   }
 }
 </style>

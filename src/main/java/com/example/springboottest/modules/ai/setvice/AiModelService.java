@@ -22,7 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
@@ -135,11 +137,11 @@ public class AiModelService {
         long startTime = System.currentTimeMillis();
         String apiKey = resolveApiKeyForTest(request);
         if (!StringUtils.hasText(apiKey)) {
-            throw new IllegalArgumentException("API Key不能为空");
+            throw new IllegalArgumentException("API Key不能为空，且配置文件中也未提供默认 API Key");
         }
 
         try {
-            OpenAiChatModel chatModel = createChatModel(request.getBaseUrl(), apiKey, request.getModelName(), 0.1, 32);
+            OpenAiChatModel chatModel = createChatModel(request.getBaseUrl(), apiKey, request.getModelName(), 0.1, 32,false);
             String content = chatModel.call(new Prompt(new UserMessage("Reply with OK only.")))
                     .getResult()
                     .getOutput()
@@ -168,7 +170,7 @@ public class AiModelService {
         return aiProperties.getOpenai().getModel();
     }
 
-    public OpenAiChatModel createChatModel(String baseUrl, String apiKey, String modelName, Double temperature, Integer maxTokens) {
+    public OpenAiChatModel createChatModel(String baseUrl, String apiKey, String modelName, Double temperature, Integer maxTokens, Boolean isDeepThinking) {
         OpenAiApi openAiApi = OpenAiApi.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
@@ -177,12 +179,19 @@ public class AiModelService {
         OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder()
                 .model(modelName);
 
+        if (Boolean.TRUE.equals(isDeepThinking)) {
+            Map<String, Object> extraBody = new HashMap<>();
+            extraBody.put("thinking", Map.of("type", "enabled", "return_reasoning", true));
+            optionsBuilder.extraBody(extraBody);
+        }
+
         if (temperature != null) {
             optionsBuilder.temperature(temperature);
         }
         if (maxTokens != null) {
             optionsBuilder.maxTokens(maxTokens);
         }
+
 
         return OpenAiChatModel.builder()
                 .openAiApi(openAiApi)
@@ -207,8 +216,8 @@ public class AiModelService {
         if (Boolean.TRUE.equals(request.getIsDefault()) && Boolean.FALSE.equals(request.getEnabled())) {
             throw new IllegalArgumentException("默认模型必须处于启用状态");
         }
-        if (!update && !StringUtils.hasText(request.getApiKey())) {
-            throw new IllegalArgumentException("新建模型时API Key不能为空");
+        if (!update && !StringUtils.hasText(request.getApiKey()) && !hasFallbackApiKey()) {
+            throw new IllegalArgumentException("新建模型未填写API Key，且配置文件中也未提供默认 API Key");
         }
     }
 
@@ -242,10 +251,11 @@ public class AiModelService {
             return request.getApiKey().trim();
         }
         if (request.getId() == null) {
-            return null;
+            return fallbackApiKey();
         }
         AiModel existing = findById(request.getId());
-        return existing == null ? null : existing.getApiKey();
+        String existingApiKey = existing == null ? null : trimToNull(existing.getApiKey());
+        return StringUtils.hasText(existingApiKey) ? existingApiKey : fallbackApiKey();
     }
 
     private AiModelResponse toResponse(AiModel entity) {
@@ -279,5 +289,13 @@ public class AiModelService {
 
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    public String fallbackApiKey() {
+        return trimToNull(aiProperties.getOpenai().getApiKey());
+    }
+
+    private boolean hasFallbackApiKey() {
+        return StringUtils.hasText(fallbackApiKey());
     }
 }

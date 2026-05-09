@@ -2,10 +2,9 @@
   <div class="model-page">
     <div class="page-header">
       <div class="page-header__info">
-        <div class="page-header__eyebrow">MODEL REGISTRY</div>
         <h2 class="page-header__title">模型管理</h2>
         <p class="page-header__desc">
-          统一维护 OpenAI 协议模型配置，为聊天页、测试连接和默认模型切换提供一个更清晰的控制台。
+          统一维护模型配置与默认选择。
         </p>
       </div>
 
@@ -21,10 +20,9 @@
     <el-card class="list-card" shadow="never">
       <div class="list-card__meta">
         <div>
-          <div class="list-card__label">当前配置</div>
-          <div class="list-card__title">已录入 {{ modelList.length }} 个模型配置</div>
+          <div class="list-card__label">模型列表</div>
+          <div class="list-card__title">{{ modelList.length }} 个配置</div>
         </div>
-<!--        <div class="list-card__hint">操作区已改为弹性卡片布局，避免按钮、标签和开关互相覆盖。</div>-->
       </div>
 
       <div class="model-grid" v-loading="loading">
@@ -63,7 +61,7 @@
 
             <div class="spec-card">
               <div class="spec-card__label">API Key</div>
-              <div class="spec-card__value mono">{{ row.maskedApiKey || '未配置' }}</div>
+              <div class="spec-card__value mono">{{ row.maskedApiKey || '使用配置文件' }}</div>
             </div>
 
             <div class="spec-card spec-card--capabilities">
@@ -144,7 +142,9 @@
             v-model="form.apiKey"
             type="password"
             show-password
-            :placeholder="form.id ? '留空表示保留原密钥' : '请输入 API Key'"
+            autocomplete="new-password"
+            name="model-api-key"
+            :placeholder="form.id ? '留空表示保留原密钥或使用配置文件中的 API Key' : '留空表示使用配置文件中的 API Key'"
           />
         </el-form-item>
 
@@ -181,8 +181,8 @@
 
       <div class="test-panel">
         <div class="test-panel__status">
-          <el-tag :type="connectionVerified ? 'success' : 'info'">
-            {{ connectionVerified ? '已通过连接测试' : '尚未测试或配置已发生变更' }}
+          <el-tag :type="testStatusTagType">
+            {{ testStatusLabel }}
           </el-tag>
           <span v-if="lastTestMessage" class="test-panel__message">{{ lastTestMessage }}</span>
         </div>
@@ -218,8 +218,19 @@ const formRef = ref(null)
 const modelList = ref([])
 const connectionVerified = ref(false)
 const lastTestMessage = ref('')
+const testStatus = ref('idle')
 
 const dialogTitle = computed(() => (form.id ? '编辑模型' : '新增模型'))
+const testStatusLabel = computed(() => ({
+  idle: '尚未测试或配置已发生变更',
+  success: '已通过连接测试',
+  error: '连接测试失败'
+}[testStatus.value] || '尚未测试或配置已发生变更'))
+const testStatusTagType = computed(() => ({
+  idle: 'info',
+  success: 'success',
+  error: 'danger'
+}[testStatus.value] || 'info'))
 
 const form = reactive({
   id: null,
@@ -239,17 +250,7 @@ const rules = {
   provider: [{ required: true, message: '请输入渠道标识', trigger: 'blur' }],
   displayName: [{ required: true, message: '请输入展示名称', trigger: 'blur' }],
   baseUrl: [{ required: true, message: '请输入 Base URL', trigger: 'blur' }],
-  modelName: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
-  apiKey: [{
-    validator: (_, value, callback) => {
-      if (!form.id && !value) {
-        callback(new Error('新建模型时必须填写 API Key'))
-        return
-      }
-      callback()
-    },
-    trigger: 'blur'
-  }]
+  modelName: [{ required: true, message: '请输入模型名称', trigger: 'blur' }]
 }
 
 watch(
@@ -257,6 +258,7 @@ watch(
   () => {
     connectionVerified.value = false
     lastTestMessage.value = ''
+    testStatus.value = 'idle'
   }
 )
 
@@ -276,6 +278,7 @@ const resetForm = () => {
   })
   connectionVerified.value = false
   lastTestMessage.value = ''
+  testStatus.value = 'idle'
 }
 
 const getModelInitial = (row) => {
@@ -330,12 +333,13 @@ const handleTestConnection = async () => {
       modelName: form.modelName
     })
     connectionVerified.value = true
+    testStatus.value = 'success'
     lastTestMessage.value = res.data?.message || '连接测试成功'
     ElMessage.success('连接测试通过')
   } catch (error) {
     connectionVerified.value = false
-    lastTestMessage.value = ''
-    throw error
+    testStatus.value = 'error'
+    lastTestMessage.value = error?.message || error?.response?.data?.message || '连接测试失败，请检查模型配置'
   } finally {
     testing.value = false
   }
@@ -358,10 +362,6 @@ const handleTestRow = async (row) => {
 
 const handleSubmit = async () => {
   await formRef.value?.validate()
-  if (!connectionVerified.value) {
-    ElMessage.warning('请先通过连接测试再保存')
-    return
-  }
 
   const payload = {
     provider: form.provider,
@@ -426,127 +426,111 @@ onMounted(() => {
 .model-page {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 6px 2px 2px;
-}
-
-.page-header__eyebrow {
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  padding: 2px 2px 0;
 }
 
 .page-header__title {
-  margin: 8px 0 0;
+  margin: 0;
   color: #0f172a;
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.04em;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
 }
 
 .page-header__desc {
-  margin: 12px 0 0;
-  max-width: 760px;
+  margin: 6px 0 0;
+  max-width: 560px;
   color: #64748b;
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .page-header__actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .list-card {
-  border-radius: 28px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: none;
 }
 
 .list-card__meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 18px;
-  padding-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   flex-wrap: wrap;
 }
 
 .list-card__label {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .list-card__title {
-  margin-top: 6px;
+  margin-top: 4px;
   color: #1e293b;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.list-card__hint {
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .model-grid {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .model-card {
   position: relative;
-  padding: 24px;
-  border-radius: 24px;
+  padding: 18px 18px 16px;
+  border-radius: 16px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  background:
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  background: #fff;
+  box-shadow: none;
 }
 
 .model-card__top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 18px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .model-identity {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
   flex: 1;
 }
 
 .model-identity__badge {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #1e293b, #475569);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 800;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .model-identity__content {
@@ -556,71 +540,70 @@ onMounted(() => {
 .model-identity__title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .model-name {
   margin: 0;
   color: #0f172a;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.15;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .model-meta {
-  margin-top: 8px;
+  margin-top: 4px;
   color: #64748b;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .model-remark {
-  margin-top: 8px;
+  margin-top: 6px;
   color: #94a3b8;
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .provider-pill {
-  padding: 10px 14px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.06);
+  background: #f8fafc;
   color: #475569;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   white-space: nowrap;
+  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .model-specs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .spec-card {
   min-width: 0;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafc;
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .spec-card__label {
-  margin-bottom: 10px;
-  color: #94a3b8;
+  margin-bottom: 6px;
+  color: #64748b;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .spec-card__value {
   display: block;
   min-width: 0;
   color: #1e293b;
-  line-height: 1.7;
+  line-height: 1.55;
   word-break: break-all;
 }
 
@@ -632,7 +615,7 @@ onMounted(() => {
 
 .mono {
   font-family: Consolas, Monaco, monospace;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .ability-tags,
@@ -652,8 +635,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding-top: 18px;
+  gap: 10px;
+  padding-top: 14px;
   border-top: 1px solid rgba(148, 163, 184, 0.16);
   flex-wrap: wrap;
 }
@@ -661,7 +644,7 @@ onMounted(() => {
 .model-actions__group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -672,22 +655,23 @@ onMounted(() => {
 .status-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(241, 245, 249, 0.92);
+  background: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .status-toggle__label {
   color: #475569;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .model-card :deep(.el-button.el-button--small) {
-  height: 34px;
-  padding: 0 14px !important;
+  height: 30px;
+  padding: 0 12px !important;
   border-radius: 999px !important;
 }
 
@@ -699,8 +683,8 @@ onMounted(() => {
 .test-panel {
   justify-content: space-between;
   margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: #f8fafc;
   gap: 12px;
   flex-wrap: wrap;
@@ -723,11 +707,11 @@ onMounted(() => {
   }
 
   .page-header__title {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .model-card {
-    padding: 20px;
+    padding: 16px;
   }
 
   .model-card__top {
@@ -735,7 +719,7 @@ onMounted(() => {
   }
 
   .model-name {
-    font-size: 22px;
+    font-size: 18px;
   }
 
   .model-specs {

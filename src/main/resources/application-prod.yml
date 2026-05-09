@@ -74,6 +74,8 @@ logging:
   level:
     root: INFO
     com.example.springboottest: INFO
+    com.baomidou: WARN
+    org.apache.ibatis: WARN
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
   pattern:
@@ -129,3 +131,15 @@ http:
   keep-alive-duration: 300
   enable-logging: false
   max-retries: 3
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+    banner: false

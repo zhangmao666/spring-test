@@ -1,194 +1,256 @@
 package com.example.springboottest.modules.weather.service.impl;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.example.springboottest.modules.weather.dto.WeatherRequest;
 import com.example.springboottest.modules.weather.dto.WeatherResponse;
 import com.example.springboottest.modules.weather.service.WeatherService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * 天气服务实现类
- * 使用 sojson 免费天气API
+ * 使用 wttr.in 免费天气接口
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class WeatherServiceImpl implements WeatherService {
-    
-    private static final String WEATHER_API_URL = "http://t.weather.sojson.com/api/weather/city/";
-    
-    private final RestTemplate restTemplate = new RestTemplate();
-    
-    /**
-     * 城市名称到城市ID的映射
-     */
-    private static final Map<String, String> CITY_ID_MAP = new HashMap<String, String>() {{
-        put("北京", "101010100");
-        put("上海", "101020100");
-        put("广州", "101280101");
-        put("深圳", "101280601");
-        put("杭州", "101210101");
-        put("成都", "101270101");
-        put("西安", "101110101");
-        put("武汉", "101200101");
-        put("南京", "101190101");
-        put("天津", "101030100");
-        put("重庆", "101040100");
-        put("苏州", "101190401");
-        put("长沙", "101250101");
-        put("郑州", "101180101");
-        put("青岛", "101120201");
-        put("厦门", "101230201");
-        put("昆明", "101290101");
-        put("大连", "101070201");
-        put("济南", "101120101");
-        put("沈阳", "101070101");
-        put("哈尔滨", "101050101");
-        put("长春", "101060101");
-        put("福州", "101230101");
-        put("贵阳", "101260101");
-        put("太原", "101100101");
-        put("石家庄", "101090101");
-        put("合肥", "101220101");
-        put("南昌", "101240101");
-        put("兰州", "101160101");
-        put("海口", "101310101");
-        put("南宁", "101300101");
-        put("拉萨", "101140101");
-        put("银川", "101170101");
-        put("西宁", "101150101");
-        put("呼和浩特", "101080101");
-        put("乌鲁木齐", "101130101");
-    }};
-    
+
+    static final String WTTR_API_URL = "https://wttr.in/%s?format=j1&lang=zh-cn";
+    static final String WTTR_DEFAULT_API_URL = "https://wttr.in/?format=j1&lang=zh-cn";
+
+    private static final Map<String, String> CITY_QUERY_ALIASES = createCityQueryAliases();
+
+    private final RestTemplate restTemplate;
+
     @Override
     public WeatherResponse getWeatherByCity(WeatherRequest weatherRequest) {
-        log.info("查询城市 {} 的天气信息", weatherRequest.getCity());
-        return fetchWeatherFromApi(weatherRequest.getCity());
+        if (weatherRequest == null || !StringUtils.hasText(weatherRequest.getCity())) {
+            throw new RuntimeException("城市名称不能为空");
+        }
+        return fetchWeather(weatherRequest.getCity());
     }
 
     @Override
     public WeatherResponse getWeatherByCity(String cityName) {
-        log.info("查询城市 {} 的天气信息", cityName);
-        return fetchWeatherFromApi(cityName);
-    }
-    
-    /**
-     * 从真实API获取天气数据
-     */
-    private WeatherResponse fetchWeatherFromApi(String cityName) {
-        String cityId = CITY_ID_MAP.get(cityName);
-        if (cityId == null) {
-            throw new RuntimeException("暂不支持查询城市: " + cityName + " 的天气信息");
+        if (!StringUtils.hasText(cityName)) {
+            throw new RuntimeException("城市名称不能为空");
         }
-        
+        return fetchWeather(cityName);
+    }
+
+    private WeatherResponse fetchWeather(String cityName) {
+        String normalizedCity = cityName.trim();
+        String queryCity = normalizeQueryCity(normalizedCity);
+        String encodedCity = UriUtils.encodePathSegment(queryCity, StandardCharsets.UTF_8);
+        String url = StringUtils.hasText(encodedCity)
+                ? WTTR_API_URL.formatted(encodedCity)
+                : WTTR_DEFAULT_API_URL;
+
         try {
-            String url = WEATHER_API_URL + cityId;
-            log.info("请求天气API: {}", url);
-            
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-            String body = response.getBody();
-            
-            JSONObject json = JSONObject.parseObject(body);
-            
-            if (json.getInteger("status") != 200) {
-                throw new RuntimeException("天气API返回错误: " + json.getString("message"));
+            log.info("查询 wttr 天气信息, requestedCity={}, queryCity={}, url={}", normalizedCity, queryCity, url);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            headers.set("User-Agent", "Mozilla/5.0 (compatible; AI-world-weather/1.0)");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful() || !StringUtils.hasText(response.getBody())) {
+                throw new RuntimeException("天气服务返回异常: HTTP " + response.getStatusCode().value());
             }
-            
-            return parseWeatherResponse(json, cityName);
-            
+
+            JSONObject json = JSONObject.parseObject(response.getBody());
+            return parseWeatherResponse(json, normalizedCity, queryCity);
         } catch (Exception e) {
-            log.error("获取天气信息失败: {}", e.getMessage());
-            throw new RuntimeException("获取天气信息失败: " + e.getMessage());
+            log.error("获取城市 {} 天气信息失败: {}", normalizedCity, e.getMessage(), e);
+            throw new RuntimeException("获取天气信息失败: " + e.getMessage(), e);
         }
     }
-    
-    /**
-     * 解析天气API响应
-     */
-    private WeatherResponse parseWeatherResponse(JSONObject json, String cityName) {
-        JSONObject cityInfo = json.getJSONObject("cityInfo");
-        JSONObject data = json.getJSONObject("data");
-        
-        // 获取今天的预报
-        JSONObject forecast = data.getJSONArray("forecast").getJSONObject(0);
-        
+
+    WeatherResponse parseWeatherResponse(JSONObject json, String requestedCity, String queryCity) {
+        if (json == null) {
+            throw new RuntimeException("天气数据为空");
+        }
+
+        JSONObject current = firstObject(json.getJSONArray("current_condition"));
+        JSONObject nearestArea = firstObject(json.getJSONArray("nearest_area"));
+        if (current == null) {
+            throw new RuntimeException("天气数据缺少 current_condition");
+        }
+
+        String city = readNestedValue(nearestArea, "areaName");
+        String country = readNestedValue(nearestArea, "country");
+        String region = readNestedValue(nearestArea, "region");
+        String weatherDesc = readNestedValue(current, "weatherDesc");
+
         WeatherResponse response = new WeatherResponse();
-        response.setCity(cityInfo.getString("city").replace("市", ""));
-        response.setCountry("中国");
-        
-        // 解析温度
-        String wendu = data.getString("wendu");
-        response.setTemperature(Double.parseDouble(wendu));
-        
-        // 解析高低温计算体感温度
-        String highStr = forecast.getString("high").replaceAll("[^0-9.-]", "");
-        String lowStr = forecast.getString("low").replaceAll("[^0-9.-]", "");
-        double high = Double.parseDouble(highStr);
-        double low = Double.parseDouble(lowStr);
-        response.setFeelsLike((high + low) / 2);
-        
-        // 天气类型和描述
-        String weatherType = forecast.getString("type");
-        response.setMain(weatherType);
-        response.setDescription(forecast.getString("notice"));
-        
-        // 湿度
-        String shidu = data.getString("shidu").replace("%", "");
-        response.setHumidity(Integer.parseInt(shidu));
-        
-        // 气压（API未提供，使用标准气压）
-        response.setPressure(1013.0);
-        
-        // 风速（解析风力等级转换为大致风速）
-        String fl = forecast.getString("fl");
-        response.setWindSpeed(parseWindSpeed(fl));
-        
-        // 风向（解析风向转换为角度）
-        String fx = forecast.getString("fx");
-        response.setWindDirection(parseWindDirection(fx));
-        
+        response.setRequestedCity(requestedCity);
+        response.setQueryCity(queryCity);
+        response.setCity(StringUtils.hasText(city) ? city : requestedCity);
+        response.setCountry(buildCountry(country, region));
+        response.setTemperature(parseDouble(current.getString("temp_C")));
+        response.setFeelsLike(parseDouble(current.getString("FeelsLikeC")));
+        response.setDescription(StringUtils.hasText(weatherDesc) ? weatherDesc : "未知");
+        response.setMain(StringUtils.hasText(weatherDesc) ? weatherDesc : "未知");
+        response.setHumidity(parseInteger(current.getString("humidity")));
+        response.setPressure(parseDouble(current.getString("pressure")));
+        response.setWindSpeed(parseDouble(current.getString("windspeedKmph")));
+        response.setWindDirection(parseWindDirection(current.getString("winddir16Point")));
+        response.setLocationMatched(isLocationMatched(requestedCity, response.getCity(), country));
         response.setQueryTime(LocalDateTime.now());
-        
-        log.info("成功获取城市 {} 天气: {}，温度: {}°C", cityName, weatherType, wendu);
         return response;
     }
-    
-    /**
-     * 解析风力等级为风速
-     */
-    private Double parseWindSpeed(String fl) {
-        if (fl == null) return 0.0;
-        if (fl.contains("3-4")) return 5.0;
-        if (fl.contains("4-5")) return 8.0;
-        if (fl.contains("5-6")) return 11.0;
-        if (fl.contains("<3") || fl.contains("微风")) return 2.0;
-        return 3.0;
+
+    private String normalizeQueryCity(String cityName) {
+        String compactName = cityName.replace("市", "").trim();
+        return CITY_QUERY_ALIASES.getOrDefault(compactName, cityName.trim());
     }
-    
-    /**
-     * 解析风向为角度
-     */
-    private Integer parseWindDirection(String fx) {
-        if (fx == null) return 0;
-        if (fx.contains("北")) {
-            if (fx.contains("东")) return 45;
-            if (fx.contains("西")) return 315;
-            return 0;
+
+    private JSONObject firstObject(JSONArray array) {
+        if (array == null || array.isEmpty()) {
+            return null;
         }
-        if (fx.contains("南")) {
-            if (fx.contains("东")) return 135;
-            if (fx.contains("西")) return 225;
-            return 180;
+        return array.getJSONObject(0);
+    }
+
+    private String readNestedValue(JSONObject parent, String fieldName) {
+        if (parent == null || !parent.containsKey(fieldName)) {
+            return "";
         }
-        if (fx.contains("东")) return 90;
-        if (fx.contains("西")) return 270;
-        return 0;
+        JSONArray array = parent.getJSONArray(fieldName);
+        if (array == null || array.isEmpty()) {
+            return "";
+        }
+        JSONObject first = array.getJSONObject(0);
+        return first == null ? "" : first.getString("value");
+    }
+
+    private Double parseDouble(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseWindDirection(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return switch (value.trim().toUpperCase(Locale.ROOT)) {
+            case "N" -> 0;
+            case "NNE" -> 23;
+            case "NE" -> 45;
+            case "ENE" -> 68;
+            case "E" -> 90;
+            case "ESE" -> 113;
+            case "SE" -> 135;
+            case "SSE" -> 158;
+            case "S" -> 180;
+            case "SSW" -> 203;
+            case "SW" -> 225;
+            case "WSW" -> 248;
+            case "W" -> 270;
+            case "WNW" -> 293;
+            case "NW" -> 315;
+            case "NNW" -> 338;
+            default -> null;
+        };
+    }
+
+    private String buildCountry(String country, String region) {
+        if (StringUtils.hasText(country) && StringUtils.hasText(region)) {
+            return country + " / " + region;
+        }
+        if (StringUtils.hasText(country)) {
+            return country;
+        }
+        return region;
+    }
+
+    private boolean isLocationMatched(String requestedCity, String resolvedCity, String country) {
+        if (!StringUtils.hasText(requestedCity) || !StringUtils.hasText(resolvedCity)) {
+            return false;
+        }
+
+        String normalizedRequested = requestedCity.replace("市", "").trim().toLowerCase(Locale.ROOT);
+        String normalizedResolved = resolvedCity.trim().toLowerCase(Locale.ROOT);
+        if (normalizedRequested.equals(normalizedResolved)) {
+            return true;
+        }
+
+        String alias = CITY_QUERY_ALIASES.getOrDefault(requestedCity.replace("市", "").trim(), "");
+        if (StringUtils.hasText(alias) && alias.equalsIgnoreCase(resolvedCity)) {
+            return true;
+        }
+
+        return containsChinese(normalizedRequested) && StringUtils.hasText(country) && country.toLowerCase(Locale.ROOT).contains("china");
+    }
+
+    private boolean containsChinese(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            if (Character.UnicodeScript.of(text.charAt(i)) == Character.UnicodeScript.HAN) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static Map<String, String> createCityQueryAliases() {
+        Map<String, String> aliases = new LinkedHashMap<>();
+        aliases.put("北京", "Beijing");
+        aliases.put("上海", "Shanghai");
+        aliases.put("广州", "Guangzhou");
+        aliases.put("深圳", "Shenzhen");
+        aliases.put("杭州", "Hangzhou");
+        aliases.put("成都", "Chengdu");
+        aliases.put("西安", "Xi'an");
+        aliases.put("武汉", "Wuhan");
+        aliases.put("南京", "Nanjing");
+        aliases.put("天津", "Tianjin");
+        aliases.put("重庆", "Chongqing");
+        aliases.put("苏州", "Suzhou");
+        aliases.put("长沙", "Changsha");
+        aliases.put("郑州", "Zhengzhou");
+        aliases.put("青岛", "Qingdao");
+        aliases.put("厦门", "Xiamen");
+        return Map.copyOf(aliases);
     }
 }

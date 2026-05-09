@@ -1,24 +1,69 @@
 <template>
   <div class="dashboard-page">
-    <section class="overview-panel">
-      <div class="overview-panel__copy">
-        <span class="section-kicker">SYSTEM OVERVIEW</span>
-        <h2 class="section-title">工作台</h2>
-        <p class="section-desc">
-          查看系统关键数据、常用入口和最近状态，也能顺手看一眼当前城市的实时天气。
-        </p>
+    <section class="hero-panel">
+      <div class="hero-panel__aurora hero-panel__aurora--one" />
+      <div class="hero-panel__aurora hero-panel__aurora--two" />
+
+      <div class="hero-panel__main">
+        <div class="hero-panel__copy">
+          <div class="hero-panel__heading">
+            <div>
+              <span class="section-kicker">COMMAND CENTER</span>
+              <h2 class="section-title">工作台</h2>
+            </div>
+            <div class="hero-status">
+              <span class="hero-status__dot" />
+              <span>{{ loading ? '同步中' : '状态已同步' }}</span>
+            </div>
+          </div>
+
+          <p class="section-desc">
+            在一个页面里掌握系统状态、进入高频模块，并快速发现需要处理的变化。
+          </p>
+
+          <div class="hero-pills">
+            <div
+              v-for="pill in heroPills"
+              :key="pill.label"
+              class="hero-pill"
+            >
+              <span class="hero-pill__label">{{ pill.label }}</span>
+              <strong class="hero-pill__value">{{ pill.value }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="overview-panel__actions">
+          <el-button type="primary" @click="$router.push('/user')">
+            <el-icon><UserFilled /></el-icon>
+            进入用户管理
+          </el-button>
+          <el-button @click="$router.push('/dict')">
+            <el-icon><Collection /></el-icon>
+            查看字典配置
+          </el-button>
+        </div>
       </div>
 
-      <div class="overview-panel__actions">
-        <el-button type="primary" @click="$router.push('/user')">
-          <el-icon><UserFilled /></el-icon>
-          进入用户管理
-        </el-button>
-        <el-button @click="$router.push('/dict')">
-          <el-icon><Collection /></el-icon>
-          查看字典配置
-        </el-button>
-      </div>
+      <aside class="hero-panel__aside">
+        <span class="hero-aside__kicker">OPERATIONS RHYTHM</span>
+        <div class="hero-score">
+          <strong class="hero-score__value">{{ healthScore }}%</strong>
+          <span class="hero-score__label">当前运行健康度</span>
+        </div>
+
+        <div class="hero-aside__list">
+          <article
+            v-for="item in overviewHighlights"
+            :key="item.label"
+            class="hero-aside__item"
+          >
+            <span class="hero-aside__label">{{ item.label }}</span>
+            <strong class="hero-aside__value">{{ item.value }}</strong>
+            <p class="hero-aside__desc">{{ item.detail }}</p>
+          </article>
+        </div>
+      </aside>
     </section>
 
     <section class="stat-grid">
@@ -28,21 +73,44 @@
         class="stat-card"
         :class="`stat-card--${card.tone}`"
       >
-        <div class="stat-card__icon">
-          <el-icon :size="20"><component :is="card.icon" /></el-icon>
+        <div class="stat-card__top">
+          <span class="stat-card__label">{{ card.label }}</span>
+          <div class="stat-card__icon">
+            <el-icon :size="20"><component :is="card.icon" /></el-icon>
+          </div>
         </div>
         <div class="stat-card__body">
-          <span class="stat-card__label">{{ card.label }}</span>
           <strong class="stat-card__value">{{ card.value }}</strong>
-          <span class="stat-card__hint">{{ card.hint }}</span>
+          <div class="stat-card__meta">
+            <span class="stat-card__hint">{{ card.hint }}</span>
+            <span class="stat-card__tag">{{ card.tag }}</span>
+          </div>
         </div>
       </article>
     </section>
 
+    <section class="priority-grid">
+      <article
+        v-for="signal in prioritySignals"
+        :key="signal.title"
+        class="priority-card"
+        :class="`priority-card--${signal.tone}`"
+      >
+        <span class="priority-card__label">{{ signal.title }}</span>
+        <strong class="priority-card__value">{{ signal.value }}</strong>
+        <p class="priority-card__desc">{{ signal.detail }}</p>
+      </article>
+    </section>
 
     <section class="weather-showcase" :class="`weather-showcase--${weatherTheme}`">
       <div class="weather-showcase__copy">
-        <span class="weather-kicker">LIVE WEATHER</span>
+        <div class="weather-status-row">
+          <span class="weather-kicker">LIVE WEATHER</span>
+          <div class="weather-status-chips">
+            <span class="weather-status-chip">实时场景</span>
+            <span class="weather-status-chip">{{ weatherThemeLabel }}</span>
+          </div>
+        </div>
 
         <div class="weather-heading">
           <div>
@@ -169,8 +237,9 @@
           <div class="card-header">
             <div>
               <h3>快捷入口</h3>
-              <p>快速进入常用模块。</p>
+              <p>直接进入最常使用的工作模块。</p>
             </div>
+            <span class="card-badge">共 {{ quickActions.length }} 个入口</span>
           </div>
         </template>
 
@@ -189,6 +258,7 @@
               <span class="quick-card__title">{{ action.title }}</span>
               <span class="quick-card__desc">{{ action.desc }}</span>
             </div>
+            <span class="quick-card__tail">前往</span>
           </button>
         </div>
       </el-card>
@@ -197,28 +267,23 @@
         <template #header>
           <div class="card-header">
             <div>
-              <h3>当前重点</h3>
-              <p>近期需要关注的数据状态。</p>
+              <h3>重点关注</h3>
+              <p>优先查看需要跟进的状态变化。</p>
             </div>
             <span class="summary-timestamp">更新于 {{ lastUpdatedLabel }}</span>
           </div>
         </template>
 
         <div class="focus-list">
-          <div class="focus-item">
-            <span class="focus-item__label">启用用户</span>
-            <strong class="focus-item__value">{{ stats.activeUsers }}</strong>
-            <span class="focus-item__desc">当前可正常使用系统的账号数量。</span>
-          </div>
-          <div class="focus-item">
-            <span class="focus-item__label">启用字典</span>
-            <strong class="focus-item__value">{{ stats.enabledDicts }}</strong>
-            <span class="focus-item__desc">当前生效中的字典配置数量。</span>
-          </div>
-          <div class="focus-item">
-            <span class="focus-item__label">停用对象</span>
-            <strong class="focus-item__value">{{ inactiveSummary }}</strong>
-            <span class="focus-item__desc">包含禁用用户和停用字典。</span>
+          <div
+            v-for="item in focusItems"
+            :key="item.label"
+            class="focus-item"
+            :class="`focus-item--${item.tone}`"
+          >
+            <span class="focus-item__label">{{ item.label }}</span>
+            <strong class="focus-item__value">{{ item.value }}</strong>
+            <span class="focus-item__desc">{{ item.desc }}</span>
           </div>
         </div>
 
@@ -235,7 +300,7 @@
           <div class="card-header">
             <div>
               <h3>数据概览</h3>
-              <p>展示当前主要管理对象的数量。</p>
+              <p>快速了解当前核心对象的整体规模。</p>
             </div>
           </div>
         </template>
@@ -264,24 +329,23 @@
         <template #header>
           <div class="card-header">
             <div>
-              <h3>模块摘要</h3>
-              <p>当前主要模块的用途概览。</p>
+              <h3>能力分区</h3>
+              <p>按任务类型组织主要功能入口。</p>
             </div>
           </div>
         </template>
 
         <div class="tips-list">
-          <div class="tip-item">
-            <strong>用户管理</strong>
-            <span>管理账号状态、角色信息和基础安全操作。</span>
-          </div>
-          <div class="tip-item">
-            <strong>字典管理</strong>
-            <span>维护系统基础配置及字典项内容。</span>
-          </div>
-          <div class="tip-item">
-            <strong>AI 与热点</strong>
-            <span>用于内容辅助、信息查看和模型能力管理。</span>
+          <div
+            v-for="group in capabilityGroups"
+            :key="group.title"
+            class="tip-item"
+          >
+            <div class="tip-item__row">
+              <strong>{{ group.title }}</strong>
+              <span class="tip-item__badge">{{ group.badge }}</span>
+            </div>
+            <span>{{ group.desc }}</span>
           </div>
         </div>
       </el-card>
@@ -344,12 +408,36 @@ const quickActions = [
   { title: '热点新闻', desc: '快速查看多平台实时热点', to: '/news/hot', icon: Notification }
 ]
 
+const capabilityGroups = [
+  {
+    title: '系统管理',
+    desc: '围绕用户、权限与基础配置建立稳定的后台运行骨架。',
+    badge: 'Core'
+  },
+  {
+    title: '内容协同',
+    desc: '让 AI 问答、模型能力和热点信息在一个入口里协作运转。',
+    badge: 'AI'
+  },
+  {
+    title: '轻量工具',
+    desc: '把高频的小工具放在工作流边上，减少来回切换的成本。',
+    badge: 'Tools'
+  }
+]
+
+const toPercent = (value, total) => {
+  if (!total) return 100
+  return Math.round((value / total) * 100)
+}
+
 const statCards = computed(() => [
   {
     key: 'users',
     label: '用户总数',
     value: stats.value.userTotal,
     hint: `${stats.value.activeUsers} 位启用中`,
+    tag: `${activeUserRate.value}% 可用`,
     tone: 'primary',
     icon: UserFilled
   },
@@ -358,6 +446,7 @@ const statCards = computed(() => [
     label: '字典总数',
     value: stats.value.dictTotal,
     hint: `${stats.value.enabledDicts} 个启用中`,
+    tag: `${enabledDictRate.value}% 生效`,
     tone: 'success',
     icon: Collection
   },
@@ -366,6 +455,7 @@ const statCards = computed(() => [
     label: '禁用用户',
     value: stats.value.disabledUsers,
     hint: '当前处于禁用状态的账号',
+    tag: stats.value.disabledUsers > 0 ? '待处理' : '稳定',
     tone: 'warning',
     icon: Compass
   },
@@ -374,12 +464,18 @@ const statCards = computed(() => [
     label: '停用字典',
     value: stats.value.disabledDicts,
     hint: '当前未启用的字典配置',
+    tag: stats.value.disabledDicts > 0 ? '需检查' : '正常',
     tone: 'neutral',
     icon: InfoFilled
   }
 ])
 
 const inactiveSummary = computed(() => stats.value.disabledUsers + stats.value.disabledDicts)
+const activeUserRate = computed(() => toPercent(stats.value.activeUsers, stats.value.userTotal))
+const enabledDictRate = computed(() => toPercent(stats.value.enabledDicts, stats.value.dictTotal))
+const healthScore = computed(() => {
+  return Math.round(activeUserRate.value * 0.55 + enabledDictRate.value * 0.45)
+})
 
 const lastUpdatedLabel = computed(() => {
   if (!lastUpdatedAt.value) return '刚刚'
@@ -400,6 +496,83 @@ const summaryNote = computed(() => {
   return '当前系统状态稳定，核心对象均处于可用区间。'
 })
 
+const heroPills = computed(() => [
+  {
+    label: '运行健康度',
+    value: `${healthScore.value}%`
+  },
+  {
+    label: '启用账号占比',
+    value: `${activeUserRate.value}%`
+  },
+  {
+    label: '当前城市',
+    value: weatherPayload.value.city || weatherCity.value
+  }
+])
+
+const overviewHighlights = computed(() => [
+  {
+    label: '最新刷新',
+    value: lastUpdatedLabel.value,
+    detail: '系统状态与核心统计已同步到当前视图。'
+  },
+  {
+    label: '启用账号',
+    value: `${stats.value.activeUsers}/${stats.value.userTotal || 0}`,
+    detail: '优先保证高频使用账号处于可用状态。'
+  },
+  {
+    label: '天气节奏',
+    value: weatherThemeLabel.value,
+    detail: weatherHeadline.value
+  }
+])
+
+const prioritySignals = computed(() => [
+  {
+    title: '待处理停用项',
+    value: inactiveSummary.value,
+    detail: inactiveSummary.value > 0
+      ? '建议优先检查停用账号与字典配置的实际影响范围。'
+      : '当前没有需要优先处理的停用对象，系统状态较为稳定。',
+    tone: inactiveSummary.value > 0 ? 'warning' : 'success'
+  },
+  {
+    title: '账号可用率',
+    value: `${activeUserRate.value}%`,
+    detail: '反映当前可正常访问系统的账号比例。',
+    tone: 'primary'
+  },
+  {
+    title: '字典生效率',
+    value: `${enabledDictRate.value}%`,
+    detail: '体现业务配置项处于启用状态的覆盖情况。',
+    tone: 'neutral'
+  }
+])
+
+const focusItems = computed(() => [
+  {
+    label: '启用用户',
+    value: stats.value.activeUsers,
+    desc: '当前可正常使用系统的账号数量。',
+    tone: 'primary'
+  },
+  {
+    label: '启用字典',
+    value: stats.value.enabledDicts,
+    desc: '当前生效中的字典配置数量。',
+    tone: 'success'
+  },
+  {
+    label: '停用对象',
+    value: inactiveSummary.value,
+    desc: '包含禁用用户和停用字典，适合作为巡检入口。',
+    tone: inactiveSummary.value > 0 ? 'warning' : 'neutral'
+  }
+])
+
 const weatherStatusText = computed(() => {
   return [weatherPayload.value.main, weatherPayload.value.description]
     .filter(Boolean)
@@ -417,13 +590,25 @@ const weatherTheme = computed(() => {
   return 'sunny'
 })
 
+const weatherThemeLabel = computed(() => {
+  const themeMap = {
+    sunny: '晴朗提效',
+    cloudy: '平稳推进',
+    rainy: '室内专注',
+    windy: '优先清单',
+    snowy: '安静深潜'
+  }
+
+  return themeMap[weatherTheme.value]
+})
+
 const weatherHeadline = computed(() => {
   const themeMap = {
-    sunny: '晴光正好，适合把重要事情推进一点。',
-    cloudy: '云层柔和，今天适合稳稳当当地处理任务。',
-    rainy: '有雨意，页面上给它加一点动态水滴氛围。',
-    windy: '风感明显，适合用流线图案表现空气流动。',
-    snowy: '雪意偏轻，用更安静的颗粒感来呈现天气。'
+    sunny: '天气不错，适合集中处理今天的关键任务。',
+    cloudy: '节奏平稳，适合按优先级逐项推进。',
+    rainy: '外面有雨，适合留在工作台把待办收一收。',
+    windy: '变化感比较明显，适合先处理高优先级事项。',
+    snowy: '节奏安静一些，适合做需要专注的工作。'
   }
 
   return themeMap[weatherTheme.value]
@@ -468,7 +653,7 @@ const weatherNote = computed(() => {
     return weatherError.value
   }
 
-  return '图案会根据天气关键词自动切换为晴天、多云、下雨、刮风或下雪场景。'
+  return '支持查看当前城市实时天气，方便安排当天工作节奏。'
 })
 
 const extractList = (payload) => {
@@ -559,46 +744,225 @@ onMounted(async () => {
 
 <style lang="scss" scoped>
 .dashboard-page {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
-.overview-panel {
+.hero-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.7fr);
+  gap: 20px;
+  overflow: hidden;
+  padding: 30px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(8, 15, 32, 0.98), rgba(17, 38, 75, 0.95) 48%, rgba(18, 79, 96, 0.9));
+  color: #fff;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.18);
+}
+
+.hero-panel__aurora {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(10px);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.hero-panel__aurora--one {
+  top: -90px;
+  right: 10%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(121, 198, 255, 0.42), transparent 68%);
+}
+
+.hero-panel__aurora--two {
+  bottom: -140px;
+  left: -40px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%);
+}
+
+.hero-panel__main,
+.hero-panel__aside {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-panel__main {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: space-between;
   gap: 20px;
-  padding: 26px 28px;
-  border-radius: 24px;
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92)),
-    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(16, 185, 129, 0.14));
-  color: #fff;
 }
 
-.overview-panel__copy {
-  max-width: 720px;
+.hero-panel__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.hero-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .section-kicker {
-  display: inline-block;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.section-kicker::before {
+  content: '';
+  width: 32px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.hero-status__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #7dd3fc;
+  box-shadow: 0 0 0 6px rgba(125, 211, 252, 0.14);
 }
 
 .section-title {
-  margin: 8px 0 0;
-  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
-  line-height: 1.15;
+  margin: 10px 0 0;
+  max-width: 760px;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
 }
 
 .section-desc {
-  margin: 10px 0 0;
+  margin: 0;
+  max-width: 720px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.hero-pills {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.hero-pill {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.hero-pill__label {
+  display: block;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-pill__value {
+  display: block;
+  margin-top: 10px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.hero-panel__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(18px);
+}
+
+.hero-aside__kicker {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.hero-score {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-score__value {
+  font-size: clamp(2.8rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.hero-score__label {
   color: rgba(255, 255, 255, 0.76);
-  line-height: 1.7;
+  font-size: 0.94rem;
+}
+
+.hero-aside__list {
+  display: grid;
+  gap: 12px;
+}
+
+.hero-aside__item {
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(7, 15, 32, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hero-aside__label {
+  display: block;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.76rem;
+}
+
+.hero-aside__value {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.16rem;
+  font-weight: 800;
+}
+
+.hero-aside__desc {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.84rem;
+  line-height: 1.65;
 }
 
 .overview-panel__actions {
@@ -624,75 +988,167 @@ onMounted(async () => {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.priority-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
 .content-grid,
 .detail-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 128px;
-  padding: 20px;
+  position: relative;
+  min-height: 168px;
+  padding: 22px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 20px;
-  background: #fff;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.06);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 36px rgba(15, 23, 42, 0.1);
+}
+
+.stat-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .stat-card__icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
   flex-shrink: 0;
 }
 
 .stat-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 12px;
+  margin-top: 30px;
 }
 
 .stat-card__label {
   color: #64748b;
   font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .stat-card__value {
   color: #0f172a;
-  font-size: 1.8rem;
-  line-height: 1;
+  font-size: clamp(2rem, 4vw, 2.7rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
+}
+
+.stat-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .stat-card__hint {
-  color: #94a3b8;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.stat-card__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .stat-card--primary .stat-card__icon {
-  background: rgba(37, 99, 235, 0.12);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.08));
   color: #2563eb;
 }
 
 .stat-card--success .stat-card__icon {
-  background: rgba(16, 185, 129, 0.12);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(45, 212, 191, 0.08));
   color: #059669;
 }
 
 .stat-card--warning .stat-card__icon {
-  background: rgba(245, 158, 11, 0.12);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.08));
   color: #d97706;
 }
 
 .stat-card--neutral .stat-card__icon {
-  background: rgba(71, 85, 105, 0.12);
+  background: linear-gradient(135deg, rgba(71, 85, 105, 0.16), rgba(100, 116, 139, 0.08));
   color: #475569;
 }
 
+.priority-card {
+  padding: 20px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+}
+
+.priority-card__label {
+  display: block;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.priority-card__value {
+  display: block;
+  margin-top: 12px;
+  color: #0f172a;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.priority-card__desc {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.priority-card--primary {
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0.92));
+}
+
+.priority-card--success {
+  background:
+    linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0.92));
+}
+
+.priority-card--warning {
+  background:
+    linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.92));
+}
+
+.priority-card--neutral {
+  background:
+    linear-gradient(180deg, rgba(71, 85, 105, 0.08), rgba(255, 255, 255, 0.92));
+}
 
 .weather-showcase {
   position: relative;
@@ -700,10 +1156,10 @@ onMounted(async () => {
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
   gap: 22px;
   overflow: hidden;
-  padding: 28px;
-  border-radius: 30px;
+  padding: 30px;
+  border-radius: 32px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
 }
 
 .weather-showcase::before,
@@ -771,6 +1227,14 @@ onMounted(async () => {
   color: #fff;
 }
 
+.weather-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .weather-kicker {
   display: inline-flex;
   align-items: center;
@@ -779,6 +1243,26 @@ onMounted(async () => {
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.18em;
+}
+
+.weather-status-chips {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.weather-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .weather-heading {
@@ -1207,6 +1691,18 @@ onMounted(async () => {
   font-size: 0.88rem;
 }
 
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .summary-timestamp {
   color: #94a3b8;
   font-size: 0.8rem;
@@ -1223,10 +1719,10 @@ onMounted(async () => {
   align-items: center;
   gap: 14px;
   width: 100%;
-  padding: 16px;
+  padding: 18px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 18px;
-  background: #fff;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fff, #f8fbff);
   text-align: left;
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
@@ -1234,8 +1730,8 @@ onMounted(async () => {
 
 .quick-card:hover {
   border-color: rgba(37, 99, 235, 0.22);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
-  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-3px);
 }
 
 .quick-card__icon {
@@ -1265,6 +1761,13 @@ onMounted(async () => {
   color: #64748b;
   font-size: 0.82rem;
   line-height: 1.5;
+}
+
+.quick-card__tail {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .focus-list,
@@ -1309,6 +1812,22 @@ onMounted(async () => {
   line-height: 1.5;
 }
 
+.focus-item--primary {
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.09), rgba(255, 255, 255, 0.92));
+}
+
+.focus-item--success {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.09), rgba(255, 255, 255, 0.92));
+}
+
+.focus-item--warning {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.11), rgba(255, 255, 255, 0.92));
+}
+
+.focus-item--neutral {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.12), rgba(255, 255, 255, 0.92));
+}
+
 .summary-note {
   display: flex;
   align-items: flex-start;
@@ -1331,11 +1850,31 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .tip-item strong {
   color: #0f172a;
   font-size: 0.95rem;
+}
+
+.tip-item__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tip-item__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #475569;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .tip-item span {
@@ -1405,18 +1944,28 @@ onMounted(async () => {
 
 
 @media (max-width: 1200px) {
+  .hero-panel,
   .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-pills {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .stat-grid,
+  .priority-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
   .weather-showcase {
     grid-template-columns: 1fr;
   }
-
 }
 
 @media (max-width: 960px) {
+  .hero-pills,
+  .priority-grid,
   .content-grid,
   .detail-grid,
   .quick-grid,
@@ -1428,7 +1977,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 768px) {
-  .overview-panel,
+  .hero-panel__heading,
+  .weather-status-row,
   .weather-heading {
     flex-direction: column;
     align-items: flex-start;
@@ -1437,7 +1987,6 @@ onMounted(async () => {
   .stat-grid {
     grid-template-columns: 1fr;
   }
-
 
   .weather-showcase {
     padding: 20px;
@@ -1448,5 +1997,26 @@ onMounted(async () => {
     max-width: 320px;
   }
 
+  .hero-panel {
+    padding: 22px;
+  }
+
+  .hero-panel__aside {
+    padding: 18px;
+  }
+
+  .stat-card__meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .quick-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .quick-card__tail {
+    margin-left: 56px;
+  }
 }
 </style>

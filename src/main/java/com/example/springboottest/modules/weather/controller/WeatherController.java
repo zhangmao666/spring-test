@@ -1,6 +1,5 @@
 package com.example.springboottest.modules.weather.controller;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.modules.weather.dto.WeatherRequest;
 import com.example.springboottest.modules.weather.dto.WeatherResponse;
@@ -29,8 +28,7 @@ public class WeatherController {
     @PostMapping("/query")
     public ApiResponse<WeatherResponse> getWeatherByCity(@Valid @RequestBody WeatherRequest weatherRequest) {
         try {
-            String json = "{\"city\": \"成都\", \"country\": \"CN\", \"temperature\": 21.0, \"feelsLike\": 21.5, \"description\": \"晴\", \"main\": \"Clear\", \"humidity\": 60, \"pressure\": 1013.0, \"windSpeed\": 2.5, \"windDirection\": 150, \"queryTime\": \"2025-11-04T14:00:00\"}";
-            WeatherResponse weatherResponse = JSONObject.parseObject(json, WeatherResponse.class);
+            WeatherResponse weatherResponse = weatherService.getWeatherByCity(weatherRequest);
             return ApiResponse.success("查询成功", weatherResponse);
         } catch (Exception e) {
             log.error("查询城市 {} 天气信息失败: {}", weatherRequest.getCity(), e.getMessage());
@@ -67,7 +65,7 @@ public class WeatherController {
 
     @GetMapping("/cities")
     public ApiResponse<String[]> getSupportedCities() {
-        String[] supportedCities = { "北京", "上海", "广州", "深圳", "杭州", "成都", "西安", "武汉", "南京", "天津" };
+        String[] supportedCities = { "北京", "上海", "广州", "深圳", "杭州", "成都", "西安", "武汉", "南京", "天津", "London", "New York", "Tokyo" };
         return ApiResponse.success("获取成功", supportedCities);
     }
 

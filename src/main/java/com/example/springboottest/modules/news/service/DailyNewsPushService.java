@@ -168,6 +168,20 @@ public class DailyNewsPushService {
     }
 
     /**
+     * Build preview HTML without sending emails.
+     */
+    public String previewTodayNewsHtml(int limit) {
+        List<DailyNews> newsList = getTodayNews();
+        if (newsList.isEmpty()) {
+            newsList = fetchTodayNews();
+        }
+        if (newsList.isEmpty()) {
+            return "<p>今日暂无可预览的新闻内容。</p>";
+        }
+        return buildEmailContent(newsList.stream().limit(Math.max(1, limit)).toList());
+    }
+
+    /**
      * Get today's news. Fetch from RSS when DB has no records.
      */
     private List<DailyNews> getTodayNews() {

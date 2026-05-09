@@ -9,7 +9,7 @@
           <transition name="fade-text">
             <div v-show="!isCollapse" class="brand-copy">
               <span class="brand-title">AI-world</span>
-              <span class="brand-subtitle">基于 AI 的世界</span>
+              <span class="brand-subtitle">把模型、内容与管理流程接到同一个工作台</span>
             </div>
           </transition>
         </div>
@@ -26,13 +26,13 @@
             >
               <el-menu-item index="/dashboard">
                 <el-icon><Monitor /></el-icon>
-                <template #title>系统概览</template>
+                <template #title>工作台</template>
               </el-menu-item>
             </el-menu>
           </div>
 
           <div class="menu-section">
-            <span v-show="!isCollapse" class="menu-section__label">内容与 AI</span>
+            <span v-show="!isCollapse" class="menu-section__label">智能内容</span>
             <el-menu
               :default-active="activeMenu"
               :default-openeds="defaultOpeneds"
@@ -50,9 +50,7 @@
                   <span>AI 工作区</span>
                 </template>
                 <el-menu-item index="/ai/chat">AI 聊天</el-menu-item>
-                <el-menu-item index="/ai/resume">简历助手</el-menu-item>
                 <el-menu-item index="/ai/models">模型管理</el-menu-item>
-                <el-menu-item index="/prompt">提示工程</el-menu-item>
               </el-sub-menu>
             </el-menu>
           </div>
@@ -101,7 +99,6 @@
                 </template>
                 <el-menu-item index="/tools/password">密码生成器</el-menu-item>
                 <el-menu-item index="/tools/word-counter">字数统计器</el-menu-item>
-                <el-menu-item index="/tools/kinship">亲戚计算器</el-menu-item>
               </el-sub-menu>
             </el-menu>
           </div>
@@ -122,7 +119,7 @@
     <el-container :class="['workspace-shell', { 'workspace-shell--chat': isAiChatRoute }]">
       <el-header v-if="!isAiChatRoute" class="workspace-header">
         <div class="workspace-header__left">
-<!--          <span class="page-kicker">当前页面</span>-->
+          <span class="page-kicker">Workspace Atlas</span>
           <h1 class="page-title">{{ pageTitle }}</h1>
           <p class="page-description">{{ pageDescription }}</p>
 
@@ -199,20 +196,11 @@ const router = useRouter()
 const isCollapse = ref(false)
 
 const activeMenu = computed(() => route.path)
-const username = computed(() => localStorage.getItem('username') || 'Guest')
+const username = computed(() => localStorage.getItem('username') || '访客')
 const pageTitle = computed(() => route.meta.title || '工作台')
 const pageDescription = computed(() => route.meta.description || '')
 const defaultOpeneds = ['content-ai', 'toolbox', 'system-log']
 const isAiChatRoute = computed(() => route.name === 'AiChat')
-
-const breadcrumbs = computed(() => {
-  return route.matched
-    .filter((item) => item.meta?.title)
-    .map((item) => ({
-      path: item.path,
-      title: item.meta.title
-    }))
-})
 
 const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
@@ -255,6 +243,9 @@ const handleCommand = async (command) => {
   padding: 18px;
   gap: 18px;
   overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(47, 91, 234, 0.12), transparent 24%),
+    radial-gradient(circle at left 30%, rgba(15, 159, 110, 0.08), transparent 18%);
 }
 
 .sidebar-shell,
@@ -265,12 +256,14 @@ const handleCommand = async (command) => {
 .sidebar-panel,
 .workspace-header,
 .workspace-main {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
 }
 
 .sidebar-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -279,7 +272,21 @@ const handleCommand = async (command) => {
   overflow: hidden;
 }
 
+.sidebar-panel::before {
+  content: '';
+  position: absolute;
+  top: -90px;
+  right: -30px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47, 91, 234, 0.14), transparent 68%);
+  pointer-events: none;
+}
+
 .sidebar-nav {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -301,6 +308,8 @@ const handleCommand = async (command) => {
 }
 
 .brand-block {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -429,6 +438,8 @@ const handleCommand = async (command) => {
 }
 
 .sidebar-footer {
+  position: relative;
+  z-index: 1;
   margin-top: auto;
   padding-top: 10px;
 }
@@ -455,10 +466,23 @@ const handleCommand = async (command) => {
 }
 
 .workspace-shell {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.workspace-shell::before {
+  content: '';
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(47, 91, 234, 0.08), transparent 68%);
+  pointer-events: none;
 }
 
 .workspace-shell--chat {
@@ -466,6 +490,8 @@ const handleCommand = async (command) => {
 }
 
 .workspace-header {
+  position: relative;
+  overflow: hidden;
   height: auto !important;
   display: flex;
   align-items: flex-start;
@@ -473,9 +499,22 @@ const handleCommand = async (command) => {
   padding: 22px 24px;
   border-radius: 24px;
   gap: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+}
+
+.workspace-header::after {
+  content: '';
+  position: absolute;
+  inset: auto 24px 0 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(47, 91, 234, 0.18), transparent);
+  pointer-events: none;
 }
 
 .workspace-header__left {
+  position: relative;
+  z-index: 1;
   min-width: 0;
 }
 
@@ -520,6 +559,8 @@ const handleCommand = async (command) => {
 }
 
 .workspace-header__right {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -560,11 +601,14 @@ const handleCommand = async (command) => {
 }
 
 .workspace-main {
+  position: relative;
   flex: 1;
   min-height: 0;
   padding: 24px;
   border-radius: 24px;
   overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 247, 252, 0.84));
 }
 
 .workspace-main--chat {

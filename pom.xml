@@ -26,7 +26,9 @@
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
         <springdoc.version>2.8.9</springdoc.version>
         <knife4j.version>4.5.0</knife4j.version>
-        <spring-ai.version>1.0.3</spring-ai.version>
+        <jackson-bom.version>2.21.1</jackson-bom.version>
+        <spring-ai.version>1.1.0</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.2.0</spring-ai-alibaba.version>
     </properties>
 
 
@@ -48,6 +50,13 @@
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
                 <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -310,12 +319,10 @@
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
 
-        <!-- Spring-AI-Agent-Utils 鈥斺€?鎻愪緵 Agent Skill 鏀寔 -->
-        <!-- Agent Skills 宸ュ叿鍖?-->
         <dependency>
-            <groupId>org.springaicommunity</groupId>
-            <artifactId>spring-ai-agent-utils</artifactId>
-            <version>0.4.2</version>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope</artifactId>
+            <version>1.0.11</version>
         </dependency>
 
     </dependencies>

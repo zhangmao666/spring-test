@@ -7,15 +7,8 @@ import com.example.springboottest.entity.DTO.AiProviderInfo;
 import com.example.springboottest.modules.ai.dto.AiCapabilitiesResponse;
 import com.example.springboottest.modules.ai.dto.EssayGenerateRequest;
 import com.example.springboottest.modules.ai.dto.EssayGenerateResponse;
-import com.example.springboottest.modules.ai.dto.ResumeGenerateRequest;
-import com.example.springboottest.modules.ai.dto.ResumeGenerateResponse;
-import com.example.springboottest.modules.ai.dto.ResumeOptimizeRequest;
-import com.example.springboottest.modules.ai.dto.ResumeOptimizeResponse;
 import com.example.springboottest.modules.ai.service.AiChatService;
 import com.example.springboottest.modules.ai.websearch.WebSearchService;
-import com.example.springboottest.modules.prompt.service.PromptTemplateService;
-import com.example.springboottest.modules.prompt.support.PromptTemplateCodes;
-import com.example.springboottest.modules.prompt.support.PromptTemplateDefaults;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,9 +44,25 @@ import java.util.regex.Pattern;
 public class AiChatController {
 
     private final AiChatService aiChatService;
-    private final PromptTemplateService promptTemplateService;
     private final WebSearchService webSearchService;
     private static final int ESSAY_TIMEOUT_SECONDS = 180;
+    private static final String ESSAY_HIGH_SCORE_TEMPLATE = """
+            你是一名资深中高考语文阅卷老师和作文教练，请生成一篇可作为高分范文的作文。
+            题目：{{topic}}
+            年级：{{gradeLevel}}
+            体裁：{{genre}}
+            目标字数：约{{expectedWordCount}}字
+            {{requirementsBlock}}写作要求：立意积极深刻、结构完整、论证或叙事充分、语言有文采、避免空话套话。
+            输出格式必须严格如下，不要增加其它小节：
+            【作文标题】
+            （给出一个正式且有吸引力的标题）
+            【作文正文】
+            （完整作文正文）
+            【得分亮点】
+            1. ...
+            2. ...
+            3. ...
+            """;
 
     @Operation(summary = "AI聊天", description = "发送消息给AI并获取回复（非流式）")
     @PostMapping("/chatAi")
@@ -113,7 +122,9 @@ public class AiChatController {
             request.setConversationId(UUID.randomUUID().toString());
         }
 
-        SseEmitter emitter = new SseEmitter(300000L);
+        // Agent/tool calls can take longer than a normal token stream. Let the server-side
+        // chat workflow decide when to complete the SSE instead of timing out early.
+        SseEmitter emitter = new SseEmitter(0L);
         aiChatService.chatStream(request, emitter);
         return emitter;
     }
@@ -160,17 +171,15 @@ public class AiChatController {
     }
 
     private String buildHighScoreEssayPrompt(EssayGenerateRequest request) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("topic", request.getTopic());
-        variables.put("gradeLevel", request.getGradeLevel());
-        variables.put("genre", request.getGenre());
-        variables.put("expectedWordCount", request.getExpectedWordCount());
+        Map<String, String> variables = new HashMap<>();
+        variables.put("topic", defaultString(request.getTopic()));
+        variables.put("gradeLevel", defaultString(request.getGradeLevel()));
+        variables.put("genre", defaultString(request.getGenre()));
+        variables.put("expectedWordCount", request.getExpectedWordCount() == null
+                ? ""
+                : String.valueOf(request.getExpectedWordCount()));
         variables.put("requirementsBlock", buildLineBlock("补充要求", request.getRequirements()));
-        return promptTemplateService.renderPromptWithFallback(
-                PromptTemplateCodes.AI_ESSAY_HIGH_SCORE,
-                PromptTemplateDefaults.ESSAY_HIGH_SCORE,
-                variables
-        );
+        return renderTemplate(ESSAY_HIGH_SCORE_TEMPLATE, variables);
     }
 
     private EssayGenerateResponse parseEssayResponse(String topic, String conversationId, AiChatResponse aiResponse) {
@@ -252,138 +261,6 @@ public class AiChatController {
         return content.replaceAll("\\s+", "").length();
     }
 
-    // ═══════════════════════════════════════════════════════════
-    //  简历优化接口
-    // ═══════════════════════════════════════════════════════════
-
-    private static final int RESUME_TIMEOUT_SECONDS = 180;
-
-    @Operation(summary = "AI简历优化", description = "对已有简历内容进行智能优化，提升匹配度和表达质量")
-    @PostMapping("/resume/optimize")
-    public CompletableFuture<ApiResponse<ResumeOptimizeResponse>> optimizeResume(
-            @Parameter(description = "简历优化请求", required = true) @Valid @RequestBody ResumeOptimizeRequest request) {
-        log.info("收到简历优化请求，目标岗位: {}", request.getTargetPosition());
-
-        String conversationId = StringUtils.hasText(request.getConversationId())
-                ? request.getConversationId().trim()
-                : UUID.randomUUID().toString();
-
-        AiChatRequest aiRequest = AiChatRequest.builder()
-                .message(buildResumeOptimizePrompt(request))
-                .conversationId(conversationId)
-                .useDeepThinking(Boolean.TRUE.equals(request.getUseDeepThinking()))
-                .useWebSearch(false)
-                .temperature(0.6)
-                .maxTokens(3000)
-                .build();
-
-        return aiChatService.chat(aiRequest)
-                .completeOnTimeout(
-                        AiChatResponse.builder()
-                                .success(false)
-                                .error("简历优化超时，请稍后重试")
-                                .responseTime((long) RESUME_TIMEOUT_SECONDS * 1000)
-                                .build(),
-                        RESUME_TIMEOUT_SECONDS, TimeUnit.SECONDS
-                )
-                .thenApply(aiResponse -> {
-                    if (!aiResponse.isSuccess()) {
-                        return ApiResponse.<ResumeOptimizeResponse>error(500, aiResponse.getError());
-                    }
-                    ResumeOptimizeResponse response = parseResumeOptimizeResponse(request, conversationId, aiResponse);
-                    return ApiResponse.success("简历优化完成", response);
-                })
-                .exceptionally(ex -> {
-                    log.error("简历优化失败", ex);
-                    return ApiResponse.<ResumeOptimizeResponse>error(500, "简历优化失败: " + ex.getMessage());
-                });
-    }
-
-    @Operation(summary = "AI简历生成", description = "根据用户基本信息和经历，AI全自动生成专业简历")
-    @PostMapping("/resume/generate")
-    public CompletableFuture<ApiResponse<ResumeGenerateResponse>> generateResume(
-            @Parameter(description = "简历生成请求", required = true) @Valid @RequestBody ResumeGenerateRequest request) {
-        log.info("收到简历生成请求，目标岗位: {}", request.getTargetPosition());
-
-        String conversationId = StringUtils.hasText(request.getConversationId())
-                ? request.getConversationId().trim()
-                : UUID.randomUUID().toString();
-
-        AiChatRequest aiRequest = AiChatRequest.builder()
-                .message(buildResumeGeneratePrompt(request))
-                .conversationId(conversationId)
-                .useDeepThinking(Boolean.TRUE.equals(request.getUseDeepThinking()))
-                .useWebSearch(false)
-                .temperature(0.7)
-                .maxTokens(3000)
-                .build();
-
-        return aiChatService.chat(aiRequest)
-                .completeOnTimeout(
-                        AiChatResponse.builder()
-                                .success(false)
-                                .error("简历生成超时，请稍后重试")
-                                .responseTime((long) RESUME_TIMEOUT_SECONDS * 1000)
-                                .build(),
-                        RESUME_TIMEOUT_SECONDS, TimeUnit.SECONDS
-                )
-                .thenApply(aiResponse -> {
-                    if (!aiResponse.isSuccess()) {
-                        return ApiResponse.<ResumeGenerateResponse>error(500, aiResponse.getError());
-                    }
-                    ResumeGenerateResponse response = parseResumeGenerateResponse(request, conversationId, aiResponse);
-                    return ApiResponse.success("简历生成成功", response);
-                })
-                .exceptionally(ex -> {
-                    log.error("简历生成失败", ex);
-                    return ApiResponse.<ResumeGenerateResponse>error(500, "简历生成失败: " + ex.getMessage());
-                });
-    }
-
-    // ─── Prompt 构建 ───────────────────────────────────────────
-
-    private String buildResumeOptimizePrompt(ResumeOptimizeRequest request) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("targetPosition", request.getTargetPosition());
-        variables.put("targetIndustryBlock", buildSectionBlock("目标行业", request.getTargetIndustry()));
-        variables.put("optimizeDirectionBlock", buildSectionBlock("优化方向", request.getOptimizeDirection()));
-        variables.put("additionalRequirementsBlock", buildSectionBlock("附加要求", request.getAdditionalRequirements()));
-        variables.put("resumeContent", safeText(request.getResumeContent()));
-        return promptTemplateService.renderPromptWithFallback(
-                PromptTemplateCodes.AI_RESUME_OPTIMIZE,
-                PromptTemplateDefaults.RESUME_OPTIMIZE,
-                variables
-        );
-    }
-
-    private String buildResumeGeneratePrompt(ResumeGenerateRequest request) {
-        String styleDesc = switch (request.getStyle() == null ? "detailed" : request.getStyle()) {
-            case "concise" -> "简洁风格，每项不超过2行";
-            case "technical" -> "技术向风格，突出技术栈和量化数据";
-            default -> "详细风格，内容充实，量化成果";
-        };
-
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("name", request.getName());
-        variables.put("targetPosition", request.getTargetPosition());
-        variables.put("targetIndustryBlock", buildLineBlock("目标行业", request.getTargetIndustry()));
-        variables.put("workYears", request.getWorkYears());
-        variables.put("educationBlock", buildLineBlock("学历", request.getEducation()));
-        variables.put("schoolBlock", buildLineBlock("毕业院校", request.getSchool()));
-        variables.put("majorBlock", buildLineBlock("专业", request.getMajor()));
-        variables.put("coreSkillsBlock", buildContentSection("核心技能", request.getCoreSkills()));
-        variables.put("workExperienceBlock", buildContentSection("工作经历（关键信息）", request.getWorkExperience()));
-        variables.put("projectExperienceBlock", buildContentSection("项目经历（关键信息）", request.getProjectExperience()));
-        variables.put("personalSummaryBlock", buildContentSection("个人优势", request.getPersonalSummary()));
-        variables.put("additionalInfoBlock", buildContentSection("其他信息", request.getAdditionalInfo()));
-        variables.put("styleDesc", styleDesc);
-        return promptTemplateService.renderPromptWithFallback(
-                PromptTemplateCodes.AI_RESUME_GENERATE,
-                PromptTemplateDefaults.RESUME_GENERATE,
-                variables
-        );
-    }
-
     private String buildLineBlock(String label, String value) {
         if (!StringUtils.hasText(value)) {
             return "";
@@ -391,103 +268,16 @@ public class AiChatController {
         return label + "：" + value.trim() + "\n";
     }
 
-    private String buildSectionBlock(String label, String value) {
-        if (!StringUtils.hasText(value)) {
-            return "";
+    private String renderTemplate(String template, Map<String, String> variables) {
+        String rendered = template;
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            rendered = rendered.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
-        return "【" + label + "】" + value.trim() + "\n";
+        return rendered;
     }
 
-    private String buildContentSection(String title, String content) {
-        if (!StringUtils.hasText(content)) {
-            return "";
-        }
-        return "\n【" + title + "】\n" + content.trim() + "\n";
+    private String defaultString(String value) {
+        return value == null ? "" : value;
     }
 
-    private String safeText(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    // ─── 响应解析 ──────────────────────────────────────────────
-
-    private ResumeOptimizeResponse parseResumeOptimizeResponse(
-            ResumeOptimizeRequest request, String conversationId, AiChatResponse aiResponse) {
-        String raw = aiResponse.getMessage() == null ? "" : aiResponse.getMessage().trim();
-
-        // 匹配度评分
-        Integer score = null;
-        String scoreBlock = matchFirstGroup(raw, "【匹配度评分】\\s*([\\s\\S]*?)(?=【|$)");
-        if (StringUtils.hasText(scoreBlock)) {
-            Matcher m = Pattern.compile("(\\d{1,3})").matcher(scoreBlock);
-            if (m.find()) {
-                score = Math.min(100, Integer.parseInt(m.group(1)));
-            }
-        }
-
-        String optimized = extractSection(raw, "【优化后简历】", "【优化摘要】");
-        List<String> summary = extractNumberedList(raw, "【优化摘要】");
-        List<String> highlights = extractNumberedList(raw, "【核心亮点】");
-        List<String> suggestions = extractNumberedList(raw, "【改进建议】");
-
-        if (!StringUtils.hasText(optimized)) optimized = raw;
-
-        return ResumeOptimizeResponse.builder()
-                .targetPosition(request.getTargetPosition())
-                .optimizedResume(optimized)
-                .optimizeSummary(summary)
-                .highlights(highlights)
-                .suggestions(suggestions)
-                .matchScore(score)
-                .conversationId(conversationId)
-                .provider(aiResponse.getProvider())
-                .model(aiResponse.getModel())
-                .tokensUsed(aiResponse.getTokensUsed())
-                .responseTime(aiResponse.getResponseTime())
-                .rawContent(raw)
-                .build();
-    }
-
-    private ResumeGenerateResponse parseResumeGenerateResponse(
-            ResumeGenerateRequest request, String conversationId, AiChatResponse aiResponse) {
-        String raw = aiResponse.getMessage() == null ? "" : aiResponse.getMessage().trim();
-
-        String resume = extractSection(raw, "【简历正文】", "【写作建议】");
-        String tips = matchFirstGroup(raw, "【写作建议】\\s*([\\s\\S]*)$");
-
-        if (!StringUtils.hasText(resume)) resume = raw;
-
-        return ResumeGenerateResponse.builder()
-                .name(request.getName())
-                .targetPosition(request.getTargetPosition())
-                .resumeContent(resume)
-                .writingTips(tips)
-                .conversationId(conversationId)
-                .provider(aiResponse.getProvider())
-                .model(aiResponse.getModel())
-                .tokensUsed(aiResponse.getTokensUsed())
-                .responseTime(aiResponse.getResponseTime())
-                .rawContent(raw)
-                .build();
-    }
-
-    private String extractSection(String content, String startTag, String endTag) {
-        if (!StringUtils.hasText(content)) return null;
-        Pattern p = Pattern.compile(
-                Pattern.quote(startTag) + "\\s*([\\s\\S]*?)(?=" + Pattern.quote(endTag) + "|$)");
-        Matcher m = p.matcher(content);
-        return m.find() ? m.group(1).trim() : null;
-    }
-
-    private List<String> extractNumberedList(String content, String sectionTag) {
-        List<String> result = new ArrayList<>();
-        String block = matchFirstGroup(content,
-                Pattern.quote(sectionTag) + "\\s*([\\s\\S]*?)(?=【|$)");
-        if (!StringUtils.hasText(block)) return result;
-        for (String line : block.split("\\r?\\n")) {
-            String item = line.replaceFirst("^[\\s\\-•\\d\\.、]+", "").trim();
-            if (StringUtils.hasText(item)) result.add(item);
-        }
-        return result;
-    }
 }

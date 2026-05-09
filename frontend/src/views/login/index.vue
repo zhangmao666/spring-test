@@ -3,9 +3,9 @@
     <section class="login-hero">
       <div class="login-hero__panel">
         <span class="login-hero__eyebrow">AI-WORLD</span>
-        <h1 class="login-hero__title">进入 AI-world，连接一个基于 AI 的世界。</h1>
+        <h1 class="login-hero__title">进入 AI-world，把 AI 能力接入你的日常工作流。</h1>
         <p class="login-hero__desc">
-          在这里统一管理模型、对话、内容与工作流，让 AI 成为整个系统持续运转的核心引擎。
+          统一管理模型、对话、资讯和系统配置，让高频操作、内容处理与后台管理在同一个入口里完成。
         </p>
 
         <div class="hero-metrics">
@@ -43,7 +43,7 @@
         <div class="login-card__header">
           <span class="login-card__eyebrow">账号登录</span>
           <h2>欢迎回来</h2>
-          <p>使用你的账户进入 AI-world。</p>
+          <p>登录后继续处理任务、查看状态并使用 AI 能力。</p>
         </div>
 
         <el-form

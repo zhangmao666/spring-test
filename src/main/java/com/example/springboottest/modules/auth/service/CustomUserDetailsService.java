@@ -29,7 +29,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        log.debug("正在加载用户信息: {}", username);
+        // log.debug("正在加载用户信息: {}", username);
         
         Optional<User> userOptional = userRepository.findByUsernameAndStatus(username, 1);
         

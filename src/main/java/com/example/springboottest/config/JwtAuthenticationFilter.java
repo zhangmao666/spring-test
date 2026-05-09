@@ -88,7 +88,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     request.setAttribute("error", true);
                 }
             } else {
-                log.debug("请求中未包含JWT令牌: {}", request.getRequestURI());
+                // log.debug("请求中未包含JWT令牌: {}", request.getRequestURI());
             }
 
         } catch (Exception e) {
@@ -120,7 +120,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 设置安全上下文
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("用户 {} 认证成功", username);
+                // log.debug("用户 {} 认证成功", username);
             } else {
                 log.warn("JWT令牌验证失败，用户: {}", username);
             }

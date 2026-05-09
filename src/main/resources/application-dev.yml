@@ -6,7 +6,7 @@ spring:
   ai:
     openai:
       base-url: https://yunwu.ai
-      api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
+      api-key: ${OPENAI_API_KEY:sk-IAicaIKi2SE2HRlQFWQmbfSJSOJH2VimiOb0jPQ0HqJRYG2g}
       chat:
         options:
           model: gpt-5.2-chat-latest
@@ -26,18 +26,6 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
       pool-name: AIWorldHikariCP
-
-  mybatis-plus:
-    mapper-locations: classpath:mapper/*.xml
-    configuration:
-      map-underscore-to-camel-case: true
-      log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
-    global-config:
-      db-config:
-        logic-delete-field: deleted
-        logic-delete-value: 1
-        logic-not-delete-value: 0
-      banner: false
 
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -93,7 +81,7 @@ api:
 logging:
   level:
     root: INFO
-    com.example.springboottest: DEBUG
+    com.example.springboottest: INFO
     com.example.springboottest.modules.ai.mapper: WARN
     com.example.springboottest.modules.ai.repository: WARN
     com.example.springboottest.modules.auth.repository: WARN
@@ -101,13 +89,12 @@ logging:
     com.example.springboottest.modules.log.repository: WARN
     com.example.springboottest.modules.news.repository: WARN
     com.example.springboottest.modules.payment.repository: WARN
-    com.example.springboottest.modules.prompt.repository: WARN
     com.baomidou: WARN
     org.apache.ibatis: WARN
-    org.springframework.security: DEBUG
-    org.springframework.ai.chat.client: DEBUG
-    org.springframework.ai.openai: DEBUG
-    org.springframework.ai.tool: DEBUG
+    org.springframework.security: WARN
+    org.springframework.ai.chat.client: INFO
+    org.springframework.ai.openai: INFO
+    org.springframework.ai.tool: INFO
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
@@ -121,7 +108,7 @@ logging:
 
 ai:
   openai:
-    api-key: ${OPENAI_API_KEY:sk-1iUHwOkNCfS3ubV9bB9JbInhyRD6RtARzEHxjjlGGUugMOCV}
+    api-key: ${OPENAI_API_KEY:sk-IAicaIKi2SE2HRlQFWQmbfSJSOJH2VimiOb0jPQ0HqJRYG2g}
     api-url: https://yunwu.ai/v1/chat/completions
     model: deepseek-v3.2
     thinking-model: gemini-2.5-flash-all
@@ -165,7 +152,7 @@ http:
   write-timeout: 60
   max-idle-connections: 10
   keep-alive-duration: 300
-  enable-logging: true
+  enable-logging: false
   max-retries: 3
 
 payment:
@@ -184,3 +171,15 @@ payment:
     api-v3-key: ${WECHAT_API_V3_KEY:}
     app-id: ${WECHAT_APP_ID:}
     notify-url: ${WECHAT_NOTIFY_URL:http://your-domain/api/payment/notify/wechat}
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+    banner: false

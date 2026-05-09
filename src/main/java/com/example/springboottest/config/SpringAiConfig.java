@@ -4,6 +4,7 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,10 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Configuration
 public class SpringAiConfig {
 
-    @Value("${spring.ai.openai.base-url}")
+    @Value("${spring.ai.openai.base-url:}")
     private String baseUrl;
 
-    @Value("${spring.ai.openai.api-key}")
+    @Value("${spring.ai.openai.api-key:}")
     private String apiKey;
 
     private final AiProperties aiProperties;
@@ -29,6 +30,7 @@ public class SpringAiConfig {
      * 默认的 OpenAI Chat Model（使用默认模型）
      */
     @Bean
+    @ConditionalOnProperty(prefix = "spring.ai.openai", name = {"base-url", "api-key"})
     public OpenAiChatModel defaultOpenAiChatModel() {
         return createChatModel(aiProperties.getOpenai().getModel());
     }
@@ -37,6 +39,7 @@ public class SpringAiConfig {
      * 深度思考模型
      */
     @Bean(name = "thinkingChatModel")
+    @ConditionalOnProperty(prefix = "spring.ai.openai", name = {"base-url", "api-key"})
     public OpenAiChatModel thinkingChatModel() {
         return createChatModel(aiProperties.getOpenai().getThinkingModel());
     }
@@ -45,6 +48,7 @@ public class SpringAiConfig {
      * 联网搜索模型
      */
     @Bean(name = "searchChatModel")
+    @ConditionalOnProperty(prefix = "spring.ai.openai", name = {"base-url", "api-key"})
     public OpenAiChatModel searchChatModel() {
         return createChatModel(aiProperties.getOpenai().getSearchModel());
     }

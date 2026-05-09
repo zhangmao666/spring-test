@@ -6,25 +6,28 @@ import com.example.springboottest.entity.DTO.AiChatResponse;
 import com.example.springboottest.entity.DTO.AiProviderInfo;
 import com.example.springboottest.modules.ai.dto.AiModelResponse;
 import com.example.springboottest.modules.ai.dto.ConversationVO;
+import com.example.springboottest.modules.ai.dto.MessageVO;
 import com.example.springboottest.modules.ai.dto.SearchStatus;
 import com.example.springboottest.modules.ai.dto.WebSearchSource;
 import com.example.springboottest.modules.ai.entity.AiModel;
+import com.example.springboottest.modules.ai.service.AiAgentService;
 import com.example.springboottest.modules.ai.service.AiChatService;
 import com.example.springboottest.modules.ai.service.ChatHistoryService;
 import com.example.springboottest.modules.ai.setvice.AiModelService;
 import com.example.springboottest.modules.ai.websearch.WebSearchContext;
 import com.example.springboottest.modules.ai.websearch.WebSearchService;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -55,6 +58,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final AiModelService aiModelService;
     private final Map<String, String> conversationContexts;
     private final WebSearchService webSearchService;
+    private final AiAgentService aiAgentService;
 
     @Value("${spring.ai.openai.base-url:}")
     private String springAiBaseUrl;
@@ -64,6 +68,9 @@ public class AiChatServiceImpl implements AiChatService {
         return CompletableFuture.supplyAsync(() -> {
             long startTime = System.currentTimeMillis();
             log.info("Handling AI chat request: {}", request.getMessage());
+            if (Boolean.TRUE.equals(request.getUseAgent())) {
+                return chatWithAgent(request, startTime);
+            }
             return chatWithSpringAi(request, startTime);
         });
     }
@@ -72,12 +79,64 @@ public class AiChatServiceImpl implements AiChatService {
     public void chatStream(AiChatRequest request, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
             try {
+                if (Boolean.TRUE.equals(request.getUseAgent())) {
+                    chatStreamWithAgent(request, emitter);
+                    return;
+                }
                 chatStreamWithSpringAi(request, emitter);
             } catch (Exception e) {
                 log.error("Streaming AI chat request failed", e);
                 sendEmitterError(emitter, e.getMessage(), e);
             }
         });
+    }
+
+    private AiChatResponse chatWithAgent(AiChatRequest request, long startTime) {
+        ResolvedChatModel resolved = resolveChatModel(request);
+        if (!resolved.available()) {
+            return aiModelService.buildFallbackErrorResponse(startTime, resolved.errorMessage());
+        }
+
+        try {
+            bindConversationModel(request, resolved);
+            saveUserMessage(request, resolved, disabledSearchContext());
+            List<Message> historyMessages = buildAgentHistoryMessages(request.getConversationId(), request.getMessage());
+            AiAgentService.AgentRunResult result = aiAgentService.run(
+                    toAgentModelConfig(resolved),
+                    request.getConversationId(),
+                    request.getMessage(),
+                    historyMessages,
+                    event -> {
+                    }
+            );
+
+            String answer = defaultIfBlank(result.getAnswer(), "抱歉，Agent 暂时没有生成有效回复。");
+            updateConversationContext(request.getConversationId(), request.getMessage(), answer);
+            saveAssistantMessage(request.getConversationId(), answer, null, null, false, disabledSearchContext());
+
+            return AiChatResponse.builder()
+                    .success(result.isSuccess())
+                    .message(answer)
+                    .error(result.getError())
+                    .provider(resolved.provider())
+                    .model(resolved.modelName())
+                    .conversationId(request.getConversationId())
+                    .usedWebSearch(false)
+                    .searchStatus(SearchStatus.NOT_REQUESTED)
+                    .responseTime(System.currentTimeMillis() - startTime)
+                    .build();
+        } catch (Exception e) {
+            log.error("Agent chat request failed", e);
+            return AiChatResponse.builder()
+                    .success(false)
+                    .error("Agent request failed: " + e.getMessage())
+                    .provider(resolved.provider())
+                    .model(resolved.modelName())
+                    .usedWebSearch(false)
+                    .searchStatus(SearchStatus.NOT_REQUESTED)
+                    .responseTime(System.currentTimeMillis() - startTime)
+                    .build();
+        }
     }
 
     private AiChatResponse chatWithSpringAi(AiChatRequest request, long startTime) {
@@ -200,6 +259,56 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private void chatStreamWithAgent(AiChatRequest request, SseEmitter emitter) {
+        ResolvedChatModel resolved = resolveChatModel(request);
+        if (!resolved.available()) {
+            sendEmitterError(emitter, resolved.errorMessage(), null);
+            emitter.complete();
+            return;
+        }
+
+        try {
+            bindConversationModel(request, resolved);
+            saveUserMessage(request, resolved, disabledSearchContext());
+            List<Message> historyMessages = buildAgentHistoryMessages(request.getConversationId(), request.getMessage());
+
+            AiAgentService.AgentRunResult result = aiAgentService.run(
+                    toAgentModelConfig(resolved),
+                    request.getConversationId(),
+                    request.getMessage(),
+                    historyMessages,
+                    event -> sendAgentEvent(emitter, event)
+            );
+
+            String answer = defaultIfBlank(result.getAnswer(), "抱歉，Agent 暂时没有生成有效回复。");
+            updateConversationContext(request.getConversationId(), request.getMessage(), answer);
+            saveAssistantMessage(request.getConversationId(), answer, null, null, false, disabledSearchContext());
+
+            emitAssistantMessage(emitter, new AssistantMessage(answer));
+            emitter.send(SseEmitter.event()
+                    .name("done")
+                    .data("{\"status\":\"completed\"}"));
+
+            try {
+                List<String> suggestions = generateFollowUpSuggestions(
+                        request.getMessage(),
+                        answer,
+                        disabledSearchContext(),
+                        resolved
+                );
+                sendSuggestionsEvent(emitter, suggestions);
+            } catch (Exception e) {
+                log.warn("Failed to generate follow-up suggestions for agent response", e);
+                sendSuggestionsEvent(emitter, Collections.emptyList());
+            } finally {
+                emitter.complete();
+            }
+        } catch (Exception e) {
+            log.error("Agent streaming request failed", e);
+            sendEmitterError(emitter, "Agent request failed: " + e.getMessage(), e);
+        }
+    }
+
     private void bindConversationModel(AiChatRequest request, ResolvedChatModel resolved) {
         if (!StringUtils.hasText(request.getConversationId())) {
             return;
@@ -279,6 +388,29 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private WebSearchContext disabledSearchContext() {
+        return WebSearchContext.builder()
+                .requested(false)
+                .success(false)
+                .abortChat(false)
+                .searchStatus(SearchStatus.NOT_REQUESTED)
+                .sources(Collections.emptyList())
+                .build();
+    }
+
+    private void sendAgentEvent(SseEmitter emitter, AiAgentService.AgentEvent event) {
+        if (event == null || !StringUtils.hasText(event.getType())) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event()
+                    .name(event.getType())
+                    .data(objectMapper.writeValueAsString(event.getPayload())));
+        } catch (Exception e) {
+            log.warn("Failed to send agent SSE event: {}", event.getType(), e);
+        }
+    }
+
     private ResolvedChatModel resolveChatModel(AiChatRequest request) {
         AiModel selectedModel = null;
 
@@ -298,18 +430,28 @@ public class AiChatServiceImpl implements AiChatService {
         }
 
         if (selectedModel != null) {
-            if (!StringUtils.hasText(selectedModel.getBaseUrl()) || !StringUtils.hasText(selectedModel.getApiKey())) {
+            String selectedModelApiKey = trimToNull(selectedModel.getApiKey());
+            if (!StringUtils.hasText(selectedModelApiKey)) {
+                selectedModelApiKey = aiModelService.fallbackApiKey();
+            }
+            if (!StringUtils.hasText(selectedModel.getBaseUrl()) || !StringUtils.hasText(selectedModelApiKey)) {
                 return ResolvedChatModel.unavailable("The selected model configuration is incomplete. Please check Base URL and API Key.");
             }
-            boolean useDeepThinking = Boolean.TRUE.equals(request.getUseDeepThinking())
-                    && Boolean.TRUE.equals(selectedModel.getSupportsDeepThinking());
-            OpenAiChatModel chatModel = aiModelService.createChatModel(
+            boolean useDeepThinking = shouldEnableDeepThinking(
+                    request.getUseAgent(),
+                    request.getUseDeepThinking(),
+                    selectedModel.getSupportsDeepThinking()
+            );
+            ChatModel chatModel = aiModelService.createChatModel(
                     selectedModel.getBaseUrl(),
-                    selectedModel.getApiKey(),
+                    selectedModelApiKey,
                     selectedModel.getModelName(),
                     request.getTemperature() != null ? request.getTemperature() : aiProperties.getOpenai().getTemperature(),
-                    request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens()
+                    request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens(),
+                    useDeepThinking
             );
+            Double temperature = request.getTemperature() != null ? request.getTemperature() : aiProperties.getOpenai().getTemperature();
+            Integer maxTokens = request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens();
             return ResolvedChatModel.builder()
                     .available(true)
                     .managed(true)
@@ -318,6 +460,10 @@ public class AiChatServiceImpl implements AiChatService {
                     .modelName(selectedModel.getModelName())
                     .displayName(defaultIfBlank(selectedModel.getDisplayName(), selectedModel.getModelName()))
                     .modelId(selectedModel.getId())
+                    .baseUrl(selectedModel.getBaseUrl())
+                    .apiKey(selectedModelApiKey)
+                    .temperature(temperature)
+                    .maxTokens(maxTokens)
                     .useDeepThinking(useDeepThinking)
                     .useWebSearch(Boolean.TRUE.equals(request.getUseWebSearch()))
                     .build();
@@ -331,13 +477,22 @@ public class AiChatServiceImpl implements AiChatService {
             return ResolvedChatModel.unavailable("No available model was found. Please enable a default model or complete configuration.");
         }
 
-        OpenAiChatModel fallbackChatModel = aiModelService.createChatModel(
+        boolean useDeepThinking = shouldEnableDeepThinking(
+                request.getUseAgent(),
+                request.getUseDeepThinking(),
+                !Boolean.TRUE.equals(request.getUseAgent()) && StringUtils.hasText(aiProperties.getOpenai().getThinkingModel())
+        );
+
+        ChatModel fallbackChatModel = aiModelService.createChatModel(
                 fallbackBaseUrl,
                 fallbackApiKey,
                 fallbackModelName,
                 request.getTemperature() != null ? request.getTemperature() : aiProperties.getOpenai().getTemperature(),
-                request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens()
+                request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens(),
+                useDeepThinking
         );
+        Double temperature = request.getTemperature() != null ? request.getTemperature() : aiProperties.getOpenai().getTemperature();
+        Integer maxTokens = request.getMaxTokens() != null ? request.getMaxTokens() : aiProperties.getOpenai().getMaxTokens();
 
         return ResolvedChatModel.builder()
                 .available(true)
@@ -347,9 +502,21 @@ public class AiChatServiceImpl implements AiChatService {
                 .modelName(fallbackModelName)
                 .displayName(fallbackModelName)
                 .modelId(null)
-                .useDeepThinking(Boolean.TRUE.equals(request.getUseDeepThinking()))
+                .baseUrl(fallbackBaseUrl)
+                .apiKey(fallbackApiKey)
+                .temperature(temperature)
+                .maxTokens(maxTokens)
+                .useDeepThinking(useDeepThinking)
                 .useWebSearch(Boolean.TRUE.equals(request.getUseWebSearch()))
                 .build();
+    }
+
+    static boolean shouldEnableDeepThinking(Boolean useAgent,
+                                            Boolean useDeepThinking,
+                                            Boolean modelSupportsDeepThinking) {
+        return !Boolean.TRUE.equals(useAgent)
+                && Boolean.TRUE.equals(useDeepThinking)
+                && Boolean.TRUE.equals(modelSupportsDeepThinking);
     }
 
     private AiModel loadEnabledManagedModel(Long modelId) {
@@ -386,6 +553,54 @@ public class AiChatServiceImpl implements AiChatService {
                     """));
         }
         messages.add(new UserMessage(buildUserMessage(request.getMessage(), searchContext)));
+        return messages;
+    }
+
+    private AiAgentService.AgentModelConfig toAgentModelConfig(ResolvedChatModel resolved) {
+        return new AiAgentService.AgentModelConfig(
+                resolved.provider(),
+                resolved.baseUrl(),
+                resolved.apiKey(),
+                resolved.modelName(),
+                resolved.temperature(),
+                resolved.maxTokens()
+        );
+    }
+
+    private List<Message> buildAgentHistoryMessages(String conversationId, String latestUserMessage) {
+        if (!StringUtils.hasText(conversationId)) {
+            return Collections.emptyList();
+        }
+        List<MessageVO> history = chatHistoryService.getConversationMessages(conversationId);
+        if (history == null || history.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int endExclusive = history.size();
+        MessageVO latest = history.get(history.size() - 1);
+        if ("user".equalsIgnoreCase(latest.getRole())
+                && StringUtils.hasText(latestUserMessage)
+                && latestUserMessage.trim().equals(defaultIfBlank(latest.getContent(), ""))) {
+            endExclusive = history.size() - 1;
+        }
+        if (endExclusive <= 0) {
+            return Collections.emptyList();
+        }
+
+        int fromIndex = Math.max(0, endExclusive - 12);
+        List<Message> messages = new ArrayList<>();
+        messages.add(new SystemMessage("""
+                以下是当前会话的历史消息，请结合上下文继续完成本轮任务。
+                如果历史内容与本轮问题无关，请以本轮问题为主。
+                """));
+
+        for (MessageVO item : history.subList(fromIndex, endExclusive)) {
+            if ("assistant".equalsIgnoreCase(item.getRole())) {
+                messages.add(new AssistantMessage(defaultIfBlank(item.getContent(), "")));
+            } else {
+                messages.add(new UserMessage(defaultIfBlank(item.getContent(), "")));
+            }
+        }
         return messages;
     }
 
@@ -578,6 +793,22 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private void emitAssistantMessage(SseEmitter emitter, AssistantMessage assistantMessage) {
+        try {
+            Map<String, Object> delta = new LinkedHashMap<>();
+            delta.put("content", assistantMessage == null ? "" : defaultIfBlank(assistantMessage.getText(), ""));
+            Map<String, Object> choice = new LinkedHashMap<>();
+            choice.put("delta", delta);
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("choices", List.of(choice));
+            emitter.send(SseEmitter.event()
+                    .name("message")
+                    .data(objectMapper.writeValueAsString(payload)));
+        } catch (Exception e) {
+            log.warn("Failed to emit final assistant message for agent", e);
+        }
+    }
+
     static List<String> parseFollowUpSuggestions(String raw, ObjectMapper objectMapper) {
         if (!StringUtils.hasText(raw)) {
             return Collections.emptyList();
@@ -762,11 +993,15 @@ public class AiChatServiceImpl implements AiChatService {
     private record ResolvedChatModel(
             boolean available,
             boolean managed,
-            OpenAiChatModel chatModel,
+            ChatModel chatModel,
             String provider,
             String modelName,
             String displayName,
             Long modelId,
+            String baseUrl,
+            String apiKey,
+            Double temperature,
+            Integer maxTokens,
             boolean useDeepThinking,
             boolean useWebSearch,
             String errorMessage

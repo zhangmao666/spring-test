@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WeatherResponse {
+    private String requestedCity;
+    private String queryCity;
     private String city;
     private String country;
     private Double temperature;
@@ -22,5 +24,6 @@ public class WeatherResponse {
     private Double pressure;
     private Double windSpeed;
     private Integer windDirection;
+    private Boolean locationMatched;
     private LocalDateTime queryTime;
 }

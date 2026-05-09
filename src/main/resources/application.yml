@@ -15,6 +15,15 @@ spring:
     async:
       request-timeout: 600s
 
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+logging:
+  level:
+    com.baomidou: WARN
+    org.apache.ibatis: WARN
+
 # SpringDoc OpenAPI 配置
 springdoc:
   api-docs:

@@ -25,10 +25,10 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
         request.setAttribute(START_TIME, Instant.now());
         
         // 记录请求信息
-        log.info("请求开始 - 方法: {}, URI: {}, 客户端IP: {}", 
-            request.getMethod(), 
-            request.getRequestURI(), 
-            getClientIp(request));
+        // log.info("请求开始 - 方法: {}, URI: {}, 客户端IP: {}",
+        //     request.getMethod(),
+        //     request.getRequestURI(),
+        //     getClientIp(request));
             
         return true;
     }
@@ -54,11 +54,11 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
                     duration.toMillis(),
                     ex.getMessage());
             } else {
-                log.info("请求结束 - 方法: {}, URI: {}, 状态码: {}, 耗时: {}ms", 
-                    request.getMethod(), 
-                    request.getRequestURI(), 
-                    response.getStatus(),
-                    duration.toMillis());
+                // log.info("请求结束 - 方法: {}, URI: {}, 状态码: {}, 耗时: {}ms",
+                //     request.getMethod(),
+                //     request.getRequestURI(),
+                //     response.getStatus(),
+                //     duration.toMillis());
             }
             
             // 慢请求告警（超过3秒）

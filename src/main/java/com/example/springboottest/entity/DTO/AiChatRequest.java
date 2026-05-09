@@ -32,4 +32,6 @@ public class AiChatRequest {
     private Boolean useWebSearch;
 
     private Boolean useDeepThinking;
+
+    private Boolean useAgent;
 }
