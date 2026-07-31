@@ -2,7 +2,7 @@
 
 ## 📝 更新概述
 
-已将 `AiChatServiceImpl` 中的通义千问（Qwen）调用方式从HTTP REST API改为使用**阿里云DashScope SDK**，与TestQwen示例保持一致。
+已将 `AiChatServiceImpl` 中的通义千问（Qwen）调用方式从HTTP REST API改为使用**阿里云DashScope SDK**。
 
 ## 🔄 修改详情
 
@@ -259,13 +259,12 @@ sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ## 📚 相关文档
 
 - [DashScope SDK文档](https://help.aliyun.com/zh/model-studio/developer-reference/sdk-overview)
-- [TestQwen示例](../src/main/java/com/example/springboottest/test/TestQwen.java)
 - [股票系统Qwen更新](./QWEN_API_UPDATE.md)
 - [股票系统使用指南](./STOCK_SYSTEM_GUIDE.md)
 
 ## 🎯 总结
 
-本次更新将AiChatService中的Qwen调用方式从HTTP REST API迁移到官方DashScope SDK，与TestQwen示例和StockAnalysisService保持一致。更新完全向后兼容，无需修改任何调用代码，同时提供了更好的类型安全性和错误处理。
+本次更新将AiChatService中的Qwen调用方式从HTTP REST API迁移到官方DashScope SDK，并与StockAnalysisService保持一致。更新完全向后兼容，无需修改任何调用代码，同时提供了更好的类型安全性和错误处理。
 
 ---
 

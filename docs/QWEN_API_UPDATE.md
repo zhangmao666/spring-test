@@ -2,7 +2,7 @@
 
 ## 📝 更新内容
 
-已将股票AI分析服务中的Qwen调用方式从原有的通用AiChatService改为直接使用**阿里云DashScope SDK**，参照TestQwen中的实现方式。
+已将股票AI分析服务中的Qwen调用方式从原有的通用AiChatService改为直接使用**阿里云DashScope SDK**。
 
 ## 🔄 主要变化
 
@@ -174,7 +174,6 @@ export QWEN_API_KEY=sk-your-api-key
 
 - [阿里云DashScope SDK文档](https://help.aliyun.com/zh/model-studio/developer-reference/sdk-overview)
 - [通义千问API文档](https://help.aliyun.com/zh/model-studio/getting-started/models)
-- [TestQwen示例代码](../src/main/java/com/example/springboottest/test/TestQwen.java)
 
 ## 🔄 版本历史
 
