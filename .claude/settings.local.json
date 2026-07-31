@@ -12,7 +12,17 @@
       "Bash(ls:*)",
       "Bash(python -m json.tool:*)",
       "Bash(node \"C:\\\\Users\\\\mao\\\\.claude\\\\skills\\\\system-time\\\\scripts\\\\get-time.js\" --format json --locale zh-CN)",
-      "Bash(find d:study_projectspring-boot-testfrontendsrc -type f \\\\\\(-name *.vue -o -name *.js -o -name *.json \\\\\\))"
+      "Bash(find d:study_projectspring-boot-testfrontendsrc -type f \\\\\\(-name *.vue -o -name *.js -o -name *.json \\\\\\))",
+      "Bash(ls C:/Users/pablo/IdeaProjects/git/repos/learning/ 2>&1 | head -30)",
+      "Read(//c/Users/pablo/IdeaProjects/git/repos/**)",
+      "Read(//c/Users/pablo/**)",
+      "Read(//c/Users/pablo/IdeaProjects/**)",
+      "Bash(pwd; ls *)",
+      "Read(//c/Users/mao/**)",
+      "Bash(grep -n \"mapper-locations\\\\|mapperLocations\" C:/Users/pablo/IdeaProjects/git/repos/learning/src/main/resources/application*.yml C:/Users/pablo/IdeaProjects/git/repos/learning/src/main/resources/application*.properties 2>/dev/null)",
+      "Read(//c/Users/pablo/IdeaProjects/git/repos/learning/src/main/**)",
+      "Bash(npm install *)",
+      "Bash(npm run *)"
     ],
     "deny": [],
     "ask": []

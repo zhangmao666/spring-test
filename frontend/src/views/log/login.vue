@@ -1,33 +1,28 @@
 <template>
-  <div class="app-page">
-    <section class="app-page__hero">
-      <div>
-        <span class="app-page__eyebrow">LOGIN AUDIT</span>
-        <h2 class="app-page__title">登录日志</h2>
-        <p class="app-page__desc">集中查看账号登录记录、失败原因与访问环境，快速定位异常登录行为。</p>
-      </div>
-
-      <div class="app-page__actions">
+  <div class="app-page tone-system">
+    <PageHero
+      title="登录日志"
+      subtitle="集中查看账号登录记录、失败原因与访问环境，快速定位异常登录行为。"
+      eyebrow="LOGIN AUDIT"
+      tone="system"
+      :icon="User"
+    >
+      <template #actions>
         <el-button type="danger" :disabled="tableData.length === 0" @click="handleClear">
           <el-icon><Delete /></el-icon>
           清空日志
         </el-button>
-      </div>
-    </section>
+      </template>
+    </PageHero>
 
-    <section class="app-metric-grid metrics-grid--three">
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">当前页记录</span>
-        <strong class="app-metric-card__value">{{ tableData.length }}</strong>
-      </article>
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">登录成功</span>
-        <strong class="app-metric-card__value">{{ successCount }}</strong>
-      </article>
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">登录失败</span>
-        <strong class="app-metric-card__value">{{ failedCount }}</strong>
-      </article>
+    <section class="stat-strip">
+      <StatCard label="当前页记录" :value="tableData.length" :icon="Clock" tone="system" hint="本页展示数量" :delay="0" />
+      <StatCard label="登录成功" :value="successCount" :icon="User" tone="tools" hint="累计成功登录" :delay="80">
+        <template #chart><Sparkline :data="trend.success" color="var(--accent-tools)" /></template>
+      </StatCard>
+      <StatCard label="登录失败" :value="failedCount" :icon="Delete" tone="news" hint="需关注的异常" :delay="160">
+        <template #chart><Sparkline :data="trend.failed" color="var(--accent-news)" /></template>
+      </StatCard>
     </section>
 
     <el-card class="filter-card" shadow="never">
@@ -159,6 +154,14 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, Delete, Search, User } from '@element-plus/icons-vue'
 import { batchDeleteLoginLog, clearLoginLog, deleteLoginLog, getLoginLogList } from '@/api/log'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+
+const trend = {
+  success: [22, 28, 24, 32, 30, 36, 42],
+  failed: [3, 5, 2, 6, 4, 3, 5]
+}
 
 const loading = ref(false)
 const tableData = ref([])

@@ -1,6 +1,7 @@
 package com.example.springboottest.modules.weather.controller;
 
 import com.example.springboottest.common.dto.ApiResponse;
+import com.example.springboottest.modules.weather.dto.WeatherForecastResponse;
 import com.example.springboottest.modules.weather.dto.WeatherRequest;
 import com.example.springboottest.modules.weather.dto.WeatherResponse;
 import com.example.springboottest.modules.weather.service.WeatherService;
@@ -73,5 +74,53 @@ public class WeatherController {
     public ApiResponse<String> hasSun(@RequestParam String city) {
         String content = city + "今天有太阳！";
         return ApiResponse.success("获取成功", content);
+    }
+
+    /**
+     * 查询最近 3 天的天气
+     */
+    @PostMapping("/forecast")
+    public ApiResponse<WeatherForecastResponse> getWeatherForecast(@Valid @RequestBody WeatherRequest weatherRequest) {
+        try {
+            WeatherForecastResponse response = weatherService.getWeatherForecast(weatherRequest);
+            return ApiResponse.success("查询成功", response);
+        } catch (Exception e) {
+            log.error("查询城市 {} 最近 3 天天气失败: {}", weatherRequest.getCity(), e.getMessage());
+            return ApiResponse.error("查询失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询最近 3 天的天气(GET,路径参数)
+     */
+    @GetMapping("/forecast/city/{cityName}")
+    public ApiResponse<WeatherForecastResponse> getWeatherForecastByCityName(
+            @PathVariable @NotBlank(message = "城市名称不能为空") String cityName) {
+        try {
+            WeatherForecastResponse response = weatherService.getWeatherForecast(cityName);
+            return ApiResponse.success("查询成功", response);
+        } catch (Exception e) {
+            log.error("查询城市 {} 最近 3 天天气失败: {}", cityName, e.getMessage());
+            return ApiResponse.error("查询失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询最近 3 天的天气(GET,查询参数)
+     */
+    @GetMapping("/forecast")
+    public ApiResponse<WeatherForecastResponse> getWeatherForecastByParams(
+            @RequestParam @NotBlank(message = "城市名称不能为空") String city,
+            @RequestParam(defaultValue = "CN") String countryCode) {
+        try {
+            WeatherRequest request = new WeatherRequest();
+            request.setCity(city);
+            request.setCountryCode(countryCode);
+            WeatherForecastResponse response = weatherService.getWeatherForecast(request);
+            return ApiResponse.success("查询成功", response);
+        } catch (Exception e) {
+            log.error("查询城市 {} 最近 3 天天气失败: {}", city, e.getMessage());
+            return ApiResponse.error("查询失败: " + e.getMessage());
+        }
     }
 }

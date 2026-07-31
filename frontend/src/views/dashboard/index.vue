@@ -1,117 +1,136 @@
 <template>
   <div class="dashboard-page">
-    <section class="hero-panel">
+    <section
+      class="hero-panel"
+      v-motion
+      :initial="{ opacity: 0, y: 12 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 320 } }"
+    >
       <div class="hero-panel__aurora hero-panel__aurora--one" />
       <div class="hero-panel__aurora hero-panel__aurora--two" />
+      <div class="hero-panel__grain" />
 
-      <div class="hero-panel__main">
-        <div class="hero-panel__copy">
+      <div class="hero-panel__content">
+        <div class="hero-panel__main">
           <div class="hero-panel__heading">
             <div>
-              <span class="section-kicker">COMMAND CENTER</span>
-              <h2 class="section-title">工作台</h2>
+              <div class="hero-panel__eyebrow">
+                <span class="hero-panel__dot"></span>
+                <span>AI-world · 工作台</span>
+              </div>
+              <h2 class="section-title">你好，{{ username }}</h2>
+              <p class="section-subtitle">今日概览 · {{ todayLabel }} · {{ weatherCity }} {{ weatherTemperature }}</p>
             </div>
             <div class="hero-status">
               <span class="hero-status__dot" />
-              <span>{{ loading ? '同步中' : '状态已同步' }}</span>
+              <span>{{ loading ? '同步中' : '已同步' }}</span>
             </div>
           </div>
 
-          <p class="section-desc">
-            在一个页面里掌握系统状态、进入高频模块，并快速发现需要处理的变化。
-          </p>
-
-          <div class="hero-pills">
-            <div
-              v-for="pill in heroPills"
-              :key="pill.label"
-              class="hero-pill"
-            >
-              <span class="hero-pill__label">{{ pill.label }}</span>
-              <strong class="hero-pill__value">{{ pill.value }}</strong>
-            </div>
+          <div class="hero-actions">
+            <el-button type="primary" @click="$router.push('/ai/chat')">
+              <el-icon><ChatDotRound /></el-icon>
+              开启 AI 对话
+            </el-button>
+            <el-button @click="$router.push('/news/hot')">
+              <el-icon><Bell /></el-icon>
+              查看热点
+            </el-button>
+            <el-button @click="$router.push('/user')">
+              <el-icon><UserFilled /></el-icon>
+              用户管理
+            </el-button>
           </div>
         </div>
 
-        <div class="overview-panel__actions">
-          <el-button type="primary" @click="$router.push('/user')">
-            <el-icon><UserFilled /></el-icon>
-            进入用户管理
-          </el-button>
-          <el-button @click="$router.push('/dict')">
-            <el-icon><Collection /></el-icon>
-            查看字典配置
-          </el-button>
+        <aside class="hero-panel__visual" aria-label="工作台任务处理动画">
+          <div class="hero-lottie">
+            <dotlottie-wc
+              class="hero-lottie__player"
+              src="/animations/working.lottie"
+              :autoplay="!prefersReducedMotion"
+              :loop="!prefersReducedMotion"
+              speed="0.82"
+            />
+          </div>
+          <div class="hero-panel__visual-copy">
+            <span>运行状态</span>
+            <strong>{{ loading ? '正在同步工作台数据' : '工作台准备就绪' }}</strong>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="stat-strip">
+      <StatCard
+        label="用户总数"
+        :value="stats.userTotal"
+        :hint="`${stats.activeUsers} 启用`"
+        :icon="UserFilled"
+        tone="primary"
+        :delay="0"
+      >
+        <template #chart>
+          <Sparkline :data="trend.users" color="var(--accent-ai)" />
+        </template>
+      </StatCard>
+      <StatCard
+        label="字典总数"
+        :value="stats.dictTotal"
+        :hint="`${stats.enabledDicts} 启用`"
+        :icon="Collection"
+        tone="system"
+        :delay="80"
+      >
+        <template #chart>
+          <Sparkline :data="trend.dicts" color="var(--accent-system)" />
+        </template>
+      </StatCard>
+      <StatCard
+        label="健康度"
+        :value="healthScore"
+        format="percent"
+        hint="综合启用率"
+        :icon="DataAnalysis"
+        tone="tools"
+        :delay="160"
+      >
+        <template #chart>
+          <Sparkline :data="trend.health" color="var(--accent-tools)" />
+        </template>
+      </StatCard>
+      <StatCard
+        :label="weatherCity"
+        :value="weatherTemp"
+        :unit="'°C'"
+        :hint="weatherHeadline"
+        :icon="LocationFilled"
+        tone="news"
+        :delay="240"
+        :animate="Number.isFinite(weatherTemp)"
+      >
+        <template #chart>
+          <Sparkline :data="trend.weather" color="var(--accent-news)" />
+        </template>
+      </StatCard>
+    </section>
+
+    <section class="chart-panel">
+      <div class="chart-panel__head">
+        <div>
+          <div class="chart-panel__eyebrow">近 7 日活跃度</div>
+          <h3 class="chart-panel__title">工作台流量</h3>
+        </div>
+        <div class="chart-panel__legend">
+          <span class="chart-panel__legend-item"><i class="dot dot--primary"></i>访问</span>
+          <span class="chart-panel__legend-item"><i class="dot dot--ai"></i>AI 对话</span>
         </div>
       </div>
-
-      <aside class="hero-panel__aside">
-        <span class="hero-aside__kicker">OPERATIONS RHYTHM</span>
-        <div class="hero-score">
-          <strong class="hero-score__value">{{ healthScore }}%</strong>
-          <span class="hero-score__label">当前运行健康度</span>
-        </div>
-
-        <div class="hero-aside__list">
-          <article
-            v-for="item in overviewHighlights"
-            :key="item.label"
-            class="hero-aside__item"
-          >
-            <span class="hero-aside__label">{{ item.label }}</span>
-            <strong class="hero-aside__value">{{ item.value }}</strong>
-            <p class="hero-aside__desc">{{ item.detail }}</p>
-          </article>
-        </div>
-      </aside>
-    </section>
-
-    <section class="stat-grid">
-      <article
-        v-for="card in statCards"
-        :key="card.key"
-        class="stat-card"
-        :class="`stat-card--${card.tone}`"
-      >
-        <div class="stat-card__top">
-          <span class="stat-card__label">{{ card.label }}</span>
-          <div class="stat-card__icon">
-            <el-icon :size="20"><component :is="card.icon" /></el-icon>
-          </div>
-        </div>
-        <div class="stat-card__body">
-          <strong class="stat-card__value">{{ card.value }}</strong>
-          <div class="stat-card__meta">
-            <span class="stat-card__hint">{{ card.hint }}</span>
-            <span class="stat-card__tag">{{ card.tag }}</span>
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <section class="priority-grid">
-      <article
-        v-for="signal in prioritySignals"
-        :key="signal.title"
-        class="priority-card"
-        :class="`priority-card--${signal.tone}`"
-      >
-        <span class="priority-card__label">{{ signal.title }}</span>
-        <strong class="priority-card__value">{{ signal.value }}</strong>
-        <p class="priority-card__desc">{{ signal.detail }}</p>
-      </article>
+      <div ref="chartRef" class="chart-panel__canvas"></div>
     </section>
 
     <section class="weather-showcase" :class="`weather-showcase--${weatherTheme}`">
       <div class="weather-showcase__copy">
-        <div class="weather-status-row">
-          <span class="weather-kicker">LIVE WEATHER</span>
-          <div class="weather-status-chips">
-            <span class="weather-status-chip">实时场景</span>
-            <span class="weather-status-chip">{{ weatherThemeLabel }}</span>
-          </div>
-        </div>
-
         <div class="weather-heading">
           <div>
             <h3 class="weather-title">{{ weatherCity }}</h3>
@@ -128,8 +147,6 @@
           <span>{{ weatherFeelsLike }}</span>
         </div>
 
-        <p class="weather-description">{{ weatherDescriptionText }}</p>
-
         <div class="weather-metrics">
           <div class="weather-metric">
             <span class="weather-metric__label">湿度</span>
@@ -140,7 +157,7 @@
             <strong class="weather-metric__value">{{ weatherWind }}</strong>
           </div>
           <div class="weather-metric">
-            <span class="weather-metric__label">更新时间</span>
+            <span class="weather-metric__label">更新</span>
             <strong class="weather-metric__value">{{ weatherUpdatedAt }}</strong>
           </div>
         </div>
@@ -153,14 +170,8 @@
             :disabled="weatherLoading"
             @change="loadWeather"
           >
-            <el-option
-              v-for="city in weatherCities"
-              :key="city"
-              :label="city"
-              :value="city"
-            />
+            <el-option v-for="city in weatherCities" :key="city" :label="city" :value="city" />
           </el-select>
-
           <el-button
             class="weather-actions__button"
             type="primary"
@@ -169,13 +180,8 @@
             :loading="weatherLoading"
             @click="loadWeather"
           >
-            刷新天气
+            刷新
           </el-button>
-        </div>
-
-        <div class="weather-note" :class="{ 'weather-note--error': weatherError }">
-          <el-icon><InfoFilled /></el-icon>
-          <span>{{ weatherNote }}</span>
         </div>
       </div>
 
@@ -184,45 +190,18 @@
           <div class="weather-scene__glow" />
           <div class="weather-scene__sun" />
           <div class="weather-scene__moon" />
-
           <div class="weather-scene__cloud weather-scene__cloud--main" />
           <div class="weather-scene__cloud weather-scene__cloud--secondary" />
           <div class="weather-scene__cloud weather-scene__cloud--tiny" />
-
           <div class="weather-scene__rain">
-            <span
-              v-for="drop in rainDrops"
-              :key="`rain-${drop}`"
-              :style="{
-                '--offset': `${(drop - 1) * 24}px`,
-                '--duration': `${1.2 + drop * 0.08}s`,
-                '--delay': `${drop * 0.12}s`
-              }"
-            />
+            <span v-for="drop in rainDrops" :key="`rain-${drop}`" :style="{ '--offset': `${(drop - 1) * 24}px`, '--duration': `${1.2 + drop * 0.08}s`, '--delay': `${drop * 0.12}s` }" />
           </div>
-
           <div class="weather-scene__snow">
-            <span
-              v-for="flake in snowFlakes"
-              :key="`snow-${flake}`"
-              :style="{
-                '--offset': `${(flake - 1) * 26}px`,
-                '--duration': `${2.8 + flake * 0.12}s`,
-                '--delay': `${flake * 0.18}s`
-              }"
-            />
+            <span v-for="flake in snowFlakes" :key="`snow-${flake}`" :style="{ '--offset': `${(flake - 1) * 26}px`, '--duration': `${2.8 + flake * 0.12}s`, '--delay': `${flake * 0.18}s` }" />
           </div>
-
           <div class="weather-scene__wind">
-            <span
-              v-for="trail in windTrails"
-              :key="`wind-${trail}`"
-              :style="{
-                '--delay': `${trail * 0.2}s`
-              }"
-            />
+            <span v-for="trail in windTrails" :key="`wind-${trail}`" :style="{ '--delay': `${trail * 0.2}s` }" />
           </div>
-
           <div class="weather-scene__sparkles">
             <span v-for="spark in sparkles" :key="`spark-${spark}`" />
           </div>
@@ -230,168 +209,64 @@
       </div>
     </section>
 
-
-    <section class="content-grid">
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <h3>快捷入口</h3>
-              <p>直接进入最常使用的工作模块。</p>
-            </div>
-            <span class="card-badge">共 {{ quickActions.length }} 个入口</span>
+    <section class="quick-panel">
+      <div class="quick-panel__head">
+        <h3>快捷入口</h3>
+        <span class="quick-panel__hint">高频功能，一键直达</span>
+      </div>
+      <div class="quick-grid">
+        <button
+          v-for="(action, i) in quickActions"
+          :key="action.title"
+          class="quick-card"
+          :class="`tone-${action.tone}`"
+          type="button"
+          v-motion
+          :initial="{ opacity: 0, y: 12 }"
+          :visibleOnce="{ opacity: 1, y: 0, transition: { duration: 260, delay: 100 + i * 70 } }"
+          @click="$router.push(action.to)"
+        >
+          <div class="quick-card__icon">
+            <el-icon><component :is="action.icon" /></el-icon>
           </div>
-        </template>
-
-        <div class="quick-grid">
-          <button
-            v-for="action in quickActions"
-            :key="action.title"
-            class="quick-card"
-            type="button"
-            @click="$router.push(action.to)"
-          >
-            <div class="quick-card__icon">
-              <el-icon><component :is="action.icon" /></el-icon>
-            </div>
-            <div class="quick-card__copy">
-              <span class="quick-card__title">{{ action.title }}</span>
-              <span class="quick-card__desc">{{ action.desc }}</span>
-            </div>
-            <span class="quick-card__tail">前往</span>
-          </button>
-        </div>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <h3>重点关注</h3>
-              <p>优先查看需要跟进的状态变化。</p>
-            </div>
-            <span class="summary-timestamp">更新于 {{ lastUpdatedLabel }}</span>
+          <div class="quick-card__copy">
+            <span class="quick-card__title">{{ action.title }}</span>
+            <span class="quick-card__desc">{{ action.desc }}</span>
           </div>
-        </template>
-
-        <div class="focus-list">
-          <div
-            v-for="item in focusItems"
-            :key="item.label"
-            class="focus-item"
-            :class="`focus-item--${item.tone}`"
-          >
-            <span class="focus-item__label">{{ item.label }}</span>
-            <strong class="focus-item__value">{{ item.value }}</strong>
-            <span class="focus-item__desc">{{ item.desc }}</span>
-          </div>
-        </div>
-
-        <div class="summary-note">
-          <el-icon><InfoFilled /></el-icon>
-          <span>{{ summaryNote }}</span>
-        </div>
-      </el-card>
-    </section>
-
-    <section class="detail-grid">
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <h3>数据概览</h3>
-              <p>快速了解当前核心对象的整体规模。</p>
-            </div>
-          </div>
-        </template>
-
-        <div class="status-metrics">
-          <div class="status-metric">
-            <span class="status-metric__label">用户总数</span>
-            <strong class="status-metric__value">{{ stats.userTotal }}</strong>
-          </div>
-          <div class="status-metric">
-            <span class="status-metric__label">禁用用户</span>
-            <strong class="status-metric__value">{{ stats.disabledUsers }}</strong>
-          </div>
-          <div class="status-metric">
-            <span class="status-metric__label">字典总数</span>
-            <strong class="status-metric__value">{{ stats.dictTotal }}</strong>
-          </div>
-          <div class="status-metric">
-            <span class="status-metric__label">停用字典</span>
-            <strong class="status-metric__value">{{ stats.disabledDicts }}</strong>
-          </div>
-        </div>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <h3>能力分区</h3>
-              <p>按任务类型组织主要功能入口。</p>
-            </div>
-          </div>
-        </template>
-
-        <div class="tips-list">
-          <div
-            v-for="group in capabilityGroups"
-            :key="group.title"
-            class="tip-item"
-          >
-            <div class="tip-item__row">
-              <strong>{{ group.title }}</strong>
-              <span class="tip-item__badge">{{ group.badge }}</span>
-            </div>
-            <span>{{ group.desc }}</span>
-          </div>
-        </div>
-      </el-card>
+          <el-icon class="quick-card__arrow"><ArrowRight /></el-icon>
+        </button>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, nextTick } from 'vue'
 import {
+  ArrowRight,
+  Bell,
   Collection,
-  Compass,
   Cpu,
-  InfoFilled,
+  ChatDotRound,
+  DataAnalysis,
+  Document,
   LocationFilled,
-  Notification,
   RefreshRight,
+  Setting,
   UserFilled
 } from '@element-plus/icons-vue'
-import { getDictList } from '@/api/dict'
-import { getUserList } from '@/api/user'
-import { getSupportedCities, getWeatherByCity } from '@/api/weather'
+import axios from 'axios'
+import * as echarts from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
 const loading = ref(false)
-const weatherLoading = ref(false)
-const weatherError = ref('')
-const lastUpdatedAt = ref(null)
-
-const weatherCity = ref('上海')
-const weatherCities = ref(['上海'])
-const weatherPayload = ref({
-  city: '上海',
-  temperature: 24,
-  feelsLike: 25,
-  description: '晴朗，适合开始今天的工作节奏。',
-  main: 'Clear',
-  humidity: 56,
-  windSpeed: 3.2,
-  queryTime: null
-})
-
-const rainDrops = [1, 2, 3, 4, 5, 6, 7]
-const snowFlakes = [1, 2, 3, 4, 5, 6]
-const windTrails = [1, 2, 3]
-const sparkles = [1, 2, 3, 4]
-
+const prefersReducedMotion = ref(false)
 const stats = ref({
   userTotal: 0,
   activeUsers: 0,
@@ -401,350 +276,247 @@ const stats = ref({
   disabledDicts: 0
 })
 
-const quickActions = [
-  { title: '用户管理', desc: '查看账号状态、角色和安全操作', to: '/user', icon: UserFilled },
-  { title: '字典管理', desc: '维护系统基础配置和字典项', to: '/dict', icon: Collection },
-  { title: 'AI 聊天', desc: '处理文本问答和辅助内容生成', to: '/ai/chat', icon: Cpu },
-  { title: '热点新闻', desc: '快速查看多平台实时热点', to: '/news/hot', icon: Notification }
-]
+const username = computed(() => localStorage.getItem('username') || '访客')
+const todayLabel = computed(() => {
+  const d = new Date()
+  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
+  return `${d.getMonth() + 1}月${d.getDate()}日 · ${week}`
+})
 
-const capabilityGroups = [
-  {
-    title: '系统管理',
-    desc: '围绕用户、权限与基础配置建立稳定的后台运行骨架。',
-    badge: 'Core'
-  },
-  {
-    title: '内容协同',
-    desc: '让 AI 问答、模型能力和热点信息在一个入口里协作运转。',
-    badge: 'AI'
-  },
-  {
-    title: '轻量工具',
-    desc: '把高频的小工具放在工作流边上，减少来回切换的成本。',
-    badge: 'Tools'
-  }
-]
+const weatherCity = ref('成都')
+const weatherCities = ['成都', '北京', '上海', '广州', '深圳', '杭州', '南京', '武汉', '重庆', '西安']
+const weatherLoading = ref(false)
+const weatherPayload = ref({})
+const weatherError = ref(false)
 
-const toPercent = (value, total) => {
-  if (!total) return 100
-  return Math.round((value / total) * 100)
-}
+const rainDrops = [1, 2, 3, 4, 5, 6]
+const snowFlakes = [1, 2, 3, 4, 5]
+const windTrails = [1, 2, 3]
+const sparkles = [1, 2, 3, 4]
 
-const statCards = computed(() => [
-  {
-    key: 'users',
-    label: '用户总数',
-    value: stats.value.userTotal,
-    hint: `${stats.value.activeUsers} 位启用中`,
-    tag: `${activeUserRate.value}% 可用`,
-    tone: 'primary',
-    icon: UserFilled
-  },
-  {
-    key: 'dicts',
-    label: '字典总数',
-    value: stats.value.dictTotal,
-    hint: `${stats.value.enabledDicts} 个启用中`,
-    tag: `${enabledDictRate.value}% 生效`,
-    tone: 'success',
-    icon: Collection
-  },
-  {
-    key: 'disabledUsers',
-    label: '禁用用户',
-    value: stats.value.disabledUsers,
-    hint: '当前处于禁用状态的账号',
-    tag: stats.value.disabledUsers > 0 ? '待处理' : '稳定',
-    tone: 'warning',
-    icon: Compass
-  },
-  {
-    key: 'disabledDicts',
-    label: '停用字典',
-    value: stats.value.disabledDicts,
-    hint: '当前未启用的字典配置',
-    tag: stats.value.disabledDicts > 0 ? '需检查' : '正常',
-    tone: 'neutral',
-    icon: InfoFilled
-  }
-])
+const trend = ref({
+  users: [12, 18, 14, 22, 26, 24, 30],
+  dicts: [8, 9, 12, 11, 14, 16, 15],
+  health: [82, 85, 84, 88, 90, 92, 94],
+  weather: [16, 18, 22, 20, 24, 21, 23]
+})
 
-const inactiveSummary = computed(() => stats.value.disabledUsers + stats.value.disabledDicts)
-const activeUserRate = computed(() => toPercent(stats.value.activeUsers, stats.value.userTotal))
-const enabledDictRate = computed(() => toPercent(stats.value.enabledDicts, stats.value.dictTotal))
 const healthScore = computed(() => {
-  return Math.round(activeUserRate.value * 0.55 + enabledDictRate.value * 0.45)
-})
-
-const lastUpdatedLabel = computed(() => {
-  if (!lastUpdatedAt.value) return '刚刚'
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(lastUpdatedAt.value)
-})
-
-const summaryNote = computed(() => {
-  if (inactiveSummary.value > 0) {
-    return `当前共有 ${inactiveSummary.value} 个停用对象，建议继续排查对应配置。`
-  }
-
-  return '当前系统状态稳定，核心对象均处于可用区间。'
-})
-
-const heroPills = computed(() => [
-  {
-    label: '运行健康度',
-    value: `${healthScore.value}%`
-  },
-  {
-    label: '启用账号占比',
-    value: `${activeUserRate.value}%`
-  },
-  {
-    label: '当前城市',
-    value: weatherPayload.value.city || weatherCity.value
-  }
-])
-
-const overviewHighlights = computed(() => [
-  {
-    label: '最新刷新',
-    value: lastUpdatedLabel.value,
-    detail: '系统状态与核心统计已同步到当前视图。'
-  },
-  {
-    label: '启用账号',
-    value: `${stats.value.activeUsers}/${stats.value.userTotal || 0}`,
-    detail: '优先保证高频使用账号处于可用状态。'
-  },
-  {
-    label: '天气节奏',
-    value: weatherThemeLabel.value,
-    detail: weatherHeadline.value
-  }
-])
-
-const prioritySignals = computed(() => [
-  {
-    title: '待处理停用项',
-    value: inactiveSummary.value,
-    detail: inactiveSummary.value > 0
-      ? '建议优先检查停用账号与字典配置的实际影响范围。'
-      : '当前没有需要优先处理的停用对象，系统状态较为稳定。',
-    tone: inactiveSummary.value > 0 ? 'warning' : 'success'
-  },
-  {
-    title: '账号可用率',
-    value: `${activeUserRate.value}%`,
-    detail: '反映当前可正常访问系统的账号比例。',
-    tone: 'primary'
-  },
-  {
-    title: '字典生效率',
-    value: `${enabledDictRate.value}%`,
-    detail: '体现业务配置项处于启用状态的覆盖情况。',
-    tone: 'neutral'
-  }
-])
-
-const focusItems = computed(() => [
-  {
-    label: '启用用户',
-    value: stats.value.activeUsers,
-    desc: '当前可正常使用系统的账号数量。',
-    tone: 'primary'
-  },
-  {
-    label: '启用字典',
-    value: stats.value.enabledDicts,
-    desc: '当前生效中的字典配置数量。',
-    tone: 'success'
-  },
-  {
-    label: '停用对象',
-    value: inactiveSummary.value,
-    desc: '包含禁用用户和停用字典，适合作为巡检入口。',
-    tone: inactiveSummary.value > 0 ? 'warning' : 'neutral'
-  }
-])
-
-const weatherStatusText = computed(() => {
-  return [weatherPayload.value.main, weatherPayload.value.description]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
+  const { userTotal, activeUsers, dictTotal, enabledDicts } = stats.value
+  if (!userTotal && !dictTotal) return 100
+  const userRate = userTotal ? (activeUsers / userTotal) : 1
+  const dictRate = dictTotal ? (enabledDicts / dictTotal) : 1
+  return Math.round((userRate * 50 + dictRate * 50))
 })
 
 const weatherTheme = computed(() => {
-  const text = weatherStatusText.value
-
-  if (text.includes('snow') || text.includes('雪')) return 'snowy'
-  if (text.includes('rain') || text.includes('雨') || text.includes('shower')) return 'rainy'
-  if (text.includes('wind') || text.includes('风')) return 'windy'
-  if (text.includes('cloud') || text.includes('阴') || text.includes('多云')) return 'cloudy'
+  const desc = (weatherPayload.value.weather || '').toLowerCase()
+  if (/雪/.test(desc)) return 'snowy'
+  if (/雨|阵雨/.test(desc)) return 'rainy'
+  if (/风/.test(desc)) return 'windy'
+  if (/云|阴/.test(desc)) return 'cloudy'
   return 'sunny'
 })
 
-const weatherThemeLabel = computed(() => {
-  const themeMap = {
-    sunny: '晴朗提效',
-    cloudy: '平稳推进',
-    rainy: '室内专注',
-    windy: '优先清单',
-    snowy: '安静深潜'
-  }
-
-  return themeMap[weatherTheme.value]
-})
-
-const weatherHeadline = computed(() => {
-  const themeMap = {
-    sunny: '天气不错，适合集中处理今天的关键任务。',
-    cloudy: '节奏平稳，适合按优先级逐项推进。',
-    rainy: '外面有雨，适合留在工作台把待办收一收。',
-    windy: '变化感比较明显，适合先处理高优先级事项。',
-    snowy: '节奏安静一些，适合做需要专注的工作。'
-  }
-
-  return themeMap[weatherTheme.value]
-})
-
 const weatherTemperature = computed(() => {
-  const temperature = weatherPayload.value.temperature
-  return Number.isFinite(temperature) ? `${Math.round(temperature)}°` : '--'
+  const t = weatherPayload.value.temperature
+  return t != null ? `${t}°C` : '--'
+})
+
+const weatherTemp = computed(() => {
+  const t = weatherPayload.value.temperature
+  return t != null ? Number(t) : 0
 })
 
 const weatherFeelsLike = computed(() => {
-  const feelsLike = weatherPayload.value.feelsLike
-  return Number.isFinite(feelsLike) ? `体感 ${Math.round(feelsLike)}°` : '体感暂未返回'
+  const t = weatherPayload.value.feelsLike
+  return t != null ? `体感 ${t}°C` : ''
 })
 
-const weatherDescriptionText = computed(() => {
-  return weatherPayload.value.description || '天气接口已接通，等待实时数据返回。'
-})
+const weatherHeadline = computed(() => weatherPayload.value.weather || '加载中...')
 
 const weatherHumidity = computed(() => {
-  const humidity = weatherPayload.value.humidity
-  return Number.isFinite(humidity) ? `${humidity}%` : '--'
+  const h = weatherPayload.value.humidity
+  return h != null ? `${h}%` : '--'
 })
 
 const weatherWind = computed(() => {
-  const windSpeed = weatherPayload.value.windSpeed
-  return Number.isFinite(windSpeed) ? `${windSpeed.toFixed(1)} m/s` : '--'
+  const w = weatherPayload.value.windSpeed
+  const d = weatherPayload.value.windDirection || ''
+  return w != null ? `${d} ${w}m/s` : '--'
 })
 
 const weatherUpdatedAt = computed(() => {
-  const parsed = parseDateLike(weatherPayload.value.queryTime)
-  if (!parsed) return '刚刚'
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(parsed)
+  const t = weatherPayload.value.observeTime
+  if (!t) return '--'
+  try {
+    const d = new Date(t)
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  } catch { return '--' }
 })
 
-const weatherNote = computed(() => {
-  if (weatherError.value) {
-    return weatherError.value
+const quickActions = [
+  { title: 'AI 聊天', desc: '和智能助手对话', icon: ChatDotRound, tone: 'ai', to: '/ai/chat' },
+  { title: '模型管理', desc: '配置可用 AI 模型', icon: Cpu, tone: 'ai', to: '/ai/models' },
+  { title: '热点新闻', desc: '多平台趋势速览', icon: Bell, tone: 'news', to: '/news/hot' },
+  { title: '用户管理', desc: '账户、权限、状态', icon: UserFilled, tone: 'system', to: '/user' },
+  { title: '字典配置', desc: '维护系统字典项', icon: Collection, tone: 'system', to: '/dict' },
+  { title: '操作日志', desc: '追踪后台变更', icon: Document, tone: 'system', to: '/log/operation' }
+]
+
+const chartRef = ref(null)
+let chart = null
+let resizeObs = null
+let motionQuery = null
+
+const syncMotionPreference = () => {
+  prefersReducedMotion.value = Boolean(motionQuery?.matches)
+}
+
+const days = () => {
+  const arr = []
+  const now = new Date()
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(now.getDate() - i)
+    arr.push(`${d.getMonth() + 1}/${d.getDate()}`)
   }
-
-  return '支持查看当前城市实时天气，方便安排当天工作节奏。'
-})
-
-const extractList = (payload) => {
-  if (Array.isArray(payload?.records)) return payload.records
-  if (Array.isArray(payload?.list)) return payload.list
-  if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload)) return payload
-  return []
+  return arr
 }
 
-const extractTotal = (payload, fallback = 0) => {
-  return typeof payload?.total === 'number' ? payload.total : fallback
+const resolveVar = (name) => {
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return val || '#2f5bea'
 }
 
-const parseDateLike = (value) => {
-  if (!value) return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? null : date
+const renderChart = () => {
+  if (!chart) return
+  const primary = resolveVar('--color-primary')
+  const ai = resolveVar('--accent-ai')
+  chart.setOption({
+    grid: { left: 24, right: 24, top: 20, bottom: 30 },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(15, 23, 42, 0.92)',
+      borderWidth: 0,
+      textStyle: { color: '#fff', fontSize: 12 },
+      padding: [8, 12]
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: days(),
+      axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.3)' } },
+      axisLabel: { color: resolveVar('--text-muted'), fontSize: 11 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.16)', type: 'dashed' } },
+      axisLabel: { color: resolveVar('--text-muted'), fontSize: 11 },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [
+      {
+        name: '访问',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: primary, width: 3 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: primary },
+            { offset: 1, color: 'rgba(255,255,255,0)' }
+          ]),
+          opacity: 0.28
+        },
+        data: [128, 152, 143, 176, 188, 210, 232]
+      },
+      {
+        name: 'AI 对话',
+        type: 'line',
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { color: ai, width: 3 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: ai },
+            { offset: 1, color: 'rgba(255,255,255,0)' }
+          ]),
+          opacity: 0.22
+        },
+        data: [42, 58, 66, 72, 88, 96, 104]
+      }
+    ]
+  })
 }
 
-const loadDashboard = async () => {
+const loadStats = async () => {
   loading.value = true
-
   try {
-    const [userResult, dictResult] = await Promise.allSettled([
-      getUserList({ page: 1, size: 200 }),
-      getDictList({ page: 0, size: 200 })
+    const [userRes, dictRes] = await Promise.all([
+      axios.get('/api/users/stats'),
+      axios.get('/api/dicts/stats')
     ])
-
-    const userPayload = userResult.status === 'fulfilled' ? userResult.value.data : null
-    const dictPayload = dictResult.status === 'fulfilled' ? dictResult.value.data : null
-
-    const users = extractList(userPayload)
-    const dicts = extractList(dictPayload)
-
+    const u = userRes.data?.data || userRes.data || {}
+    const d = dictRes.data?.data || dictRes.data || {}
     stats.value = {
-      userTotal: extractTotal(userPayload, users.length),
-      activeUsers: users.filter((item) => item.status === 1).length,
-      disabledUsers: users.filter((item) => item.status !== 1).length,
-      dictTotal: extractTotal(dictPayload, dicts.length),
-      enabledDicts: dicts.filter((item) => item.status === 1).length,
-      disabledDicts: dicts.filter((item) => item.status !== 1).length
+      userTotal: u.total ?? 0,
+      activeUsers: u.activeCount ?? 0,
+      disabledUsers: u.disabledCount ?? 0,
+      dictTotal: d.total ?? 0,
+      enabledDicts: d.enabledCount ?? 0,
+      disabledDicts: d.disabledCount ?? 0
     }
+  } catch (e) {
+    console.error('加载统计失败', e)
   } finally {
-    lastUpdatedAt.value = new Date()
     loading.value = false
-  }
-}
-
-const loadWeatherCities = async () => {
-  try {
-    const res = await getSupportedCities()
-    const cities = Array.isArray(res.data) && res.data.length > 0 ? res.data : ['上海']
-    weatherCities.value = cities
-
-    if (!cities.includes(weatherCity.value)) {
-      weatherCity.value = cities[0]
-    }
-  } catch (error) {
-    weatherCities.value = ['上海', '北京', '广州', '深圳', '杭州']
   }
 }
 
 const loadWeather = async () => {
   weatherLoading.value = true
-  weatherError.value = ''
-
+  weatherError.value = false
   try {
-    const res = await getWeatherByCity(weatherCity.value)
-    if (res?.data) {
-      weatherPayload.value = {
-        ...weatherPayload.value,
-        ...res.data
-      }
-    }
-  } catch (error) {
-    weatherError.value = '暂时没有拿到实时天气，先展示默认场景图案。'
+    const res = await axios.get('/api/weather', { params: { city: weatherCity.value } })
+    weatherPayload.value = res.data?.data || res.data || {}
+  } catch (e) {
+    console.error('加载天气失败', e)
+    weatherError.value = true
+    weatherPayload.value = {}
   } finally {
     weatherLoading.value = false
   }
 }
 
 onMounted(async () => {
-  await Promise.allSettled([loadDashboard(), loadWeatherCities()])
-  await loadWeather()
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    syncMotionPreference()
+    motionQuery.addEventListener?.('change', syncMotionPreference)
+  }
+  loadStats()
+  loadWeather()
+  await nextTick()
+  if (chartRef.value) {
+    chart = echarts.init(chartRef.value)
+    renderChart()
+    resizeObs = new ResizeObserver(() => chart && chart.resize())
+    resizeObs.observe(chartRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  motionQuery?.removeEventListener?.('change', syncMotionPreference)
+  if (resizeObs) resizeObs.disconnect()
+  if (chart) chart.dispose()
 })
 </script>
 
 <style lang="scss" scoped>
 .dashboard-page {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -752,25 +524,25 @@ onMounted(async () => {
 
 .hero-panel {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.7fr);
-  gap: 20px;
   overflow: hidden;
-  padding: 30px;
+  padding: 32px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 32px;
+  border-radius: 28px;
   background:
-    linear-gradient(135deg, rgba(8, 15, 32, 0.98), rgba(17, 38, 75, 0.95) 48%, rgba(18, 79, 96, 0.9));
+    radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.32), transparent 40%),
+    radial-gradient(circle at 12% 70%, rgba(52, 211, 153, 0.18), transparent 40%),
+    linear-gradient(135deg, #0b1024 0%, #101a3f 45%, #1a3260);
   color: #fff;
-  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.22);
 }
 
 .hero-panel__aurora {
   position: absolute;
   border-radius: 999px;
-  filter: blur(10px);
+  filter: blur(24px);
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.85;
+  animation: heroFloat 14s ease-in-out infinite;
 }
 
 .hero-panel__aurora--one {
@@ -778,7 +550,7 @@ onMounted(async () => {
   right: 10%;
   width: 260px;
   height: 260px;
-  background: radial-gradient(circle, rgba(121, 198, 255, 0.42), transparent 68%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.55), transparent 68%);
 }
 
 .hero-panel__aurora--two {
@@ -786,26 +558,42 @@ onMounted(async () => {
   left: -40px;
   width: 320px;
   height: 320px;
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.18), transparent 68%);
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.35), transparent 68%);
+  animation-direction: reverse;
+  animation-duration: 18s;
 }
 
-.hero-panel__main,
-.hero-panel__aside {
+@keyframes heroFloat {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-16px, 12px); }
+}
+
+.hero-panel__grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 78%);
+}
+
+.hero-panel__content {
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 240px);
+  gap: 26px;
+  align-items: center;
 }
 
 .hero-panel__main {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.hero-panel__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  gap: 22px;
+  min-width: 0;
 }
 
 .hero-panel__heading {
@@ -815,21 +603,44 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.section-kicker {
+.hero-panel__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
-.section-kicker::before {
-  content: '';
-  width: 32px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.4);
+.hero-panel__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7dd3fc;
+  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.24);
+}
+
+.section-title {
+  margin: 14px 0 0;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #ffffff, #c4d9ff 60%, #7dd3fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.section-subtitle {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
 }
 
 .hero-status {
@@ -839,8 +650,8 @@ onMounted(async () => {
   padding: 10px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.84rem;
   white-space: nowrap;
 }
@@ -849,371 +660,207 @@ onMounted(async () => {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #7dd3fc;
-  box-shadow: 0 0 0 6px rgba(125, 211, 252, 0.14);
+  background: #34d399;
+  box-shadow: 0 0 0 6px rgba(52, 211, 153, 0.16);
+  animation: heroPulse 2.4s ease-in-out infinite;
 }
 
-.section-title {
-  margin: 10px 0 0;
-  max-width: 760px;
-  font-size: clamp(2rem, 4vw, 3.35rem);
-  font-weight: 900;
-  line-height: 1.02;
-  letter-spacing: -0.04em;
+@keyframes heroPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-.section-desc {
-  margin: 0;
-  max-width: 720px;
-  color: rgba(255, 255, 255, 0.74);
-  font-size: 1rem;
-  line-height: 1.8;
-}
-
-.hero-pills {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.hero-pill {
-  padding: 16px 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
-}
-
-.hero-pill__label {
-  display: block;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hero-pill__value {
-  display: block;
-  margin-top: 10px;
-  font-size: 1.1rem;
-  font-weight: 800;
-}
-
-.hero-panel__aside {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px;
-  border-radius: 26px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(18px);
-}
-
-.hero-aside__kicker {
-  color: rgba(255, 255, 255, 0.64);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.hero-score {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hero-score__value {
-  font-size: clamp(2.8rem, 5vw, 4rem);
-  line-height: 0.95;
-}
-
-.hero-score__label {
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 0.94rem;
-}
-
-.hero-aside__list {
-  display: grid;
-  gap: 12px;
-}
-
-.hero-aside__item {
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(7, 15, 32, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.hero-aside__label {
-  display: block;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.76rem;
-}
-
-.hero-aside__value {
-  display: block;
-  margin-top: 8px;
-  font-size: 1.16rem;
-  font-weight: 800;
-}
-
-.hero-aside__desc {
-  margin: 8px 0 0;
-  color: rgba(255, 255, 255, 0.66);
-  font-size: 0.84rem;
-  line-height: 1.65;
-}
-
-.overview-panel__actions {
+.hero-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.overview-panel__actions :deep(.el-button:not(.el-button--primary)) {
-  background: rgba(255, 255, 255, 0.08);
+.hero-panel__visual {
+  position: relative;
+  overflow: hidden;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 218px;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.hero-panel__visual::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border-radius: 20px;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+.hero-lottie {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: min(100%, 190px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+.hero-lottie__player {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-panel__visual-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.hero-panel__visual-copy span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hero-panel__visual-copy strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.hero-actions :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
 }
 
-.stat-grid,
-.content-grid,
-.detail-grid {
+.hero-actions :deep(.el-button:not(.el-button--primary):hover) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.stat-strip {
   display: grid;
-  gap: 20px;
-}
-
-.stat-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.priority-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
-.content-grid,
-.detail-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.stat-card {
-  position: relative;
-  min-height: 168px;
-  padding: 22px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+.chart-panel {
+  padding: 24px;
   border-radius: 24px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
-  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.06);
-  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 22px 36px rgba(15, 23, 42, 0.1);
-}
-
-.stat-card__top {
+.chart-panel__head {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chart-panel__eyebrow {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.chart-panel__title {
+  margin: 6px 0 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.chart-panel__legend {
+  display: inline-flex;
   gap: 14px;
-}
-
-.stat-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 18px;
-  flex-shrink: 0;
-}
-
-.stat-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 30px;
-}
-
-.stat-card__label {
-  color: #64748b;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.stat-card__value {
-  color: #0f172a;
-  font-size: clamp(2rem, 4vw, 2.7rem);
-  line-height: 0.94;
-  letter-spacing: -0.04em;
-}
-
-.stat-card__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.stat-card__hint {
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.84rem;
-  line-height: 1.6;
 }
 
-.stat-card__tag {
+.chart-panel__legend-item {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.06);
-  color: #334155;
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
+  gap: 6px;
 }
 
-.stat-card--primary .stat-card__icon {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.08));
-  color: #2563eb;
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
-.stat-card--success .stat-card__icon {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(45, 212, 191, 0.08));
-  color: #059669;
-}
+.dot--primary { background: var(--color-primary); }
+.dot--ai { background: var(--accent-ai); }
 
-.stat-card--warning .stat-card__icon {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(251, 191, 36, 0.08));
-  color: #d97706;
-}
-
-.stat-card--neutral .stat-card__icon {
-  background: linear-gradient(135deg, rgba(71, 85, 105, 0.16), rgba(100, 116, 139, 0.08));
-  color: #475569;
-}
-
-.priority-card {
-  padding: 20px 22px;
-  border-radius: 24px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
-}
-
-.priority-card__label {
-  display: block;
-  color: #64748b;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
-.priority-card__value {
-  display: block;
-  margin-top: 12px;
-  color: #0f172a;
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.priority-card__desc {
-  margin: 12px 0 0;
-  color: #64748b;
-  font-size: 0.88rem;
-  line-height: 1.7;
-}
-
-.priority-card--primary {
-  background:
-    linear-gradient(180deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0.92));
-}
-
-.priority-card--success {
-  background:
-    linear-gradient(180deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0.92));
-}
-
-.priority-card--warning {
-  background:
-    linear-gradient(180deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.92));
-}
-
-.priority-card--neutral {
-  background:
-    linear-gradient(180deg, rgba(71, 85, 105, 0.08), rgba(255, 255, 255, 0.92));
+.chart-panel__canvas {
+  width: 100%;
+  height: 260px;
 }
 
 .weather-showcase {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
   gap: 22px;
   overflow: hidden;
   padding: 30px;
-  border-radius: 32px;
+  border-radius: 28px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-}
-
-.weather-showcase::before,
-.weather-showcase::after {
-  content: '';
-  position: absolute;
-  inset: auto;
-  border-radius: 999px;
-  pointer-events: none;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
 }
 
 .weather-showcase::before {
+  content: '';
+  position: absolute;
   top: -72px;
   right: -18px;
   width: 220px;
   height: 220px;
+  border-radius: 999px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent 68%);
-}
-
-.weather-showcase::after {
-  left: -120px;
-  bottom: -150px;
-  width: 280px;
-  height: 280px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+  pointer-events: none;
 }
 
 .weather-showcase--sunny {
-  background:
-    radial-gradient(circle at 82% 18%, rgba(255, 213, 79, 0.34), transparent 18%),
+  background: radial-gradient(circle at 82% 18%, rgba(255, 213, 79, 0.34), transparent 18%),
     linear-gradient(135deg, #11315f, #2166b5 48%, #61b0ff);
 }
 
 .weather-showcase--cloudy {
-  background:
-    radial-gradient(circle at 78% 16%, rgba(255, 255, 255, 0.22), transparent 18%),
+  background: radial-gradient(circle at 78% 16%, rgba(255, 255, 255, 0.22), transparent 18%),
     linear-gradient(135deg, #1f304f, #58708f 46%, #93a7bf);
 }
 
 .weather-showcase--rainy {
-  background:
-    radial-gradient(circle at 84% 16%, rgba(146, 197, 255, 0.18), transparent 18%),
+  background: radial-gradient(circle at 84% 16%, rgba(146, 197, 255, 0.18), transparent 18%),
     linear-gradient(135deg, #101c33, #26496c 44%, #3f7a9f);
 }
 
 .weather-showcase--windy {
-  background:
-    radial-gradient(circle at 84% 20%, rgba(255, 255, 255, 0.18), transparent 18%),
+  background: radial-gradient(circle at 84% 20%, rgba(255, 255, 255, 0.18), transparent 18%),
     linear-gradient(135deg, #10233f, #225a81 44%, #67b4d6);
 }
 
 .weather-showcase--snowy {
-  background:
-    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.42), transparent 18%),
+  background: radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.42), transparent 18%),
     linear-gradient(135deg, #20334f, #5c7599 46%, #d7e2ef);
 }
 
@@ -1227,61 +874,21 @@ onMounted(async () => {
   color: #fff;
 }
 
-.weather-status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.weather-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.weather-status-chips {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.weather-status-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
 .weather-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 14px;
 }
 
 .weather-title {
   margin: 0;
-  font-size: clamp(2rem, 3.4vw, 3.2rem);
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
   line-height: 0.96;
 }
 
 .weather-subtitle {
-  margin: 10px 0 0;
-  max-width: 560px;
+  margin: 8px 0 0;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.98rem;
   line-height: 1.7;
@@ -1291,12 +898,12 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1305,11 +912,11 @@ onMounted(async () => {
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .weather-temperature strong {
-  font-size: clamp(3rem, 7vw, 4.8rem);
+  font-size: clamp(2.6rem, 6vw, 4rem);
   line-height: 0.95;
 }
 
@@ -1319,22 +926,15 @@ onMounted(async () => {
   font-size: 1rem;
 }
 
-.weather-description {
-  margin: 16px 0 0;
-  max-width: 580px;
-  color: rgba(255, 255, 255, 0.84);
-  line-height: 1.8;
-}
-
 .weather-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 22px;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .weather-metric {
-  padding: 16px 18px;
+  padding: 14px 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1346,14 +946,13 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.64);
   font-size: 0.76rem;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .weather-metric__value {
   display: block;
-  margin-top: 8px;
+  margin-top: 6px;
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
@@ -1361,7 +960,7 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .weather-actions__select {
@@ -1378,10 +977,6 @@ onMounted(async () => {
   color: #fff;
 }
 
-.weather-actions__select :deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.5);
-}
-
 .weather-actions__button {
   height: 40px;
   border-radius: 16px;
@@ -1396,23 +991,6 @@ onMounted(async () => {
   color: #fff;
 }
 
-.weather-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.6;
-}
-
-.weather-note--error {
-  background: rgba(248, 113, 113, 0.14);
-  color: #ffe5e5;
-}
-
 .weather-showcase__art {
   display: flex;
   align-items: center;
@@ -1421,7 +999,7 @@ onMounted(async () => {
 
 .weather-scene {
   position: relative;
-  width: min(100%, 360px);
+  width: min(100%, 320px);
   aspect-ratio: 1 / 1;
   border-radius: 34px;
   overflow: hidden;
@@ -1443,7 +1021,6 @@ onMounted(async () => {
 }
 
 .weather-scene__glow {
-  inset: auto;
   top: 18%;
   left: 50%;
   width: 210px;
@@ -1464,16 +1041,12 @@ onMounted(async () => {
 
 .weather-scene__sun {
   background: radial-gradient(circle at 35% 35%, #fff7c8, #ffd157 58%, #ff9f2f);
-  box-shadow:
-    0 0 0 16px rgba(255, 209, 87, 0.14),
-    0 0 42px rgba(255, 209, 87, 0.28);
+  box-shadow: 0 0 0 16px rgba(255, 209, 87, 0.14), 0 0 42px rgba(255, 209, 87, 0.28);
 }
 
 .weather-scene__moon {
   background: radial-gradient(circle at 30% 30%, #f8fbff, #d7e4f7 58%, #a7c0df);
-  box-shadow:
-    -18px 0 0 0 rgba(30, 58, 96, 0.9),
-    0 0 32px rgba(215, 228, 247, 0.18);
+  box-shadow: -18px 0 0 0 rgba(30, 58, 96, 0.9), 0 0 32px rgba(215, 228, 247, 0.18);
   opacity: 0;
 }
 
@@ -1509,25 +1082,9 @@ onMounted(async () => {
   height: 56px;
 }
 
-.weather-scene__cloud--main {
-  top: 34%;
-}
-
-.weather-scene__cloud--secondary {
-  top: 48%;
-  left: 38%;
-  width: 112px;
-  transform: translateX(-50%) scale(0.86);
-  opacity: 0.92;
-}
-
-.weather-scene__cloud--tiny {
-  top: 24%;
-  left: 26%;
-  width: 88px;
-  transform: translateX(-50%) scale(0.68);
-  opacity: 0.72;
-}
+.weather-scene__cloud--main { top: 34%; }
+.weather-scene__cloud--secondary { top: 48%; left: 38%; width: 112px; transform: translateX(-50%) scale(0.86); opacity: 0.92; }
+.weather-scene__cloud--tiny { top: 24%; left: 26%; width: 88px; transform: translateX(-50%) scale(0.68); opacity: 0.72; }
 
 .weather-scene__rain,
 .weather-scene__snow {
@@ -1586,23 +1143,11 @@ onMounted(async () => {
   animation-delay: var(--delay);
 }
 
-.weather-scene__wind span:nth-child(1) {
-  top: 8px;
-}
+.weather-scene__wind span:nth-child(1) { top: 8px; }
+.weather-scene__wind span:nth-child(2) { top: 42px; width: 180px; }
+.weather-scene__wind span:nth-child(3) { top: 78px; width: 120px; }
 
-.weather-scene__wind span:nth-child(2) {
-  top: 42px;
-  width: 180px;
-}
-
-.weather-scene__wind span:nth-child(3) {
-  top: 78px;
-  width: 120px;
-}
-
-.weather-scene__sparkles {
-  inset: 0;
-}
+.weather-scene__sparkles { inset: 0; }
 
 .weather-scene__sparkles span {
   position: absolute;
@@ -1613,36 +1158,15 @@ onMounted(async () => {
   animation: sparkle 2.8s ease-in-out infinite;
 }
 
-.weather-scene__sparkles span:nth-child(1) {
-  top: 16%;
-  left: 18%;
-}
-
-.weather-scene__sparkles span:nth-child(2) {
-  top: 26%;
-  left: 74%;
-  animation-delay: 0.6s;
-}
-
-.weather-scene__sparkles span:nth-child(3) {
-  top: 38%;
-  left: 12%;
-  animation-delay: 1.2s;
-}
-
-.weather-scene__sparkles span:nth-child(4) {
-  top: 62%;
-  left: 76%;
-  animation-delay: 1.8s;
-}
+.weather-scene__sparkles span:nth-child(1) { top: 16%; left: 18%; }
+.weather-scene__sparkles span:nth-child(2) { top: 26%; left: 74%; animation-delay: 0.6s; }
+.weather-scene__sparkles span:nth-child(3) { top: 38%; left: 12%; animation-delay: 1.2s; }
+.weather-scene__sparkles span:nth-child(4) { top: 62%; left: 76%; animation-delay: 1.8s; }
 
 .weather-scene--cloudy .weather-scene__sun,
 .weather-scene--rainy .weather-scene__sun,
 .weather-scene--windy .weather-scene__sun,
-.weather-scene--snowy .weather-scene__sun {
-  opacity: 0.35;
-  transform: scale(0.88);
-}
+.weather-scene--snowy .weather-scene__sun { opacity: 0.35; transform: scale(0.88); }
 
 .weather-scene--cloudy .weather-scene__cloud,
 .weather-scene--rainy .weather-scene__cloud,
@@ -1650,373 +1174,164 @@ onMounted(async () => {
   background: linear-gradient(180deg, rgba(243, 247, 252, 0.98), rgba(205, 218, 233, 0.95));
 }
 
-.weather-scene--rainy .weather-scene__rain {
-  opacity: 1;
+.weather-scene--rainy .weather-scene__rain { opacity: 1; }
+.weather-scene--windy .weather-scene__wind { opacity: 1; }
+.weather-scene--snowy .weather-scene__snow { opacity: 1; }
+.weather-scene--snowy .weather-scene__sun { opacity: 0; }
+.weather-scene--snowy .weather-scene__moon { opacity: 1; }
+
+.quick-panel {
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
-.weather-scene--windy .weather-scene__wind {
-  opacity: 1;
-}
-
-.weather-scene--snowy .weather-scene__snow {
-  opacity: 1;
-}
-
-.weather-scene--snowy .weather-scene__sun {
-  opacity: 0;
-}
-
-.weather-scene--snowy .weather-scene__moon {
-  opacity: 1;
-}
-
-
-.card-header {
+.quick-panel__head {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.card-header h3 {
+.quick-panel__head h3 {
   margin: 0;
-  color: #0f172a;
-  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
-.card-header p {
-  margin: 6px 0 0;
-  color: #64748b;
-  font-size: 0.88rem;
-}
-
-.card-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #1d4ed8;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.summary-timestamp {
-  color: #94a3b8;
-  font-size: 0.8rem;
+.quick-panel__hint {
+  color: var(--text-muted);
+  font-size: 0.86rem;
 }
 
 .quick-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.quick-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 20px;
-  background: linear-gradient(180deg, #fff, #f8fbff);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.quick-card:hover {
-  border-color: rgba(37, 99, 235, 0.22);
-  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
-  transform: translateY(-3px);
-}
-
-.quick-card__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  flex-shrink: 0;
-}
-
-.quick-card__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.quick-card__title {
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.quick-card__desc {
-  color: #64748b;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.quick-card__tail {
-  margin-left: auto;
-  color: #94a3b8;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.focus-list,
-.status-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
-.status-metrics {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.focus-item,
-.status-metric,
-.tip-item {
+.quick-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
   padding: 18px;
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  background: #f8fafc;
+  background: linear-gradient(160deg, var(--accent-soft) 0%, transparent 55%), var(--surface-base);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.focus-item__label,
-.status-metric__label {
-  color: #64748b;
-  font-size: 0.84rem;
+.quick-card::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), transparent 72%);
+  pointer-events: none;
 }
 
-.focus-item__value,
-.status-metric__value {
-  display: block;
-  margin-top: 10px;
-  color: #0f172a;
-  font-size: 1.6rem;
-  line-height: 1;
+.quick-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow-strong);
 }
 
-.focus-item__desc {
-  display: block;
-  margin-top: 10px;
-  color: #94a3b8;
+.quick-card__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.quick-card__copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-card__title {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.quick-card__desc {
+  color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.5;
 }
 
-.focus-item--primary {
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.09), rgba(255, 255, 255, 0.92));
+.quick-card__arrow {
+  position: relative;
+  z-index: 1;
+  color: var(--accent);
+  transition: transform 180ms ease;
 }
 
-.focus-item--success {
-  background: linear-gradient(180deg, rgba(16, 185, 129, 0.09), rgba(255, 255, 255, 0.92));
+.quick-card:hover .quick-card__arrow {
+  transform: translateX(4px);
 }
-
-.focus-item--warning {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.11), rgba(255, 255, 255, 0.92));
-}
-
-.focus-item--neutral {
-  background: linear-gradient(180deg, rgba(148, 163, 184, 0.12), rgba(255, 255, 255, 0.92));
-}
-
-.summary-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #1e40af;
-  line-height: 1.6;
-}
-
-.tips-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.tip-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.tip-item strong {
-  color: #0f172a;
-  font-size: 0.95rem;
-}
-
-.tip-item__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.tip-item__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.06);
-  color: #475569;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.tip-item span {
-  color: #64748b;
-  font-size: 0.88rem;
-  line-height: 1.6;
-}
-
 
 @keyframes rain-fall {
-  0% {
-    transform: translateY(-16px);
-    opacity: 0;
-  }
-
-  15% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateY(130px);
-    opacity: 0;
-  }
+  0% { transform: translateY(-16px); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(130px); opacity: 0; }
 }
 
 @keyframes snow-fall {
-  0% {
-    transform: translate3d(0, -10px, 0);
-    opacity: 0;
-  }
-
-  12% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate3d(18px, 132px, 0);
-    opacity: 0;
-  }
+  0% { transform: translate3d(0, -10px, 0); opacity: 0; }
+  12% { opacity: 1; }
+  100% { transform: translate3d(18px, 132px, 0); opacity: 0; }
 }
 
 @keyframes wind-move {
-  0%,
-  100% {
-    transform: translateX(0);
-    opacity: 0.32;
-  }
-
-  50% {
-    transform: translateX(18px);
-    opacity: 1;
-  }
+  0%, 100% { transform: translateX(0); opacity: 0.32; }
+  50% { transform: translateX(18px); opacity: 1; }
 }
 
 @keyframes sparkle {
-  0%,
-  100% {
-    transform: scale(0.6);
-    opacity: 0.35;
-  }
-
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-  }
+  0%, 100% { transform: scale(0.6); opacity: 0.35; }
+  50% { transform: scale(1.2); opacity: 1; }
 }
-
 
 @media (max-width: 1200px) {
-  .hero-panel,
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-pills {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .stat-grid,
-  .priority-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .weather-showcase {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 960px) {
-  .hero-pills,
-  .priority-grid,
-  .content-grid,
-  .detail-grid,
-  .quick-grid,
-  .focus-list,
-  .status-metrics,
-  .weather-metrics {
-    grid-template-columns: 1fr;
-  }
+  .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .weather-showcase { grid-template-columns: 1fr; }
+  .hero-panel__content { grid-template-columns: minmax(0, 1fr) minmax(180px, 210px); }
 }
 
 @media (max-width: 768px) {
+  .hero-panel__content { grid-template-columns: 1fr; }
   .hero-panel__heading,
-  .weather-status-row,
-  .weather-heading {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .stat-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .weather-showcase {
-    padding: 20px;
-  }
-
-  .weather-scene {
-    width: 100%;
-    max-width: 320px;
-  }
-
-  .hero-panel {
-    padding: 22px;
-  }
-
-  .hero-panel__aside {
-    padding: 18px;
-  }
-
-  .stat-card__meta {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .quick-card {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .quick-card__tail {
-    margin-left: 56px;
-  }
+  .weather-heading { flex-direction: column; align-items: flex-start; }
+  .stat-strip { grid-template-columns: 1fr; }
+  .quick-grid { grid-template-columns: 1fr; }
+  .weather-showcase { padding: 20px; }
+  .hero-panel { padding: 22px; }
+  .hero-panel__visual { min-height: 190px; }
+  .hero-lottie { width: min(100%, 160px); }
+  .weather-scene { width: 100%; max-width: 280px; }
 }
 </style>

@@ -7,6 +7,8 @@ import com.example.springboottest.entity.DTO.AiProviderInfo;
 import com.example.springboottest.modules.ai.dto.AiCapabilitiesResponse;
 import com.example.springboottest.modules.ai.dto.EssayGenerateRequest;
 import com.example.springboottest.modules.ai.dto.EssayGenerateResponse;
+import com.example.springboottest.modules.ai.agent.tool.AgentToolDefinition;
+import com.example.springboottest.modules.ai.agent.tool.AgentToolRegistry;
 import com.example.springboottest.modules.ai.service.AiChatService;
 import com.example.springboottest.modules.ai.websearch.WebSearchService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +47,7 @@ public class AiChatController {
 
     private final AiChatService aiChatService;
     private final WebSearchService webSearchService;
+    private final AgentToolRegistry agentToolRegistry;
     private static final int ESSAY_TIMEOUT_SECONDS = 180;
     private static final String ESSAY_HIGH_SCORE_TEMPLATE = """
             你是一名资深中高考语文阅卷老师和作文教练，请生成一篇可作为高分范文的作文。
@@ -102,6 +105,12 @@ public class AiChatController {
                 .webSearchEnabled(webSearchService.isEnabled())
                 .webSearchMode("system-searxng")
                 .build());
+    }
+
+    @Operation(summary = "获取智能体工具列表", description = "返回当前 Agent Runtime 可用工具定义")
+    @GetMapping("/tools")
+    public ApiResponse<List<AgentToolDefinition>> getAgentTools() {
+        return ApiResponse.success(new ArrayList<>(agentToolRegistry.definitions()));
     }
 
     @Operation(summary = "检查AI模型状态", description = "检查指定AI服务提供商是否可用")

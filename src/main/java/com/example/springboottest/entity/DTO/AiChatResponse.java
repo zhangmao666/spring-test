@@ -38,4 +38,8 @@ public class AiChatResponse {
     private boolean success;
 
     private String error;
+
+    private String agentRunId;
+
+    private String agentStatus;
 }

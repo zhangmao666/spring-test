@@ -14,6 +14,8 @@ import com.example.springboottest.modules.ai.service.AiAgentService;
 import com.example.springboottest.modules.ai.service.AiChatService;
 import com.example.springboottest.modules.ai.service.ChatHistoryService;
 import com.example.springboottest.modules.ai.setvice.AiModelService;
+import com.example.springboottest.modules.ai.skill.entity.AiSkill;
+import com.example.springboottest.modules.ai.skill.service.AiSkillService;
 import com.example.springboottest.modules.ai.websearch.WebSearchContext;
 import com.example.springboottest.modules.ai.websearch.WebSearchService;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -59,6 +61,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final Map<String, String> conversationContexts;
     private final WebSearchService webSearchService;
     private final AiAgentService aiAgentService;
+    private final AiSkillService aiSkillService;
 
     @Value("${spring.ai.openai.base-url:}")
     private String springAiBaseUrl;
@@ -99,13 +102,18 @@ public class AiChatServiceImpl implements AiChatService {
 
         try {
             bindConversationModel(request, resolved);
+            syncRequestMountedSkills(request);
             saveUserMessage(request, resolved, disabledSearchContext());
             List<Message> historyMessages = buildAgentHistoryMessages(request.getConversationId(), request.getMessage());
+            List<AiSkill> mountedSkills = aiSkillService.getMountedEnabledSkills(request.getConversationId());
+            String mountedSkillPrompt = aiSkillService.buildMountedSkillPrompt(request.getConversationId());
             AiAgentService.AgentRunResult result = aiAgentService.run(
-                    toAgentModelConfig(resolved),
+                    toAgentModelConfig(resolved, request),
                     request.getConversationId(),
                     request.getMessage(),
                     historyMessages,
+                    mountedSkills,
+                    mountedSkillPrompt,
                     event -> {
                     }
             );
@@ -123,6 +131,8 @@ public class AiChatServiceImpl implements AiChatService {
                     .conversationId(request.getConversationId())
                     .usedWebSearch(false)
                     .searchStatus(SearchStatus.NOT_REQUESTED)
+                    .agentRunId(result.getRunId())
+                    .agentStatus(result.getStatus())
                     .responseTime(System.currentTimeMillis() - startTime)
                     .build();
         } catch (Exception e) {
@@ -152,6 +162,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         try {
             bindConversationModel(request, resolved);
+            syncRequestMountedSkills(request);
             saveUserMessage(request, resolved, searchContext);
 
             List<Message> messages = buildMessages(request, searchContext);
@@ -196,6 +207,7 @@ public class AiChatServiceImpl implements AiChatService {
 
         try {
             bindConversationModel(request, resolved);
+            syncRequestMountedSkills(request);
             saveUserMessage(request, resolved, searchContext);
             sendSearchEvent(emitter, searchContext);
 
@@ -269,14 +281,19 @@ public class AiChatServiceImpl implements AiChatService {
 
         try {
             bindConversationModel(request, resolved);
+            syncRequestMountedSkills(request);
             saveUserMessage(request, resolved, disabledSearchContext());
             List<Message> historyMessages = buildAgentHistoryMessages(request.getConversationId(), request.getMessage());
+            List<AiSkill> mountedSkills = aiSkillService.getMountedEnabledSkills(request.getConversationId());
+            String mountedSkillPrompt = aiSkillService.buildMountedSkillPrompt(request.getConversationId());
 
             AiAgentService.AgentRunResult result = aiAgentService.run(
-                    toAgentModelConfig(resolved),
+                    toAgentModelConfig(resolved, request),
                     request.getConversationId(),
                     request.getMessage(),
                     historyMessages,
+                    mountedSkills,
+                    mountedSkillPrompt,
                     event -> sendAgentEvent(emitter, event)
             );
 
@@ -287,7 +304,10 @@ public class AiChatServiceImpl implements AiChatService {
             emitAssistantMessage(emitter, new AssistantMessage(answer));
             emitter.send(SseEmitter.event()
                     .name("done")
-                    .data("{\"status\":\"completed\"}"));
+                    .data(objectMapper.writeValueAsString(Map.of(
+                            "status", defaultIfBlank(result.getStatus(), "completed"),
+                            "agentRunId", defaultIfBlank(result.getRunId(), "")
+                    ))));
 
             try {
                 List<String> suggestions = generateFollowUpSuggestions(
@@ -511,6 +531,13 @@ public class AiChatServiceImpl implements AiChatService {
                 .build();
     }
 
+    private void syncRequestMountedSkills(AiChatRequest request) {
+        if (request == null || !StringUtils.hasText(request.getConversationId()) || request.getSkillIds() == null) {
+            return;
+        }
+        aiSkillService.saveConversationSkills(request.getConversationId(), request.getSkillIds());
+    }
+
     static boolean shouldEnableDeepThinking(Boolean useAgent,
                                             Boolean useDeepThinking,
                                             Boolean modelSupportsDeepThinking) {
@@ -552,18 +579,25 @@ public class AiChatServiceImpl implements AiChatService {
                     If the search context is insufficient or unrelated, say so clearly before answering cautiously.
                     """));
         }
+        String mountedSkillPrompt = aiSkillService.buildMountedSkillPrompt(request.getConversationId());
+        if (StringUtils.hasText(mountedSkillPrompt)) {
+            messages.add(new SystemMessage(mountedSkillPrompt));
+        }
         messages.add(new UserMessage(buildUserMessage(request.getMessage(), searchContext)));
         return messages;
     }
 
-    private AiAgentService.AgentModelConfig toAgentModelConfig(ResolvedChatModel resolved) {
+    private AiAgentService.AgentModelConfig toAgentModelConfig(ResolvedChatModel resolved, AiChatRequest request) {
         return new AiAgentService.AgentModelConfig(
                 resolved.provider(),
                 resolved.baseUrl(),
                 resolved.apiKey(),
                 resolved.modelName(),
                 resolved.temperature(),
-                resolved.maxTokens()
+                resolved.maxTokens(),
+                request == null ? null : request.getAgentMode(),
+                request == null ? null : request.getPermissionMode(),
+                request == null ? null : request.getResumeRunId()
         );
     }
 

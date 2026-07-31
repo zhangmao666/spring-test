@@ -108,7 +108,7 @@ logging:
 
 ai:
   openai:
-    api-key: ${OPENAI_API_KEY:sk-IAicaIKi2SE2HRlQFWQmbfSJSOJH2VimiOb0jPQ0HqJRYG2g}
+    api-key: ${OPENAI_API_KEY:sk-IAicaIKi2SE2HRlQFWQmbfSJSOJH2VimiOb0jPQ0HqJRYG2gda}
     api-url: https://yunwu.ai/v1/chat/completions
     model: deepseek-v3.2
     thinking-model: gemini-2.5-flash-all

@@ -2,6 +2,7 @@ package com.example.springboottest.modules.weather.service.impl;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.example.springboottest.modules.weather.dto.WeatherForecastResponse;
 import com.example.springboottest.modules.weather.dto.WeatherRequest;
 import com.example.springboottest.modules.weather.dto.WeatherResponse;
 import com.example.springboottest.modules.weather.service.WeatherService;
@@ -19,6 +20,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +56,22 @@ public class WeatherServiceImpl implements WeatherService {
             throw new RuntimeException("城市名称不能为空");
         }
         return fetchWeather(cityName);
+    }
+
+    @Override
+    public WeatherForecastResponse getWeatherForecast(WeatherRequest weatherRequest) {
+        if (weatherRequest == null || !StringUtils.hasText(weatherRequest.getCity())) {
+            throw new RuntimeException("城市名称不能为空");
+        }
+        return fetchForecast(weatherRequest.getCity());
+    }
+
+    @Override
+    public WeatherForecastResponse getWeatherForecast(String cityName) {
+        if (!StringUtils.hasText(cityName)) {
+            throw new RuntimeException("城市名称不能为空");
+        }
+        return fetchForecast(cityName);
     }
 
     private WeatherResponse fetchWeather(String cityName) {
@@ -122,6 +140,154 @@ public class WeatherServiceImpl implements WeatherService {
         response.setLocationMatched(isLocationMatched(requestedCity, response.getCity(), country));
         response.setQueryTime(LocalDateTime.now());
         return response;
+    }
+
+    private WeatherForecastResponse fetchForecast(String cityName) {
+        String normalizedCity = cityName.trim();
+        String queryCity = normalizeQueryCity(normalizedCity);
+        String encodedCity = UriUtils.encodePathSegment(queryCity, StandardCharsets.UTF_8);
+        String url = StringUtils.hasText(encodedCity)
+                ? WTTR_API_URL.formatted(encodedCity)
+                : WTTR_DEFAULT_API_URL;
+
+        try {
+            log.info("查询 wttr 3 天天气, requestedCity={}, queryCity={}, url={}", normalizedCity, queryCity, url);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            headers.set("User-Agent", "Mozilla/5.0 (compatible; AI-world-weather/1.0)");
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class
+            );
+
+            if (!response.getStatusCode().is2xxSuccessful() || !StringUtils.hasText(response.getBody())) {
+                throw new RuntimeException("天气服务返回异常: HTTP " + response.getStatusCode().value());
+            }
+
+            JSONObject json = JSONObject.parseObject(response.getBody());
+            return parseForecastResponse(json, normalizedCity, queryCity);
+        } catch (Exception e) {
+            log.error("获取城市 {} 3 天天气信息失败: {}", normalizedCity, e.getMessage(), e);
+            throw new RuntimeException("获取 3 天天气信息失败: " + e.getMessage(), e);
+        }
+    }
+
+    WeatherForecastResponse parseForecastResponse(JSONObject json, String requestedCity, String queryCity) {
+        if (json == null) {
+            throw new RuntimeException("天气数据为空");
+        }
+
+        JSONObject current = firstObject(json.getJSONArray("current_condition"));
+        JSONObject nearestArea = firstObject(json.getJSONArray("nearest_area"));
+        JSONArray weatherArray = json.getJSONArray("weather");
+
+        if (weatherArray == null || weatherArray.isEmpty()) {
+            throw new RuntimeException("天气数据缺少 weather 数组");
+        }
+
+        String city = readNestedValue(nearestArea, "areaName");
+        String country = readNestedValue(nearestArea, "country");
+        String region = readNestedValue(nearestArea, "region");
+        String currentDesc = readNestedValue(current, "weatherDesc");
+
+        List<WeatherForecastResponse.DailyWeather> forecast = new ArrayList<>();
+        int dayCount = Math.min(3, weatherArray.size());
+        for (int i = 0; i < dayCount; i++) {
+            forecast.add(parseDailyWeather(weatherArray.getJSONObject(i)));
+        }
+
+        return WeatherForecastResponse.builder()
+                .requestedCity(requestedCity)
+                .queryCity(queryCity)
+                .city(StringUtils.hasText(city) ? city : requestedCity)
+                .country(buildCountry(country, region))
+                .currentTemperature(parseDouble(current == null ? null : current.getString("temp_C")))
+                .currentDescription(StringUtils.hasText(currentDesc) ? currentDesc : "未知")
+                .queryTime(LocalDateTime.now().toString())
+                .forecast(forecast)
+                .build();
+    }
+
+    private WeatherForecastResponse.DailyWeather parseDailyWeather(JSONObject dailyJson) {
+        if (dailyJson == null) {
+            return null;
+        }
+
+        JSONArray hourlyArray = dailyJson.getJSONArray("hourly");
+        List<WeatherForecastResponse.HourlyWeather> hourlyList = new ArrayList<>();
+        if (hourlyArray != null) {
+            for (int i = 0; i < hourlyArray.size(); i++) {
+                hourlyList.add(parseHourlyWeather(hourlyArray.getJSONObject(i)));
+            }
+        }
+
+        // 取正午时段(1200)的天气描述作为当日总览,无则用第一个小时
+        String dayDescription = "";
+        if (hourlyArray != null && !hourlyArray.isEmpty()) {
+            JSONObject noon = findHourlyByTime(hourlyArray, "1200");
+            if (noon == null) {
+                noon = hourlyArray.getJSONObject(0);
+            }
+            dayDescription = readNestedValue(noon, "weatherDesc");
+        }
+
+        return WeatherForecastResponse.DailyWeather.builder()
+                .date(dailyJson.getString("date"))
+                .minTemperature(parseDouble(dailyJson.getString("mintempC")))
+                .maxTemperature(parseDouble(dailyJson.getString("maxtempC")))
+                .description(StringUtils.hasText(dayDescription) ? dayDescription : "未知")
+                .sunrise(extractAstronomyField(dailyJson, 0))
+                .sunset(extractAstronomyField(dailyJson, 1))
+                .uvIndex(parseDouble(dailyJson.getString("uvIndex")))
+                .hourly(hourlyList)
+                .build();
+    }
+
+    private JSONObject findHourlyByTime(JSONArray hourlyArray, String time) {
+        for (int i = 0; i < hourlyArray.size(); i++) {
+            JSONObject item = hourlyArray.getJSONObject(i);
+            if (item != null && time.equals(item.getString("time"))) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private WeatherForecastResponse.HourlyWeather parseHourlyWeather(JSONObject hourlyJson) {
+        if (hourlyJson == null) {
+            return null;
+        }
+        String desc = readNestedValue(hourlyJson, "weatherDesc");
+
+        return WeatherForecastResponse.HourlyWeather.builder()
+                .time(hourlyJson.getString("time"))
+                .temperature(parseDouble(hourlyJson.getString("tempC")))
+                .feelsLike(parseDouble(hourlyJson.getString("FeelsLikeC")))
+                .description(StringUtils.hasText(desc) ? desc : "未知")
+                .humidity(parseInteger(hourlyJson.getString("humidity")))
+                .windSpeed(parseDouble(hourlyJson.getString("windspeedKmph")))
+                .windDirection(parseWindDirection(hourlyJson.getString("winddir16Point")))
+                .precipitation(parseDouble(hourlyJson.getString("precipMM")))
+                .build();
+    }
+
+    private String extractAstronomyField(JSONObject dailyJson, int index) {
+        if (dailyJson == null) {
+            return "";
+        }
+        JSONArray astronomyArray = dailyJson.getJSONArray("astronomy");
+        if (astronomyArray == null || astronomyArray.size() <= index) {
+            return "";
+        }
+        JSONObject entry = astronomyArray.getJSONObject(index);
+        if (entry == null) {
+            return "";
+        }
+        return entry.getString("value");
     }
 
     private String normalizeQueryCity(String cityName) {

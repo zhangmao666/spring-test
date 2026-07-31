@@ -34,4 +34,12 @@ public class AiChatRequest {
     private Boolean useDeepThinking;
 
     private Boolean useAgent;
+
+    private String agentMode;
+
+    private String permissionMode;
+
+    private String resumeRunId;
+
+    private java.util.List<Long> skillIds;
 }

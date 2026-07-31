@@ -9,7 +9,7 @@
           <transition name="fade-text">
             <div v-show="!isCollapse" class="brand-copy">
               <span class="brand-title">AI-world</span>
-              <span class="brand-subtitle">把模型、内容与管理流程接到同一个工作台</span>
+<!--              <span class="brand-subtitle">把模型、内容与管理流程接到同一个工作台</span>-->
             </div>
           </transition>
         </div>
@@ -99,6 +99,7 @@
                 </template>
                 <el-menu-item index="/tools/password">密码生成器</el-menu-item>
                 <el-menu-item index="/tools/word-counter">字数统计器</el-menu-item>
+                <el-menu-item index="/tools/pomodoro">番茄钟</el-menu-item>
               </el-sub-menu>
             </el-menu>
           </div>
@@ -116,10 +117,13 @@
       </div>
     </el-aside>
 
-    <el-container :class="['workspace-shell', { 'workspace-shell--chat': isAiChatRoute }]">
+    <el-container :class="['workspace-shell', { 'workspace-shell--chat': isAiChatRoute }]" :data-tone="currentTone">
       <el-header v-if="!isAiChatRoute" class="workspace-header">
         <div class="workspace-header__left">
-          <span class="page-kicker">Workspace Atlas</span>
+          <div class="page-badge">
+            <span class="page-badge__dot"></span>
+            <span>{{ toneLabel }}</span>
+          </div>
           <h1 class="page-title">{{ pageTitle }}</h1>
           <p class="page-description">{{ pageDescription }}</p>
 
@@ -161,10 +165,14 @@
       </el-header>
 
       <el-main :class="['workspace-main', { 'workspace-main--chat': isAiChatRoute }]">
-        <router-view v-slot="{ Component }">
-          <transition name="page-fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
+        <router-view v-slot="{ Component, route: r }">
+          <component
+            :is="Component"
+            :key="r.path"
+            v-motion
+            :initial="{ opacity: 0, y: 12 }"
+            :enter="{ opacity: 1, y: 0, transition: { duration: 260, ease: [0.19, 1, 0.22, 1] } }"
+          />
         </router-view>
       </el-main>
     </el-container>
@@ -201,6 +209,20 @@ const pageTitle = computed(() => route.meta.title || '工作台')
 const pageDescription = computed(() => route.meta.description || '')
 const defaultOpeneds = ['content-ai', 'toolbox', 'system-log']
 const isAiChatRoute = computed(() => route.name === 'AiChat')
+
+const currentTone = computed(() => {
+  const p = route.path
+  if (p.startsWith('/ai')) return 'ai'
+  if (p.startsWith('/news')) return 'news'
+  if (p.startsWith('/tools')) return 'tools'
+  if (p.startsWith('/user') || p.startsWith('/dict') || p.startsWith('/log')) return 'system'
+  return 'primary'
+})
+
+const toneLabel = computed(() => {
+  const map = { ai: 'AI 工作区', news: '内容情报', tools: '工具中心', system: '系统管理', primary: '工作台' }
+  return map[currentTone.value] || '工作台'
+})
 
 const toggleCollapse = () => {
   isCollapse.value = !isCollapse.value
@@ -508,7 +530,7 @@ const handleCommand = async (command) => {
   position: absolute;
   inset: auto 24px 0 24px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(47, 91, 234, 0.18), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
   pointer-events: none;
 }
 
@@ -516,6 +538,33 @@ const handleCommand = async (command) => {
   position: relative;
   z-index: 1;
   min-width: 0;
+}
+
+.page-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.page-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  animation: badgePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
 }
 
 .page-kicker {
@@ -527,11 +576,15 @@ const handleCommand = async (command) => {
 }
 
 .page-title {
-  margin: 6px 0 0;
+  margin: 10px 0 0;
   color: var(--text-primary);
   font-size: 1.85rem;
   font-weight: 800;
   line-height: 1.12;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .page-description {

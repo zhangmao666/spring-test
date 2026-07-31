@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springboottest.modules.ai.agent.mapper.AgentSubagentMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.springboottest.modules.ai.agent.entity.AgentSubagent">
+        <id column="id" property="id"/>
+        <result column="parent_run_id" property="parentRunId"/>
+        <result column="child_run_id" property="childRunId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="agent_type" property="agentType"/>
+        <result column="task" property="task"/>
+        <result column="status" property="status"/>
+        <result column="result_summary" property="resultSummary"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_agent_subagent (
+            parent_run_id, child_run_id, conversation_id, agent_type, task, status, result_summary
+        ) VALUES (
+            #{parentRunId}, #{childRunId}, #{conversationId}, #{agentType}, #{task}, #{status}, #{resultSummary}
+        )
+    </insert>
+
+    <select id="findByParentRunId" resultMap="BaseResultMap">
+        SELECT * FROM ai_agent_subagent WHERE parent_run_id = #{parentRunId} ORDER BY id ASC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE ai_agent_subagent
+        SET status = #{status}, result_summary = #{resultSummary}, updated_at = NOW()
+        WHERE child_run_id = #{childRunId}
+    </update>
+</mapper>

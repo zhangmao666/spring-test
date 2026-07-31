@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springboottest.modules.ai.agent.mapper.AgentPermissionRequestMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.springboottest.modules.ai.agent.entity.AgentPermissionRequest">
+        <id column="id" property="id"/>
+        <result column="request_id" property="requestId"/>
+        <result column="run_id" property="runId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="tool_name" property="toolName"/>
+        <result column="arguments_payload" property="argumentsPayload"/>
+        <result column="reason" property="reason"/>
+        <result column="status" property="status"/>
+        <result column="decision" property="decision"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="decided_at" property="decidedAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_agent_permission_request (
+            request_id, run_id, conversation_id, tool_name, arguments_payload, reason, status, decision
+        ) VALUES (
+            #{requestId}, #{runId}, #{conversationId}, #{toolName}, #{argumentsPayload}, #{reason}, #{status}, #{decision}
+        )
+    </insert>
+
+    <select id="findByRequestId" resultMap="BaseResultMap">
+        SELECT * FROM ai_agent_permission_request WHERE request_id = #{requestId} LIMIT 1
+    </select>
+
+    <update id="decide">
+        UPDATE ai_agent_permission_request
+        SET status = #{status}, decision = #{decision}, decided_at = NOW()
+        WHERE request_id = #{requestId}
+    </update>
+</mapper>

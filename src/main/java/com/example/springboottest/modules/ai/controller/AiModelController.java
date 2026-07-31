@@ -36,6 +36,12 @@ public class AiModelController {
         return ApiResponse.success(enabledOnly ? aiModelService.listEnabledModels() : aiModelService.listModels());
     }
 
+    @GetMapping("/registry")
+    @Operation(summary = "获取智能体模型注册表")
+    public ApiResponse<List<AiModelResponse>> listAgentModelRegistry() {
+        return ApiResponse.success(aiModelService.listEnabledModels());
+    }
+
     @PostMapping("/test")
     @Operation(summary = "测试模型连接")
     public ApiResponse<AiModelTestResponse> testConnection(@Valid @RequestBody AiModelTestRequest request) {

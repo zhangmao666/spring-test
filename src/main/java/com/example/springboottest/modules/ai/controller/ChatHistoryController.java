@@ -4,6 +4,9 @@ import com.example.springboottest.common.dto.ApiResponse;
 import com.example.springboottest.modules.ai.dto.ConversationVO;
 import com.example.springboottest.modules.ai.dto.MessageVO;
 import com.example.springboottest.modules.ai.service.ChatHistoryService;
+import com.example.springboottest.modules.ai.skill.dto.AiSkillResponse;
+import com.example.springboottest.modules.ai.skill.dto.ConversationSkillUpdateRequest;
+import com.example.springboottest.modules.ai.skill.service.AiSkillService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +25,7 @@ import java.util.Map;
 public class ChatHistoryController {
 
     private final ChatHistoryService chatHistoryService;
+    private final AiSkillService aiSkillService;
 
     @Operation(summary = "获取所有会话列表", description = "获取所有未删除的会话，按最后消息时间倒序")
     @GetMapping("/conversations")
@@ -71,5 +75,19 @@ public class ChatHistoryController {
             @PathVariable String conversationId) {
         chatHistoryService.deleteConversation(conversationId);
         return ApiResponse.success(null);
+    }
+
+    @Operation(summary = "获取会话挂载技能", description = "获取当前会话已挂载的技能列表")
+    @GetMapping("/conversations/{conversationId}/skills")
+    public ApiResponse<List<AiSkillResponse>> getConversationSkills(@PathVariable String conversationId) {
+        return ApiResponse.success(aiSkillService.getConversationSkills(conversationId));
+    }
+
+    @Operation(summary = "保存会话挂载技能", description = "保存当前会话已挂载的技能列表，最多50个")
+    @PutMapping("/conversations/{conversationId}/skills")
+    public ApiResponse<Void> saveConversationSkills(@PathVariable String conversationId,
+                                                    @RequestBody ConversationSkillUpdateRequest request) {
+        aiSkillService.saveConversationSkills(conversationId, request == null ? List.of() : request.getSkillIds());
+        return ApiResponse.success();
     }
 }

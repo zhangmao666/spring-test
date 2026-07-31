@@ -1,34 +1,29 @@
 <template>
-  <div class="user-page">
-    <section class="page-hero">
-      <div class="page-hero__copy">
-        <span class="page-hero__eyebrow">USER OPERATIONS</span>
-        <h2 class="page-hero__title">用户管理</h2>
-        <p class="page-hero__desc">统一查看账号状态、角色分布和安全操作，避免误改用户权限。</p>
-      </div>
-      <el-button type="primary" @click="handleAdd">
-        <el-icon><Plus /></el-icon>
-        新增用户
-      </el-button>
-    </section>
+  <div class="user-page tone-system">
+    <PageHero
+      title="用户管理"
+      subtitle="统一查看账号状态、角色分布和安全操作，避免误改用户权限。"
+      eyebrow="USER OPERATIONS"
+      tone="system"
+      :icon="UserFilled"
+    >
+      <template #actions>
+        <el-button type="primary" @click="handleAdd">
+          <el-icon><Plus /></el-icon>
+          新增用户
+        </el-button>
+      </template>
+    </PageHero>
 
-    <section class="metric-strip">
-      <article class="metric-chip">
-        <span class="metric-chip__label">用户总数</span>
-        <strong class="metric-chip__value">{{ summary.total }}</strong>
-      </article>
-      <article class="metric-chip">
-        <span class="metric-chip__label">启用中</span>
-        <strong class="metric-chip__value">{{ summary.active }}</strong>
-      </article>
-      <article class="metric-chip">
-        <span class="metric-chip__label">禁用中</span>
-        <strong class="metric-chip__value">{{ summary.disabled }}</strong>
-      </article>
-      <article class="metric-chip">
-        <span class="metric-chip__label">管理员</span>
-        <strong class="metric-chip__value">{{ summary.admin }}</strong>
-      </article>
+    <section class="stat-strip">
+      <StatCard label="用户总数" :value="summary.total" :icon="UserFilled" tone="system" hint="平台注册账号" :delay="0">
+        <template #chart><Sparkline :data="trend.total" color="var(--accent-system)" /></template>
+      </StatCard>
+      <StatCard label="启用中" :value="summary.active" :icon="CircleCheckFilled" tone="tools" hint="当前活跃账号" :delay="80">
+        <template #chart><Sparkline :data="trend.active" color="var(--accent-tools)" /></template>
+      </StatCard>
+      <StatCard label="禁用中" :value="summary.disabled" :icon="CircleClose" tone="news" hint="已停用账号" :delay="160" />
+      <StatCard label="管理员" :value="summary.admin" :icon="Star" tone="ai" hint="拥有最高权限" :delay="240" />
     </section>
 
     <el-card class="filter-card" shadow="never">
@@ -196,7 +191,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Clock, Plus, Search, UserFilled } from '@element-plus/icons-vue'
+import { CircleCheckFilled, CircleClose, Clock, Plus, Search, Star, UserFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   createUser,
@@ -206,6 +201,14 @@ import {
   updateUser,
   updateUserStatus
 } from '@/api/user'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+
+const trend = {
+  total: [12, 15, 14, 18, 22, 24, 28],
+  active: [10, 12, 13, 16, 20, 22, 26]
+}
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -407,58 +410,24 @@ onMounted(() => {
 }
 
 .page-hero {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
+  display: none;
 }
 
-.page-hero__eyebrow {
-  display: inline-block;
-  color: #94a3b8;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
+.page-hero__eyebrow,
+.page-hero__title,
+.page-hero__desc,
+.metric-chip,
+.metric-chip__label,
+.metric-chip__value { display: none; }
 
-.page-hero__title {
-  margin: 8px 0 0;
-  color: #0f172a;
-  font-size: 2rem;
-  font-weight: 800;
-}
-
-.page-hero__desc {
-  margin: 10px 0 0;
-  color: #64748b;
-  font-size: 0.95rem;
-  line-height: 1.7;
-}
-
-.metric-strip {
+.stat-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
-.metric-chip {
-  padding: 16px 18px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 18px;
-  background: #f8fafc;
-}
-
-.metric-chip__label {
-  color: #64748b;
-  font-size: 0.84rem;
-}
-
-.metric-chip__value {
-  display: block;
-  margin-top: 10px;
-  color: #0f172a;
-  font-size: 1.5rem;
-  line-height: 1;
+.metric-strip {
+  display: none;
 }
 
 .filter-card :deep(.el-card__body) {
@@ -614,9 +583,8 @@ onMounted(() => {
 }
 
 @media (max-width: 1100px) {
-  .metric-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+@media (max-width: 1200px) {
+  .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .filter-toolbar,
   .filter-result,
@@ -627,13 +595,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .page-hero {
-    flex-direction: column;
-  }
-
-  .metric-strip {
-    grid-template-columns: 1fr;
-  }
+  .stat-strip { grid-template-columns: 1fr; }
 
   .filter-input,
   .filter-input--wide,

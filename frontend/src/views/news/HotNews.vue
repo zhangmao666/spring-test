@@ -1,344 +1,335 @@
 <template>
-  <div class="hot-news-page">
-    <section class="hero-panel">
-      <div class="hero-copy">
-        <p class="eyebrow">Realtime Hotboard</p>
-        <h2 class="page-title">{{ copy.title }}</h2>
-        <p class="page-subtitle">{{ copy.subtitle }}</p>
-      </div>
-      <div class="hero-actions">
-        <div class="platform-meta">
-          <span class="meta-label">{{ copy.currentPlatform }}</span>
-          <span class="meta-value">{{ currentPlatformMeta.label }}</span>
-        </div>
-        <div class="platform-meta">
-          <span class="meta-label">{{ copy.lastUpdated }}</span>
-          <span class="meta-value">{{ formattedUpdateTime }}</span>
-        </div>
+  <div class="hot-news-page tone-news">
+    <PageHero
+      title="热点新闻"
+      subtitle="聚合 5 大主流平台热榜，实时抓取全网风向。切换平台即刻查看不同来源的热点排行。"
+      eyebrow="REALTIME HOTBOARD"
+      tone="news"
+      :icon="Bell"
+    >
+      <template #actions>
         <el-button
           type="primary"
-          :icon="Refresh"
-          :loading="loading"
           class="refresh-button"
-          @click="loadNews"
+          :loading="loading"
+          :icon="Refresh"
+          @click="fetchNews"
         >
-          {{ copy.refresh }}
+          刷新热榜
         </el-button>
-      </div>
+      </template>
+    </PageHero>
+
+    <section class="stat-strip">
+      <StatCard
+        label="覆盖平台"
+        :value="platforms.length"
+        :icon="Connection"
+        tone="news"
+        hint="澎湃 · 头条 · 腾讯 · 新浪 · 网易"
+        :delay="0"
+      />
+      <StatCard
+        label="当前热点"
+        :value="newsList.length"
+        :icon="TrendCharts"
+        tone="news"
+        :hint="`来自 ${currentPlatformName}`"
+        :delay="80"
+      >
+        <template #chart>
+          <Sparkline :data="fakeTrend" color="var(--accent-news)" />
+        </template>
+      </StatCard>
+      <StatCard
+        label="上次更新"
+        :value="formattedUpdateTime === '--' ? 0 : refreshCount"
+        :animate="false"
+        :icon="Refresh"
+        tone="news"
+        :hint="formattedUpdateTime"
+        :delay="160"
+      />
     </section>
 
     <section class="platform-switcher">
       <button
-        v-for="platform in platforms"
-        :key="platform.value"
-        class="platform-chip"
-        :class="{ active: currentPlatform === platform.value }"
-        @click="switchPlatform(platform.value)"
+        v-for="(p, i) in platforms"
+        :key="p.id"
+        :class="['platform-chip', { active: currentPlatform === p.id }]"
+        type="button"
+        v-motion
+        :initial="{ opacity: 0, y: 10 }"
+        :visibleOnce="{ opacity: 1, y: 0, transition: { delay: i * 60, duration: 260 } }"
+        @click="handlePlatformChange(p.id)"
       >
-        <span class="chip-name">{{ platform.label }}</span>
-        <span class="chip-code">{{ platform.value }}</span>
+        <span class="chip-badge">{{ p.short }}</span>
+        <div class="chip-copy">
+          <span class="chip-name">{{ p.name }}</span>
+          <span class="chip-code">{{ p.id }}</span>
+        </div>
       </button>
     </section>
 
     <section class="board-panel">
       <div class="board-header">
         <div>
-          <p class="board-title">{{ `${currentPlatformMeta.label}${copy.boardSuffix}` }}</p>
-          <p class="board-desc">{{ copy.boardDesc }}</p>
+          <h2 class="board-title">{{ currentPlatformName }}热榜</h2>
+          <p class="board-desc">点击榜单标题可直达原始新闻页面</p>
         </div>
-        <div class="board-count">{{ `${newsItems.length} ${copy.boardCount}` }}</div>
+        <span v-if="newsList.length" class="board-count">共 {{ newsList.length }} 条热点</span>
       </div>
 
       <div v-if="loading" class="loading-state">
-        <el-skeleton v-for="index in 8" :key="index" animated>
-          <template #template>
-            <div class="skeleton-row">
-              <div class="skeleton-rank" />
-              <div class="skeleton-main">
-                <el-skeleton-item variant="text" style="width: 72%" />
-                <el-skeleton-item variant="text" style="width: 38%" />
-              </div>
-              <div class="skeleton-hot" />
-            </div>
-          </template>
-        </el-skeleton>
+        <div v-for="i in 6" :key="i" class="skeleton-row">
+          <div class="skeleton-rank" />
+          <div class="skeleton-main">
+            <el-skeleton-item variant="text" style="width: 72%" />
+            <el-skeleton-item variant="text" style="width: 36%; height: 12px" />
+          </div>
+          <div class="skeleton-hot" />
+        </div>
       </div>
 
-      <div v-else-if="newsItems.length === 0" class="empty-state">
-        <el-empty :description="copy.empty" />
+      <div v-else-if="newsList.length === 0" class="empty-state">
+        <EmptyIllustration
+          variant="news"
+          title="暂无热点数据"
+          description="换个平台试试，或稍后再来刷新"
+        />
       </div>
 
-      <ol v-else class="news-list">
-        <li v-for="item in newsItems" :key="`${currentPlatform}-${item.rank}-${item.title}`" class="news-row">
+      <ul v-else class="news-list">
+        <li
+          v-for="(item, i) in newsList"
+          :key="item.rank"
+          class="news-row"
+          v-motion
+          :initial="{ opacity: 0, x: -8 }"
+          :visibleOnce="{ opacity: 1, x: 0, transition: { delay: Math.min(i * 30, 600), duration: 220 } }"
+        >
           <a
             :href="item.url"
             target="_blank"
             rel="noopener noreferrer"
-            class="news-link"
-            :class="{ 'without-heat': !item.hotValue }"
+            :class="['news-link', { 'without-heat': !item.hotValue }]"
           >
-            <div class="rank-badge" :class="getRankClass(item.rank)">
-              {{ item.rank || '--' }}
+            <div :class="['rank-badge', rankClass(item.rank)]">
+              {{ item.rank }}
             </div>
+
             <div class="news-main">
-              <h3 class="news-title">{{ item.title }}</h3>
+              <p class="news-title">{{ item.title }}</p>
               <div class="news-meta">
-                <span class="meta-source">{{ item.source || currentPlatformMeta.label }}</span>
-                <span class="meta-divider">/</span>
-                <span class="meta-platform">{{ currentPlatformMeta.label }}</span>
+                <span>{{ item.source || currentPlatformName }}</span>
               </div>
             </div>
+
             <div v-if="item.hotValue" class="news-heat">
-              <span class="heat-label">{{ copy.hotValue }}</span>
-              <span class="heat-value">{{ item.hotValue }}</span>
+              <span class="heat-value">🔥 {{ formatHot(item.hotValue) }}</span>
             </div>
+
+            <el-icon class="news-arrow"><ArrowRight /></el-icon>
           </a>
         </li>
-      </ol>
+      </ul>
+
+      <div v-if="newsList.length" class="board-footer">
+        <el-icon><Location /></el-icon>
+        <span>点击榜单标题可直接跳转到原文页面，查看更多详细内容</span>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+import {
+  ArrowRight,
+  Bell,
+  Connection,
+  Location,
+  Refresh,
+  TrendCharts
+} from '@element-plus/icons-vue'
 import { getHotNews } from '@/api/news'
-
-const copy = {
-  title: '\u70ed\u70b9\u65b0\u95fb',
-  subtitle: '\u805a\u5408 5 \u4e2a\u4e3b\u6d41\u8d44\u8baf\u5e73\u53f0\u70ed\u699c\uff0c\u6309\u5e73\u53f0\u5feb\u901f\u5207\u6362\u67e5\u770b\u6700\u65b0\u70ed\u70b9\u3002',
-  currentPlatform: '\u5f53\u524d\u5e73\u53f0',
-  lastUpdated: '\u6700\u540e\u66f4\u65b0',
-  refresh: '\u5237\u65b0\u70ed\u699c',
-  boardSuffix: '\u70ed\u699c',
-  boardDesc: '\u70b9\u51fb\u699c\u5355\u6807\u9898\u53ef\u76f4\u8fbe\u539f\u59cb\u65b0\u95fb\u9875\u9762',
-  boardCount: '\u6761\u70ed\u70b9',
-  empty: '\u5f53\u524d\u5e73\u53f0\u6682\u65e0\u70ed\u70b9\u6570\u636e',
-  hotValue: '\u70ed\u5ea6',
-  notUpdated: '\u6682\u672a\u66f4\u65b0',
-  loadFailed: '\u83b7\u53d6\u70ed\u70b9\u65b0\u95fb\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5'
-}
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+import EmptyIllustration from '@/components/EmptyIllustration.vue'
 
 const platforms = [
-  { label: '\u6f8e\u6e43\u65b0\u95fb', value: 'thepaper' },
-  { label: '\u4eca\u65e5\u5934\u6761', value: 'toutiao' },
-  { label: '\u817e\u8baf\u65b0\u95fb', value: 'tencent-news' },
-  { label: '\u65b0\u6d6a\u65b0\u95fb', value: 'sina-news' },
-  { label: '\u7f51\u6613\u65b0\u95fb', value: 'netease-news' }
+  { id: 'thepaper', name: '澎湃新闻', short: '澎湃' },
+  { id: 'toutiao', name: '今日头条', short: '头条' },
+  { id: 'tencent-news', name: '腾讯新闻', short: '腾讯' },
+  { id: 'sina-news', name: '新浪新闻', short: '新浪' },
+  { id: 'netease-news', name: '网易新闻', short: '网易' }
 ]
 
-const loading = ref(false)
 const currentPlatform = ref('thepaper')
-const newsItems = ref([])
+const loading = ref(false)
+const newsList = ref([])
 const updateTime = ref('')
+const refreshCount = ref(0)
+const fakeTrend = ref([12, 18, 15, 22, 26, 24, 30])
 
-const currentPlatformMeta = computed(() => {
-  return platforms.find(platform => platform.value === currentPlatform.value) || platforms[0]
+const currentPlatformName = computed(() => {
+  const p = platforms.find(item => item.id === currentPlatform.value)
+  return p ? p.name : ''
 })
 
 const formattedUpdateTime = computed(() => {
-  if (!updateTime.value) {
-    return copy.notUpdated
-  }
-
-  const parsedDate = parseUpdateTime(updateTime.value)
-  if (!parsedDate) {
+  if (!updateTime.value) return '--'
+  try {
+    const d = new Date(updateTime.value)
+    if (isNaN(d.getTime())) return updateTime.value
+    const pad = n => String(n).padStart(2, '0')
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  } catch {
     return updateTime.value
   }
-
-  const year = parsedDate.getFullYear()
-  const month = `${parsedDate.getMonth() + 1}`.padStart(2, '0')
-  const day = `${parsedDate.getDate()}`.padStart(2, '0')
-  const hour = `${parsedDate.getHours()}`.padStart(2, '0')
-  const minute = `${parsedDate.getMinutes()}`.padStart(2, '0')
-
-  return `${year}-${month}-${day} ${hour}:${minute}`
 })
 
-const parseUpdateTime = (value) => {
-  if (!value) {
-    return null
-  }
-
-  if (value.includes('T')) {
-    const isoDate = new Date(value)
-    return Number.isNaN(isoDate.getTime()) ? null : isoDate
-  }
-
-  const localDate = new Date(value.replace(' ', 'T'))
-  return Number.isNaN(localDate.getTime()) ? null : localDate
-}
-
-const loadNews = async () => {
-  loading.value = true
-  try {
-    const res = await getHotNews({
-      platform: currentPlatform.value
-    })
-    const data = res.data || {}
-    newsItems.value = data.items || []
-    updateTime.value = data.updateTime || ''
-  } catch (error) {
-    newsItems.value = []
-    updateTime.value = ''
-    ElMessage.error(copy.loadFailed)
-  } finally {
-    loading.value = false
-  }
-}
-
-const switchPlatform = (platform) => {
-  if (platform === currentPlatform.value) {
-    return
-  }
-  currentPlatform.value = platform
-  loadNews()
-}
-
-const getRankClass = (rank) => {
+const rankClass = (rank) => {
   if (rank === 1) return 'top-one'
   if (rank === 2) return 'top-two'
   if (rank === 3) return 'top-three'
   return 'top-normal'
 }
 
-onMounted(loadNews)
+const formatHot = (val) => {
+  if (!val) return ''
+  const num = parseFloat(String(val).replace(/[^\d.]/g, ''))
+  if (isNaN(num)) return val
+  if (num >= 10000) return `${(num / 10000).toFixed(1)}w`
+  return val
+}
+
+const fetchNews = async () => {
+  loading.value = true
+  try {
+    const res = await getHotNews({ platform: currentPlatform.value })
+    const data = res.data || res
+    newsList.value = data.items || []
+    updateTime.value = data.updateTime || ''
+    refreshCount.value += 1
+  } catch (e) {
+    console.error('加载热点新闻失败', e)
+    newsList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePlatformChange = (id) => {
+  currentPlatform.value = id
+  fetchNews()
+}
+
+onMounted(() => {
+  fetchNews()
+})
 </script>
 
 <style lang="scss" scoped>
 .hot-news-page {
-  min-height: 100%;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top right, rgba(255, 140, 66, 0.16), transparent 24%),
-    radial-gradient(circle at left center, rgba(28, 126, 214, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.92));
-}
-
-.hero-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
-  gap: 20px;
-  padding: 28px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(247, 250, 252, 0.92)),
-    linear-gradient(120deg, rgba(255, 132, 0, 0.08), rgba(0, 122, 204, 0.08));
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
-}
-
-.eyebrow {
-  margin: 0 0 10px;
-  color: #d35400;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.page-title {
-  margin: 0;
-  font-size: clamp(1.9rem, 3vw, 2.8rem);
-  line-height: 1.1;
-  color: #18212f;
-}
-
-.page-subtitle {
-  margin: 12px 0 0;
-  max-width: 640px;
-  color: #516074;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.hero-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  justify-content: center;
-  align-items: stretch;
-}
-
-.platform-meta {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.05);
-}
-
-.meta-label {
-  display: block;
-  margin-bottom: 4px;
-  color: #7a8798;
-  font-size: 0.78rem;
-}
-
-.meta-value {
-  color: #1b2636;
-  font-size: 1rem;
-  font-weight: 700;
+  gap: 20px;
 }
 
 .refresh-button {
-  margin-top: 4px;
-  height: 46px;
-  border-radius: 16px;
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 700;
+  background: var(--accent-gradient) !important;
+  border: none !important;
+  box-shadow: 0 12px 24px var(--accent-soft) !important;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .platform-switcher {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 22px 0;
 }
 
 .platform-chip {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  min-width: 140px;
+  align-items: center;
+  gap: 12px;
+  min-width: 150px;
+  flex: 1;
   padding: 14px 16px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 2px solid var(--border-subtle);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  color: #4c5a6b;
+  background: var(--surface-base);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
 .platform-chip:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
-  border-color: rgba(211, 84, 0, 0.28);
+  border-color: var(--accent-border);
+  box-shadow: 0 8px 24px var(--accent-soft);
+  transform: translateY(-3px);
 }
 
 .platform-chip.active {
-  border-color: transparent;
-  background: linear-gradient(135deg, #18212f, #d35400);
+  border-color: var(--accent);
+  background: linear-gradient(135deg, var(--accent-soft), transparent 60%), var(--surface-base);
+  box-shadow: 0 12px 28px var(--accent-soft);
+}
+
+.chip-badge {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  transition: all 220ms ease;
+}
+
+.platform-chip.active .chip-badge {
+  background: var(--accent-gradient);
   color: #fff;
-  box-shadow: 0 16px 32px rgba(211, 84, 0, 0.22);
+  box-shadow: 0 8px 16px var(--accent-soft);
+}
+
+.chip-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .chip-name {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
+  color: var(--text-primary);
 }
 
 .chip-code {
   font-size: 0.72rem;
-  opacity: 0.72;
-  letter-spacing: 0.06em;
+  color: var(--text-disabled);
+  letter-spacing: 0.04em;
 }
 
 .board-panel {
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
+  background: var(--surface-base);
+  box-shadow: var(--shadow-sm);
 }
 
 .board-header {
@@ -346,38 +337,42 @@ onMounted(loadNews)
   justify-content: space-between;
   align-items: flex-end;
   gap: 12px;
-  padding: 22px 24px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.02), rgba(255, 255, 255, 0.3));
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .board-title {
   margin: 0;
-  color: #18212f;
-  font-size: 1.15rem;
+  color: var(--text-primary);
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
 .board-desc {
-  margin: 6px 0 0;
-  color: #6b7787;
-  font-size: 0.86rem;
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
 }
 
 .board-count {
-  color: #d35400;
-  font-size: 0.9rem;
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.8rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .loading-state,
 .empty-state {
-  padding: 22px 24px 30px;
+  padding: 20px 24px 28px;
 }
 
 .skeleton-row {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 92px;
+  grid-template-columns: 50px minmax(0, 1fr) 80px;
   gap: 16px;
   align-items: center;
   padding: 14px 0;
@@ -387,170 +382,136 @@ onMounted(loadNews)
 .skeleton-hot {
   height: 42px;
   border-radius: 14px;
-  background: rgba(15, 23, 42, 0.08);
+  background: var(--surface-muted);
 }
 
 .skeleton-main {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .news-list {
   margin: 0;
-  padding: 8px 0 16px;
+  padding: 8px 12px 16px;
   list-style: none;
-}
-
-.news-row {
-  padding: 0 16px;
 }
 
 .news-link {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 96px;
-  gap: 16px;
+  grid-template-columns: 50px minmax(0, 1fr) auto 24px;
+  gap: 14px;
   align-items: center;
-  padding: 16px 8px;
-  border-radius: 20px;
+  padding: 14px 12px;
+  border-radius: 16px;
   color: inherit;
   text-decoration: none;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition: background-color 220ms ease, transform 220ms ease;
 }
 
 .news-link.without-heat {
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 50px minmax(0, 1fr) 24px;
 }
 
 .news-link:hover {
-  background: rgba(15, 23, 42, 0.035);
+  background: var(--accent-soft);
   transform: translateX(4px);
 }
 
 .rank-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  font-size: 0.95rem;
   font-weight: 800;
 }
 
 .top-one {
-  background: linear-gradient(135deg, #ff7a18, #ffb347);
+  background: linear-gradient(135deg, #f97316, #fb923c);
   color: #fff;
+  box-shadow: 0 8px 16px rgba(249, 115, 22, 0.32);
 }
 
 .top-two {
-  background: linear-gradient(135deg, #748cab, #a7b7c9);
+  background: linear-gradient(135deg, #64748b, #94a3b8);
   color: #fff;
 }
 
 .top-three {
-  background: linear-gradient(135deg, #b5651d, #d4a373);
+  background: linear-gradient(135deg, #d97706, #fbbf24);
   color: #fff;
+  box-shadow: 0 8px 16px rgba(245, 158, 11, 0.28);
 }
 
 .top-normal {
-  background: rgba(15, 23, 42, 0.06);
-  color: #415064;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 
-.news-main {
-  min-width: 0;
-}
+.news-main { min-width: 0; }
 
 .news-title {
   margin: 0;
-  color: #17202d;
-  font-size: 1rem;
+  color: var(--text-primary);
+  font-size: 0.98rem;
+  font-weight: 600;
   line-height: 1.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.news-link:hover .news-title {
+  color: var(--accent-strong);
 }
 
 .news-meta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
-  color: #758293;
-  font-size: 0.8rem;
-}
-
-.meta-divider {
-  opacity: 0.45;
-}
-
-.news-heat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.heat-label {
-  color: #8995a4;
-  font-size: 0.72rem;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
 }
 
 .heat-value {
-  color: #d35400;
-  font-size: 0.95rem;
-  font-weight: 800;
+  color: #f97316;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-@media (max-width: 960px) {
-  .hero-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-actions {
-    align-items: stretch;
-  }
+.news-arrow {
+  color: var(--text-disabled);
+  font-size: 14px;
 }
 
-@media (max-width: 640px) {
-  .hot-news-page {
-    padding: 16px;
-  }
+.news-link:hover .news-arrow {
+  color: var(--accent);
+}
 
-  .hero-panel,
-  .board-header,
-  .loading-state,
-  .empty-state {
-    padding-left: 18px;
-    padding-right: 18px;
-  }
+.board-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
 
-  .platform-chip {
-    min-width: calc(50% - 6px);
-  }
+@media (max-width: 1100px) {
+  .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
-  .news-row {
-    padding: 0 10px;
-  }
-
-  .news-link {
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 12px;
-  }
-
-  .news-heat {
-    grid-column: 2;
-    align-items: flex-start;
-    margin-top: -2px;
-  }
-
-  .rank-badge {
-    width: 40px;
-    height: 40px;
-    border-radius: 14px;
-    font-size: 0.92rem;
-  }
-
-  .news-title {
-    font-size: 0.95rem;
-  }
+@media (max-width: 768px) {
+  .stat-strip { grid-template-columns: 1fr; }
+  .platform-chip { min-width: calc(50% - 6px); flex: unset; }
+  .news-link { grid-template-columns: 40px minmax(0, 1fr) 24px; gap: 12px; }
+  .news-heat { grid-column: 2; margin-top: -2px; }
+  .rank-badge { width: 36px; height: 36px; border-radius: 12px; font-size: 0.88rem; }
 }
 </style>

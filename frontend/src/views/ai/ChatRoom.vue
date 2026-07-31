@@ -1,19 +1,21 @@
 <template>
-  <div class="chat-room">
+  <div class="chat-room tone-ai">
     <aside :class="['conversation-sidebar', { collapsed: sidebarCollapsed }]">
       <div class="sidebar-header">
         <div v-if="!sidebarCollapsed" class="sidebar-header__title">
-          <h3>对话历史</h3>
+          <h3>你的对话</h3>
         </div>
         <div class="sidebar-header__actions">
-          <el-button v-if="!sidebarCollapsed" type="primary" @click="createNewConversation">
-            <el-icon><Plus /></el-icon>
-            新对话
-          </el-button>
           <button class="icon-btn sidebar-toggle" type="button" aria-label="切换会话侧栏" @click="sidebarCollapsed = !sidebarCollapsed">
             <el-icon><ArrowLeft v-if="!sidebarCollapsed" /><ArrowRight v-else /></el-icon>
           </button>
         </div>
+      </div>
+      <div v-if="!sidebarCollapsed" class="sidebar-new-chat">
+        <el-button type="primary" class="new-chat-btn" @click="createNewConversation">
+          <el-icon><Plus /></el-icon>
+          新对话
+        </el-button>
       </div>
 
       <div v-if="!sidebarCollapsed" class="conversation-list">
@@ -83,54 +85,22 @@
       </header>
 
       <div class="messages-shell">
-      <div
-        v-if="useAgent || agentTimeline.length"
-        :class="['agent-workbench', { 'agent-workbench--collapsed': agentWorkbenchCollapsed }]"
-      >
-        <div class="agent-workbench__header">
-          <div class="agent-workbench__header-copy">
-            <h3>AgentScope 执行轨迹</h3>
-            <p>{{ agentStatusText }}</p>
-          </div>
-          <div class="agent-workbench__header-actions">
-            <el-tag size="small" :type="agentStatusTagType" effect="plain">
-              {{ agentStatusLabel }}
-            </el-tag>
-            <button
-              class="icon-btn agent-workbench__toggle"
-              type="button"
-              :aria-label="agentWorkbenchCollapsed ? '展开 AgentScope 执行轨迹' : '收起 AgentScope 执行轨迹'"
-              @click="agentWorkbenchCollapsed = !agentWorkbenchCollapsed"
-            >
-              <el-icon :class="{ rotated: !agentWorkbenchCollapsed }"><ArrowDown /></el-icon>
-            </button>
-          </div>
-        </div>
-        <div v-if="!agentWorkbenchCollapsed && agentTimeline.length" class="agent-timeline">
-          <div
-            v-for="(item, index) in agentTimeline"
-            :key="`${item.timestamp}-${index}`"
-            class="agent-timeline__item"
-          >
-            <span class="agent-timeline__type">{{ item.typeLabel }}</span>
-            <p class="agent-timeline__text">{{ item.text }}</p>
-          </div>
-        </div>
-        <div v-else-if="!agentWorkbenchCollapsed" class="agent-workbench__empty">
-          打开 AgentScope 模式后，系统会在这里显示规划、工具调用和结果摘要。
-        </div>
-      </div>
 
       <main ref="messagesContainer" class="messages-panel" @scroll="handleScroll">
         <div v-if="messages.length === 0" class="empty-state">
-          <el-icon :size="42"><ChatDotRound /></el-icon>
-          <h3>开始一段新的对话</h3>
-          <p>当前支持在聊天中切换不同的基座模型，会话会记录最近一次使用的模型。</p>
+          <EmptyIllustration
+            variant="chat"
+            title="开始一段新的对话"
+            description="选择下方建议话题快速开始，或直接输入你的问题。会话会记录最近一次使用的模型。"
+          />
           <div class="suggestion-grid">
             <button
               v-for="(item, index) in suggestionCards"
               :key="index"
               class="suggestion-card"
+              v-motion
+              :initial="{ opacity: 0, scale: 0.94, y: 8 }"
+              :visibleOnce="{ opacity: 1, scale: 1, y: 0, transition: { delay: 200 + index * 80, duration: 260 } }"
               @click="handleSuggestionClick(item.text)"
             >
               <span class="suggestion-card__icon">
@@ -160,6 +130,37 @@
               <div v-else class="assistant-content">
                 <div v-if="msg.isStreaming && !msg.content && !msg.thought" class="streaming-loader">
                   <span></span><span></span><span></span>
+                </div>
+
+                <div v-if="msg.agentEvents && msg.agentEvents.length" class="agent-trace-card">
+                  <div class="agent-trace-card__header" @click="msg.agentEventsExpanded = !msg.agentEventsExpanded">
+                    <div class="agent-trace-card__title">
+                      <el-icon><Cpu /></el-icon>
+                      <span>执行轨迹 ({{ msg.agentEvents.length }})</span>
+                    </div>
+                    <el-icon :class="{ 'rotated-down': msg.agentEventsExpanded }"><ArrowRight /></el-icon>
+                  </div>
+                  <div v-show="msg.agentEventsExpanded" class="agent-trace-card__body">
+                    <div v-if="msg.agentTodos && msg.agentTodos.length" class="agent-todo-list">
+                      <div
+                        v-for="todo in msg.agentTodos"
+                        :key="todo.todoId"
+                        :class="['agent-todo-item', `is-${String(todo.status || 'PENDING').toLowerCase()}`]"
+                      >
+                        <span class="agent-todo-item__dot"></span>
+                        <span class="agent-todo-item__content">{{ todo.content }}</span>
+                        <span class="agent-todo-item__status">{{ todoStatusLabel(todo.status) }}</span>
+                      </div>
+                    </div>
+                    <div
+                      v-for="(evt, evtIdx) in msg.agentEvents"
+                      :key="`${evt.timestamp}-${evtIdx}`"
+                      class="agent-trace-card__item"
+                    >
+                      <span class="agent-trace-card__type">{{ evt.typeLabel }}</span>
+                      <p class="agent-trace-card__text">{{ evt.text }}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div v-if="msg.thought" class="thought-card">
@@ -253,6 +254,23 @@
       </div>
 
       <footer class="chat-input">
+        <div v-if="mountedSkills.length" class="mounted-skill-bar">
+          <div class="mounted-skill-list">
+            <el-tag
+              v-for="skill in compactMountedSkills"
+              :key="skill.id"
+              closable
+              effect="plain"
+              @close="removeMountedSkill(skill.id)"
+            >
+              {{ skill.name }}
+            </el-tag>
+            <el-tag v-if="mountedSkills.length > compactMountedSkills.length" effect="plain">
+              +{{ mountedSkills.length - compactMountedSkills.length }}
+            </el-tag>
+          </div>
+          <span v-if="hasToolSkillWithoutAgent" class="skill-mode-hint">工具型技能将在智能体模式下执行，当前仅作为提示词参考</span>
+        </div>
         <el-input
           v-model="inputToSent"
           type="textarea"
@@ -266,13 +284,13 @@
           <div class="toggle-group">
             <button :class="['toggle-chip', 'toggle-chip--agent', { active: useAgent }]" type="button" @click="toggleAgentMode">
               <el-icon><ChatDotRound /></el-icon>
-              AgentScope 模式
+              智能体模式
             </button>
             <button
               :class="['toggle-chip', { active: useDeepThinking, 'toggle-chip--disabled': useAgent }]"
               type="button"
               :disabled="useAgent"
-              :title="useAgent ? 'AgentScope 模式暂不支持深度思考模型的多轮工具调用' : '启用深度思考'"
+              :title="useAgent ? '智能体模式暂不支持深度思考模型的多轮工具调用' : '启用深度思考'"
               @click="useDeepThinking = !useDeepThinking"
             >
               <el-icon><Cpu /></el-icon>
@@ -282,11 +300,15 @@
               :class="['toggle-chip', { active: useWebSearch, 'toggle-chip--disabled': useAgent || !webSearchAvailable }]"
               type="button"
               :disabled="useAgent || !webSearchAvailable"
-              :title="useAgent ? 'AgentScope 模式首版暂不接入联网搜索' : (webSearchAvailable ? '使用系统联网搜索' : webSearchUnavailableReason)"
+              :title="useAgent ? '智能体模式首版暂不接入联网搜索' : (webSearchAvailable ? '使用系统联网搜索' : webSearchUnavailableReason)"
               @click="useWebSearch = !useWebSearch"
             >
               <el-icon><Compass /></el-icon>
               联网搜索
+            </button>
+            <button :class="['toggle-chip', { active: mountedSkills.length > 0 }]" type="button" @click="openSkillPicker">
+              <el-icon><MagicStick /></el-icon>
+              技能 {{ mountedSkills.length }}/50
             </button>
           </div>
 
@@ -297,6 +319,69 @@
         </div>
       </footer>
     </section>
+
+    <el-dialog v-model="skillPickerVisible" width="920px" class="skill-picker-dialog" destroy-on-close>
+      <template #header>
+        <div class="skill-picker-header">
+          <div>
+            <h3>编程技能</h3>
+            <p>Skills</p>
+          </div>
+          <span>已选 {{ mountedSkills.length }}/50</span>
+        </div>
+      </template>
+      <div class="skill-picker">
+        <aside class="skill-picker-side">
+          <el-button type="primary" class="create-skill-btn" @click="goSkillManage">
+            <el-icon><Plus /></el-icon>
+            创建技能
+          </el-button>
+          <button :class="['skill-source-tab', { active: skillFilters.originType !== 'MY' }]" @click="setSkillOrigin('')">平台技能</button>
+          <button :class="['skill-source-tab', { active: skillFilters.originType === 'MY' }]" @click="setSkillOrigin('MY')">我的技能</button>
+          <div class="skill-filter-block">
+            <span>按类型筛选</span>
+            <el-checkbox-group v-model="skillTypeFilters" @change="loadSkillOptions">
+              <el-checkbox label="PROMPT">提示词</el-checkbox>
+              <el-checkbox label="TOOL">工具</el-checkbox>
+              <el-checkbox label="MIXED">混合</el-checkbox>
+            </el-checkbox-group>
+          </div>
+          <div class="skill-filter-block">
+            <span>按使用场景筛选</span>
+            <el-checkbox v-model="webScenarioOnly" @change="loadSkillOptions">网页开发</el-checkbox>
+          </div>
+        </aside>
+        <main class="skill-picker-main">
+          <div class="selected-skill-row">
+            <el-tag
+              v-for="skill in mountedSkills"
+              :key="skill.id"
+              closable
+              effect="plain"
+              @close="removeMountedSkill(skill.id)"
+            >
+              {{ skill.name }}
+            </el-tag>
+          </div>
+          <el-input v-model="skillFilters.keyword" clearable placeholder="搜索技能" @keyup.enter="loadSkillOptions" />
+          <div v-loading="skillLoading" class="skill-option-list">
+            <div v-for="skill in skillOptions" :key="skill.id" class="skill-option">
+              <div class="skill-option-icon">{{ skill.name?.slice(0, 1) }}</div>
+              <div class="skill-option-body">
+                <div class="skill-option-title">
+                  <strong>{{ skill.name }}</strong>
+                  <el-tag size="small" effect="plain">{{ typeLabel(skill.skillType) }}</el-tag>
+                </div>
+                <p>{{ skill.description || '暂无描述' }}</p>
+              </div>
+              <el-button :disabled="isMountedSkill(skill.id)" @click="addMountedSkill(skill)">
+                {{ isMountedSkill(skill.id) ? '已添加' : '添加' }}
+              </el-button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </el-dialog>
 
   </div>
 </template>
@@ -316,6 +401,7 @@ import {
   DataAnalysis,
   Delete,
   Document,
+  MagicStick,
   Plus,
   Reading,
   RefreshRight,
@@ -328,6 +414,9 @@ import 'highlight.js/styles/github.css'
 import axios from 'axios'
 import aiAvatar from '@/assets/ai_avatar.png'
 import { getAiCapabilities, getAiModelList } from '@/api/ai-model'
+import { getConversationSkills, listSkills, saveConversationSkills } from '@/api/ai-skill'
+import { useRouter } from 'vue-router'
+import EmptyIllustration from '@/components/EmptyIllustration.vue'
 
 const suggestionCards = [
   { icon: DataAnalysis, text: '分析今天热门板块' },
@@ -365,6 +454,7 @@ md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
 }
 
 const messages = ref([])
+const router = useRouter()
 const conversations = ref([])
 const managedModels = ref([])
 const defaultModelId = ref(null)
@@ -379,13 +469,19 @@ const useDeepThinking = ref(false)
 const sidebarCollapsed = ref(false)
 const userScrolledUp = ref(false)
 const agentTimeline = ref([])
-const agentWorkbenchCollapsed = ref(false)
 const agentStatus = ref('idle')
-const agentStatusText = ref('AgentScope 模式已关闭，当前为普通聊天模式。')
+const agentStatusText = ref('智能体模式已关闭，当前为普通聊天模式。')
 const aiCapabilities = ref({
   webSearchEnabled: false,
   webSearchMode: 'system-searxng'
 })
+const mountedSkills = ref([])
+const skillOptions = ref([])
+const skillPickerVisible = ref(false)
+const skillLoading = ref(false)
+const skillFilters = ref({ keyword: '', originType: '', enabledOnly: true })
+const skillTypeFilters = ref([])
+const webScenarioOnly = ref(false)
 
 const selectedModel = computed(() => managedModels.value.find(item => item.id === selectedModelId.value) || null)
 const webSearchAvailable = computed(() => Boolean(aiCapabilities.value?.webSearchEnabled))
@@ -407,6 +503,9 @@ const currentModelLabel = computed(() => {
   if (managedModels.value.length === 0) return '配置文件默认模型'
   return '未选择模型'
 })
+const compactMountedSkills = computed(() => mountedSkills.value.slice(0, 8))
+const mountedSkillIds = computed(() => mountedSkills.value.map(item => item.id))
+const hasToolSkillWithoutAgent = computed(() => !useAgent.value && mountedSkills.value.some(item => ['TOOL', 'MIXED'].includes(item.skillType)))
 const conversationSummary = computed(() => {
   const count = conversations.value.length
   const model = currentModelLabel.value
@@ -425,6 +524,82 @@ const copyMessage = (content) => {
     ElMessage.error('复制失败')
   })
 }
+
+const loadMountedSkills = async (conversationId = currentConversationId.value) => {
+  if (!conversationId) {
+    mountedSkills.value = []
+    return
+  }
+  try {
+    const { data } = await getConversationSkills(conversationId)
+    mountedSkills.value = data?.data || data || []
+  } catch (error) {
+    mountedSkills.value = []
+  }
+}
+
+const saveMountedSkills = async () => {
+  if (!currentConversationId.value) return
+  await saveConversationSkills(currentConversationId.value, mountedSkillIds.value)
+}
+
+const loadSkillOptions = async () => {
+  skillLoading.value = true
+  try {
+    const params = {
+      ...skillFilters.value,
+      skillType: skillTypeFilters.value.length === 1 ? skillTypeFilters.value[0] : '',
+      scenario: webScenarioOnly.value ? '网页开发' : ''
+    }
+    const { data } = await listSkills(params)
+    let list = data?.data || data || []
+    if (skillTypeFilters.value.length > 1) {
+      list = list.filter(item => skillTypeFilters.value.includes(item.skillType))
+    }
+    skillOptions.value = list
+  } catch (error) {
+    ElMessage.error('加载技能列表失败')
+  } finally {
+    skillLoading.value = false
+  }
+}
+
+const openSkillPicker = async () => {
+  if (!currentConversationId.value) {
+    currentConversationId.value = crypto.randomUUID()
+  }
+  skillPickerVisible.value = true
+  await loadSkillOptions()
+}
+
+const setSkillOrigin = (originType) => {
+  skillFilters.value.originType = originType
+  loadSkillOptions()
+}
+
+const isMountedSkill = (id) => mountedSkills.value.some(item => item.id === id)
+
+const addMountedSkill = async (skill) => {
+  if (isMountedSkill(skill.id)) return
+  if (mountedSkills.value.length >= 50) {
+    ElMessage.warning('最多挂载 50 个技能')
+    return
+  }
+  mountedSkills.value.push(skill)
+  await saveMountedSkills()
+}
+
+const removeMountedSkill = async (id) => {
+  mountedSkills.value = mountedSkills.value.filter(item => item.id !== id)
+  await saveMountedSkills()
+}
+
+const goSkillManage = () => {
+  skillPickerVisible.value = false
+  router.push('/ai/skills')
+}
+
+const typeLabel = (value) => ({ PROMPT: '提示词', TOOL: '工具', MIXED: '混合' }[value] || value || '-')
 
 const doRender = (msg) => {
   if (msg.content) msg.renderedHtml = md.render(msg.content)
@@ -449,7 +624,10 @@ const createAssistantMessage = () => ({
   timestamp: Date.now(),
   renderedHtml: '',
   renderedThoughtHtml: '',
-  agentEvents: []
+  agentEvents: [],
+  agentEventsExpanded: false,
+  agentRunId: '',
+  agentTodos: []
 })
 
 const throttledRender = (msg) => {
@@ -530,14 +708,14 @@ const normalizeSources = (sources) => Array.isArray(sources) ? sources : []
 
 const resetAgentRuntime = () => {
   agentTimeline.value = []
-  agentWorkbenchCollapsed.value = false
   agentStatus.value = useAgent.value ? 'idle' : 'idle'
   agentStatusText.value = useAgent.value
-    ? '等待发送消息后启动 AgentScope。'
-    : 'AgentScope 模式已关闭，当前为普通聊天模式。'
+    ? '等待发送消息后启动智能体。'
+    : '智能体模式已关闭，当前为普通聊天模式。'
 }
 
 const pushAgentTimeline = (type, payload = {}, targetMsg = null) => {
+  updateAgentMessageState(type, payload, targetMsg)
   const text = buildAgentTimelineText(type, payload)
   const item = {
     type,
@@ -555,15 +733,38 @@ const pushAgentTimeline = (type, payload = {}, targetMsg = null) => {
 }
 
 const buildAgentTimelineLabel = (type) => ({
+  agent_run: '运行',
   agent_plan: '规划',
+  agent_todo: '任务',
+  agent_compact: '压缩',
+  agent_subagent: '子代理',
+  agent_permission: '权限',
   agent_tool_call: '工具调用',
   agent_tool_result: '工具结果',
   agent_status: '状态'
-}[type] || 'AgentScope')
+}[type] || '智能体')
 
 const buildAgentTimelineText = (type, payload = {}) => {
+  if (type === 'agent_run') {
+    return payload.message || `Run ${payload.runId || ''} 已启动`
+  }
   if (type === 'agent_plan') {
-    return payload.summary || 'AgentScope 已生成执行计划。'
+    return payload.summary || '智能体已生成执行计划。'
+  }
+  if (type === 'agent_todo') {
+    const todos = normalizeAgentTodos(payload)
+    return todos.length ? `更新 ${todos.length} 个任务` : '任务状态已更新'
+  }
+  if (type === 'agent_compact') {
+    return payload.reason || payload.snapshot?.compactLevel || '上下文已压缩'
+  }
+  if (type === 'agent_subagent') {
+    const subagent = payload.subagent || {}
+    return `${subagent.agentType || 'general-purpose'}：${subagent.task || subagent.resultSummary || '子代理状态更新'}`
+  }
+  if (type === 'agent_permission') {
+    const request = payload.request || {}
+    return `${request.toolName || '工具'} 需要授权`
   }
   if (type === 'agent_tool_call') {
     const args = payload.arguments ? JSON.stringify(payload.arguments) : '{}'
@@ -575,8 +776,45 @@ const buildAgentTimelineText = (type, payload = {}) => {
   if (type === 'agent_status') {
     return payload.message || payload.status || '状态已更新'
   }
-  return 'AgentScope 事件'
+  return '智能体事件'
 }
+
+const normalizeAgentTodos = (payload = {}) => {
+  if (Array.isArray(payload.todos)) return payload.todos
+  if (payload.todo) return [payload.todo]
+  return []
+}
+
+const updateAgentMessageState = (type, payload = {}, targetMsg = null) => {
+  if (!targetMsg) return
+  if (payload.runId) {
+    targetMsg.agentRunId = payload.runId
+  }
+  if (type === 'agent_run') {
+    targetMsg.agentRunId = payload.runId || targetMsg.agentRunId
+  }
+  if (type === 'agent_todo') {
+    const incoming = normalizeAgentTodos(payload)
+    if (!Array.isArray(targetMsg.agentTodos)) {
+      targetMsg.agentTodos = []
+    }
+    incoming.forEach((todo) => {
+      const index = targetMsg.agentTodos.findIndex(item => item.todoId === todo.todoId)
+      if (index >= 0) {
+        targetMsg.agentTodos[index] = { ...targetMsg.agentTodos[index], ...todo }
+      } else {
+        targetMsg.agentTodos.push(todo)
+      }
+    })
+  }
+}
+
+const todoStatusLabel = (status) => ({
+  PENDING: '待办',
+  IN_PROGRESS: '进行中',
+  COMPLETED: '完成',
+  CANCELLED: '取消'
+}[status] || status || '待办')
 
 const shouldShowSearchCard = (msg) => ['SEARCHING', 'SUCCESS', 'FALLBACK_NO_RESULT', 'FALLBACK_ERROR'].includes(msg?.searchStatus)
 
@@ -685,7 +923,8 @@ const mapHistoryMessage = (msg) => {
     fullText: '',
     renderedHtml: '',
     renderedThoughtHtml: '',
-    agentEvents: []
+    agentEvents: [],
+    agentEventsExpanded: false
   }
   if (msg.role !== 'user') doRender(item)
   return item
@@ -696,6 +935,7 @@ const switchConversation = async (conversationId) => {
   resetAgentRuntime()
   resolveConversationModel(conversations.value.find(item => item.conversationId === conversationId))
   try {
+    await loadMountedSkills(conversationId)
     const historyMessages = await loadConversationMessages(conversationId)
     messages.value = historyMessages.map(mapHistoryMessage)
     userScrolledUp.value = false
@@ -726,6 +966,7 @@ const recoverAssistantMessageFromHistory = async (conversationId, targetMsg) => 
 const createNewConversation = () => {
   currentConversationId.value = crypto.randomUUID()
   messages.value = []
+  mountedSkills.value = []
   selectedModelId.value = defaultModelId.value
   userScrolledUp.value = false
   resetAgentRuntime()
@@ -756,6 +997,7 @@ const deleteConversation = async (conversationId) => {
 const clearCurrentHistory = () => {
   messages.value = []
   currentConversationId.value = null
+  mountedSkills.value = []
   selectedModelId.value = defaultModelId.value
   resetAgentRuntime()
 }
@@ -763,11 +1005,11 @@ const clearCurrentHistory = () => {
 const normalizeCapabilitiesBeforeSend = () => {
   if (useAgent.value && useDeepThinking.value) {
     useDeepThinking.value = false
-    ElMessage.warning('AgentScope 模式暂不支持深度思考模型，已自动关闭深度思考')
+    ElMessage.warning('智能体模式暂不支持深度思考模型，已自动关闭深度思考')
   }
   if (useAgent.value && useWebSearch.value) {
     useWebSearch.value = false
-    ElMessage.warning('AgentScope 模式首版暂不接入联网搜索，已自动关闭联网搜索')
+    ElMessage.warning('智能体模式首版暂不接入联网搜索，已自动关闭联网搜索')
   }
   if (selectedModel.value && useDeepThinking.value && !selectedModel.value.supportsDeepThinking) {
     useDeepThinking.value = false
@@ -815,11 +1057,11 @@ const toggleAgentMode = () => {
   useAgent.value = !useAgent.value
   if (useAgent.value && useDeepThinking.value) {
     useDeepThinking.value = false
-    ElMessage.info('AgentScope 模式暂不支持深度思考模型，已自动关闭深度思考')
+    ElMessage.info('智能体模式暂不支持深度思考模型，已自动关闭深度思考')
   }
   if (useAgent.value && useWebSearch.value) {
     useWebSearch.value = false
-    ElMessage.info('AgentScope 模式首版暂不接入联网搜索，已自动关闭联网搜索')
+    ElMessage.info('智能体模式首版暂不接入联网搜索，已自动关闭联网搜索')
   }
   resetAgentRuntime()
 }
@@ -852,9 +1094,9 @@ const handleSend = async () => {
 
   if (useAgent.value) {
     agentTimeline.value = []
-    agentWorkbenchCollapsed.value = false
     agentStatus.value = 'running'
-    agentStatusText.value = 'AgentScope 正在分析问题并按需调用工具。'
+    agentStatusText.value = '智能体正在分析问题并按需调用工具。'
+    messages.value[aiIndex].agentEventsExpanded = true
   } else {
     resetAgentRuntime()
   }
@@ -882,7 +1124,8 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
         conversationId: currentConversationId.value,
         useAgent: useAgent.value,
         useWebSearch: useWebSearch.value,
-        useDeepThinking: useDeepThinking.value
+        useDeepThinking: useDeepThinking.value,
+        skillIds: mountedSkillIds.value
       })
     })
 
@@ -922,7 +1165,8 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
             targetMsg.suggestionsLoading = false
             if (useAgent.value) {
               agentStatus.value = 'failed'
-              agentStatusText.value = json.error || 'AgentScope 执行失败'
+              agentStatusText.value = json.error || '智能体执行失败'
+              targetMsg.agentEventsExpanded = false
             }
             finalRender(targetMsg)
             setLoadingForRequest(requestId, false)
@@ -931,13 +1175,22 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
 
           if (currentEvent === 'agent_status') {
             agentStatus.value = json.status || 'running'
-            agentStatusText.value = json.message || 'AgentScope 状态已更新'
+            agentStatusText.value = json.message || '智能体状态已更新'
             pushAgentTimeline(currentEvent, json, targetMsg)
             throttledScroll()
             continue
           }
 
-          if (currentEvent === 'agent_plan' || currentEvent === 'agent_tool_call' || currentEvent === 'agent_tool_result') {
+          if ([
+            'agent_run',
+            'agent_plan',
+            'agent_todo',
+            'agent_compact',
+            'agent_subagent',
+            'agent_permission',
+            'agent_tool_call',
+            'agent_tool_result'
+          ].includes(currentEvent)) {
             pushAgentTimeline(currentEvent, json, targetMsg)
             throttledScroll()
             continue
@@ -953,12 +1206,16 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
           }
 
           if (currentEvent === 'done') {
+            if (json.agentRunId) {
+              targetMsg.agentRunId = json.agentRunId
+            }
             if (thoughtTimer) clearInterval(thoughtTimer)
             targetMsg.isThinking = false
             targetMsg.suggestionsLoading = Boolean(targetMsg.content)
              if (useAgent.value && agentStatus.value !== 'failed') {
               agentStatus.value = 'completed'
-              agentStatusText.value = 'AgentScope 已完成本轮任务。'
+              agentStatusText.value = '智能体已完成本轮任务。'
+              targetMsg.agentEventsExpanded = false
             }
             finalRender(targetMsg)
             setLoadingForRequest(requestId, false)
@@ -1046,8 +1303,9 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
       if (useAgent.value && agentStatus.value === 'running') {
         agentStatus.value = recovered ? 'completed' : 'failed'
         agentStatusText.value = recovered
-          ? 'AgentScope 已完成本轮任务。'
-          : 'AgentScope 已结束，但未收到完整的流式收尾事件。'
+          ? '智能体已完成本轮任务。'
+          : '智能体已结束，但未收到完整的流式收尾事件。'
+        targetMsg.agentEventsExpanded = false
       }
     }
     targetMsg.suggestionsLoading = false
@@ -1060,7 +1318,8 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
     errMsg.suggestionsLoading = false
     if (useAgent.value) {
       agentStatus.value = 'failed'
-      agentStatusText.value = 'AgentScope 服务连接失败'
+      agentStatusText.value = '智能体服务连接失败'
+      errMsg.agentEventsExpanded = false
     }
     finalRender(errMsg)
   } finally {
@@ -1122,7 +1381,6 @@ onBeforeUnmount(() => {
   }
 }
 
-.sidebar-header,
 .chat-header,
 .chat-input {
   padding: 14px 16px;
@@ -1130,6 +1388,7 @@ onBeforeUnmount(() => {
 }
 
 .sidebar-header {
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -1183,6 +1442,15 @@ onBeforeUnmount(() => {
   margin: 4px 0 0;
   color: #64748b;
   font-size: 12px;
+}
+
+.sidebar-new-chat {
+  padding: 0 10px 10px;
+}
+
+.new-chat-btn {
+  width: 100%;
+  border-radius: 12px;
 }
 
 .conversation-list {
@@ -1296,89 +1564,120 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.agent-workbench {
-  margin: 14px 18px 0;
-  padding: 14px 16px;
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at top left, rgba(219, 234, 254, 0.72), transparent 40%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.92));
-  flex: 0 0 auto;
+.agent-trace-card {
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(37, 99, 235, 0.14);
 }
 
-.agent-workbench--collapsed {
-  padding-bottom: 12px;
-}
-
-.agent-workbench__header,
-.agent-timeline__item {
+.agent-trace-card__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.agent-workbench__header-copy {
-  min-width: 0;
-}
-
-.agent-workbench__header-actions {
+.agent-trace-card__title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e40af;
 }
 
-.agent-workbench__header h3 {
-  margin: 0;
+.agent-trace-card__header .el-icon {
+  color: #64748b;
   font-size: 14px;
-  color: #0f172a;
+  transition: transform 0.25s ease;
 }
 
-.agent-workbench__header p,
-.agent-workbench__empty {
-  margin: 6px 0 0;
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.7;
+.rotated-down {
+  transform: rotate(90deg);
 }
 
-.agent-workbench__toggle {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  color: #2563eb;
-}
-
-.agent-timeline {
+.agent-trace-card__body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 12px;
-  max-height: 220px;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 260px;
   overflow: auto;
   padding-right: 4px;
 }
 
-.agent-timeline__item {
-  padding: 10px 12px;
-  border-radius: 14px;
+.agent-todo-list {
+  display: grid;
+  gap: 6px;
+}
+
+.agent-todo-item {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.agent-todo-item__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.agent-todo-item.is-in_progress .agent-todo-item__dot {
+  background: #f59e0b;
+}
+
+.agent-todo-item.is-completed .agent-todo-item__dot {
+  background: #16a34a;
+}
+
+.agent-todo-item.is-cancelled .agent-todo-item__dot {
+  background: #ef4444;
+}
+
+.agent-todo-item__content {
+  min-width: 0;
+  color: #1f2937;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.agent-todo-item__status {
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.agent-trace-card__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
-.agent-timeline__type {
+.agent-trace-card__type {
   flex: 0 0 auto;
   min-width: 52px;
   color: #2563eb;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.6;
 }
 
-.agent-timeline__text {
+.agent-trace-card__text {
   flex: 1;
   margin: 0;
   color: #334155;
@@ -1686,6 +1985,28 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.mounted-skill-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.mounted-skill-list,
+.selected-skill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skill-mode-hint {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: #b45309;
+}
+
 .chat-input :deep(.el-textarea__inner) {
   padding: 10px 12px;
   line-height: 1.6;
@@ -1725,6 +2046,132 @@ onBeforeUnmount(() => {
 .toggle-chip:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.skill-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skill-picker-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.skill-picker-header p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.skill-picker {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 540px;
+}
+
+.skill-picker-side {
+  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  padding-right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.create-skill-btn {
+  width: 100%;
+}
+
+.skill-source-tab {
+  width: 100%;
+  min-height: 40px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  text-align: left;
+  padding: 0 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.skill-source-tab.active,
+.skill-source-tab:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.skill-filter-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.skill-filter-block > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.skill-picker-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.skill-option-list {
+  min-height: 0;
+  max-height: 430px;
+  overflow: auto;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.skill-option {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.skill-option-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.skill-option-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skill-option-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-option-body p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .search-card {
@@ -1821,16 +2268,33 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .agent-workbench {
-    margin: 10px 12px 0;
-  }
-
-  .agent-workbench__header {
-    align-items: center;
-  }
-
-  .agent-timeline__item {
+  .agent-trace-card__item {
     flex-direction: column;
+    gap: 4px;
+  }
+
+  .mounted-skill-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .skill-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .skill-picker-side {
+    border-right: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    padding-right: 0;
+    padding-bottom: 12px;
+  }
+
+  .skill-option {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .skill-option .el-button {
+    grid-column: 1 / -1;
   }
 }
 </style>

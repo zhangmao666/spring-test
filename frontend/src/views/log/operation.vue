@@ -1,37 +1,29 @@
 <template>
-  <div class="app-page">
-    <section class="app-page__hero">
-      <div>
-        <span class="app-page__eyebrow">OPERATION AUDIT</span>
-        <h2 class="app-page__title">操作日志</h2>
-        <p class="app-page__desc">查看模块操作记录、请求信息与异常结果，辅助排查配置变更和审计风险。</p>
-      </div>
-
-      <div class="app-page__actions">
+  <div class="app-page tone-system">
+    <PageHero
+      title="操作日志"
+      subtitle="查看模块操作记录、请求信息与异常结果，辅助排查配置变更和审计风险。"
+      eyebrow="OPERATION AUDIT"
+      tone="system"
+      :icon="Document"
+    >
+      <template #actions>
         <el-button type="danger" :disabled="tableData.length === 0" @click="handleClear">
           <el-icon><Delete /></el-icon>
           清空日志
         </el-button>
-      </div>
-    </section>
+      </template>
+    </PageHero>
 
-    <section class="app-metric-grid metrics-grid--four">
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">当前页记录</span>
-        <strong class="app-metric-card__value">{{ tableData.length }}</strong>
-      </article>
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">成功操作</span>
-        <strong class="app-metric-card__value">{{ successCount }}</strong>
-      </article>
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">失败操作</span>
-        <strong class="app-metric-card__value">{{ failedCount }}</strong>
-      </article>
-      <article class="app-metric-card">
-        <span class="app-metric-card__label">高耗时请求</span>
-        <strong class="app-metric-card__value">{{ slowCount }}</strong>
-      </article>
+    <section class="stat-strip">
+      <StatCard label="当前页记录" :value="tableData.length" :icon="Clock" tone="system" hint="本页展示数量" :delay="0" />
+      <StatCard label="成功操作" :value="successCount" :icon="CircleCheckFilled" tone="tools" hint="正常完成的请求" :delay="80">
+        <template #chart><Sparkline :data="trend.success" color="var(--accent-tools)" /></template>
+      </StatCard>
+      <StatCard label="失败操作" :value="failedCount" :icon="CircleClose" tone="news" hint="返回错误的请求" :delay="160">
+        <template #chart><Sparkline :data="trend.failed" color="var(--accent-news)" /></template>
+      </StatCard>
+      <StatCard label="高耗时请求" :value="slowCount" :icon="Timer" tone="ai" hint="响应偏慢的请求" :delay="240" />
     </section>
 
     <el-card class="filter-card" shadow="never">
@@ -245,7 +237,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, Delete, Search } from '@element-plus/icons-vue'
+import { CircleCheckFilled, CircleClose, Clock, Delete, Document, Search, Timer } from '@element-plus/icons-vue'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+
+const trend = {
+  success: [40, 52, 48, 60, 58, 66, 72],
+  failed: [2, 4, 3, 6, 4, 3, 5]
+}
 import {
   batchDeleteOperationLog,
   clearOperationLog,

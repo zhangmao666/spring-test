@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springboottest.modules.ai.agent.mapper.AgentContextSnapshotMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.springboottest.modules.ai.agent.entity.AgentContextSnapshot">
+        <id column="id" property="id"/>
+        <result column="run_id" property="runId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="snapshot_index" property="snapshotIndex"/>
+        <result column="compact_level" property="compactLevel"/>
+        <result column="estimated_tokens" property="estimatedTokens"/>
+        <result column="char_budget" property="charBudget"/>
+        <result column="summary" property="summary"/>
+        <result column="source_boundary" property="sourceBoundary"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_agent_context_snapshot (
+            run_id, conversation_id, snapshot_index, compact_level, estimated_tokens,
+            char_budget, summary, source_boundary
+        ) VALUES (
+            #{runId}, #{conversationId}, #{snapshotIndex}, #{compactLevel}, #{estimatedTokens},
+            #{charBudget}, #{summary}, #{sourceBoundary}
+        )
+    </insert>
+
+    <select id="findLatestByRunId" resultMap="BaseResultMap">
+        SELECT * FROM ai_agent_context_snapshot WHERE run_id = #{runId} ORDER BY snapshot_index DESC, id DESC LIMIT 1
+    </select>
+
+    <select id="countByRunId" resultType="int">
+        SELECT COUNT(1) FROM ai_agent_context_snapshot WHERE run_id = #{runId}
+    </select>
+</mapper>

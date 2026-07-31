@@ -21,7 +21,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling  // 启用定时任务支持
 @MapperScan({
     "com.example.springboottest.modules.*.repository",
-    "com.example.springboottest.modules.*.mapper"
+    "com.example.springboottest.modules.*.mapper",
+    "com.example.springboottest.modules.ai.skill.mapper",
+    "com.example.springboottest.modules.ai.agent.mapper"
 })
 public class SpringBootTestApplication {
 

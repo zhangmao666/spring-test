@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.springboottest.modules.ai.agent.mapper.AgentEventRecordMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.springboottest.modules.ai.agent.entity.AgentEventRecord">
+        <id column="id" property="id"/>
+        <result column="event_id" property="eventId"/>
+        <result column="run_id" property="runId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="event_type" property="eventType"/>
+        <result column="payload" property="payload"/>
+        <result column="turn_index" property="turnIndex"/>
+        <result column="created_at" property="createdAt"/>
+    </resultMap>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_agent_event (event_id, run_id, conversation_id, event_type, payload, turn_index)
+        VALUES (#{eventId}, #{runId}, #{conversationId}, #{eventType}, #{payload}, #{turnIndex})
+    </insert>
+
+    <select id="findByRunId" resultMap="BaseResultMap">
+        SELECT * FROM ai_agent_event WHERE run_id = #{runId} ORDER BY id ASC
+    </select>
+</mapper>

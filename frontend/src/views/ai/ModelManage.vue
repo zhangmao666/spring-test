@@ -1,21 +1,26 @@
 <template>
-  <div class="model-page">
-    <div class="page-header">
-      <div class="page-header__info">
-        <h2 class="page-header__title">模型管理</h2>
-        <p class="page-header__desc">
-          统一维护模型配置与默认选择。
-        </p>
-      </div>
-
-      <div class="page-header__actions">
+  <div class="model-page tone-ai">
+    <PageHero
+      title="模型管理"
+      subtitle="统一维护模型配置与默认选择，控制不同模型的可用状态与能力标签。"
+      eyebrow="MODEL REGISTRY"
+      tone="ai"
+      :icon="Cpu"
+    >
+      <template #actions>
         <el-button @click="loadModels">刷新</el-button>
         <el-button type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>
           新增模型
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHero>
+
+    <section class="stat-strip stat-strip--three">
+      <StatCard label="模型总数" :value="modelList.length" :icon="Cpu" tone="ai" hint="已接入的模型配置" :delay="0" />
+      <StatCard label="启用中" :value="enabledModelCount" :icon="CircleCheckFilled" tone="tools" hint="当前可调用的模型" :delay="80" />
+      <StatCard label="默认模型" :value="defaultModelName" :animate="false" :icon="Star" tone="news" hint="对话默认使用" :delay="160" />
+    </section>
 
     <el-card class="list-card" shadow="never">
       <div class="list-card__meta">
@@ -200,7 +205,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { CircleCheckFilled, Cpu, Plus, Star } from '@element-plus/icons-vue'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
 import {
   createAiModel,
   deleteAiModel,
@@ -212,6 +219,12 @@ import {
 } from '@/api/ai-model'
 
 const loading = ref(false)
+
+const enabledModelCount = computed(() => modelList.value.filter(m => m.enabled).length)
+const defaultModelName = computed(() => {
+  const d = modelList.value.find(m => m.isDefault)
+  return d ? d.displayName : '未设置'
+})
 const testing = ref(false)
 const dialogVisible = ref(false)
 const formRef = ref(null)

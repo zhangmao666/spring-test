@@ -56,6 +56,12 @@ const routes = [
         meta: { title: '模型管理', icon: 'Cpu', description: '配置模型能力、可用状态与默认选项' }
       },
       {
+        path: 'ai/skills',
+        name: 'AiSkillManage',
+        component: () => import('@/views/ai/SkillManage.vue'),
+        meta: { title: '技能管理', icon: 'MagicStick', description: '管理对话可挂载的提示词与工具技能' }
+      },
+      {
         path: 'news/hot',
         name: 'HotNews',
         component: () => import('@/views/news/HotNews.vue'),
@@ -72,6 +78,12 @@ const routes = [
         name: 'WordCounter',
         component: () => import('@/views/tools/WordCounter.vue'),
         meta: { title: '字数统计器', icon: 'EditPen', description: '统计文本字数、结构和阅读时长' }
+      },
+      {
+        path: 'tools/pomodoro',
+        name: 'PomodoroClock',
+        component: () => import('@/views/tools/PomodoroClock.vue'),
+        meta: { title: '番茄钟', icon: 'Timer', description: '本地番茄钟 · 轻任务清单 · 自动续算' }
       }
     ]
   }

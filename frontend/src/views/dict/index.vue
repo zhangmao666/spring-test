@@ -1,14 +1,27 @@
 <template>
-  <div class="dict-page">
-    <div class="page-header">
-      <div class="page-header__info">
-        <div class="page-header__eyebrow">DATA DICTIONARY</div>
-        <h2 class="page-header__title">字典管理</h2>
-        <p class="page-header__desc">
-          左侧选择字典进入详情，右侧专注维护该字典下的字典项，避免操作挤在同一行里造成换行和重叠。
-        </p>
-      </div>
-    </div>
+  <div class="dict-page tone-system">
+    <PageHero
+      title="字典管理"
+      subtitle="左侧选择字典进入详情，右侧专注维护该字典下的字典项，避免操作挤在同一行里造成换行和重叠。"
+      eyebrow="DATA DICTIONARY"
+      tone="system"
+      :icon="Collection"
+    >
+      <template #actions>
+        <el-button type="primary" @click="handleAddDict">
+          <el-icon><Plus /></el-icon>
+          新增字典
+        </el-button>
+      </template>
+    </PageHero>
+
+    <section class="stat-strip stat-strip--three">
+      <StatCard label="字典总数" :value="dictPagination.total" :icon="Files" tone="system" hint="平台内的字典分组" :delay="0">
+        <template #chart><Sparkline :data="trend.total" color="var(--accent-system)" /></template>
+      </StatCard>
+      <StatCard label="启用中" :value="enabledCount" :icon="List" tone="tools" hint="当前正在使用的字典" :delay="80" />
+      <StatCard label="字典项" :value="itemPagination.total" :icon="Pointer" tone="ai" hint="当前字典下的条目" :delay="160" />
+    </section>
 
     <div class="dict-layout">
       <el-card class="dict-card" shadow="never">
@@ -212,10 +225,17 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Files, List, Plus, Pointer } from '@element-plus/icons-vue'
+import { Collection, Delete, Edit, Files, List, Plus, Pointer } from '@element-plus/icons-vue'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
+import Sparkline from '@/components/Sparkline.vue'
+
+const trend = {
+  total: [8, 10, 9, 12, 14, 13, 16]
+}
 import {
   createDict,
   createDictItem,
@@ -249,6 +269,9 @@ const dictPagination = reactive({
   size: 10,
   total: 0
 })
+
+const itemPagination = computed(() => ({ total: itemList.value.length }))
+const enabledCount = computed(() => dictList.value.filter(d => d.status === 1).length)
 
 const dictForm = reactive({
   id: null,

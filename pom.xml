@@ -319,12 +319,6 @@
             <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>io.agentscope</groupId>
-            <artifactId>agentscope</artifactId>
-            <version>1.0.11</version>
-        </dependency>
-
     </dependencies>
 
     <build>
