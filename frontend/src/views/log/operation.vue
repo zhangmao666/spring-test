@@ -500,6 +500,7 @@ onMounted(() => {
 
 .cost-time {
   font-weight: 700;
+  font-family: var(--font-mono);
 }
 
 .cost-time--fast {
@@ -574,7 +575,7 @@ onMounted(() => {
   margin: 0;
   padding: 16px;
   border: 1px solid var(--border-soft);
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: var(--surface-muted);
   color: var(--text-secondary);
   white-space: pre-wrap;
@@ -586,7 +587,7 @@ onMounted(() => {
 
 .error-message {
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: var(--color-danger-soft);
   color: var(--color-danger);
   line-height: 1.7;

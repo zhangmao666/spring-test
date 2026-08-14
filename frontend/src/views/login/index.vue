@@ -4,10 +4,6 @@
       <div class="login-hero__orb login-hero__orb--purple"></div>
       <div class="login-hero__orb login-hero__orb--blue"></div>
       <div class="login-hero__orb login-hero__orb--teal"></div>
-      <div class="login-hero__stars">
-        <span v-for="s in stars" :key="s.id" :style="s.style"></span>
-      </div>
-      <div class="login-hero__grid"></div>
 
       <div
         class="login-hero__panel"
@@ -414,37 +410,6 @@ const handleRegister = async () => {
   66% { transform: translate(20px, -14px); }
 }
 
-.login-hero__grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.12;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 42px 42px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 76%);
-}
-
-.login-hero__stars {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.login-hero__stars span {
-  position: absolute;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
-  animation: starTwinkle ease-in-out infinite;
-}
-
-@keyframes starTwinkle {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
 .login-hero__panel {
   position: relative;
   z-index: 1;
@@ -485,10 +450,11 @@ const handleRegister = async () => {
 
 .login-hero__title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: clamp(2rem, 3.6vw, 3rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .login-hero__title-accent {
@@ -608,9 +574,9 @@ const handleRegister = async () => {
   position: relative;
   z-index: 1;
   width: min(460px, 100%);
-  padding: 34px;
+  padding: 30px;
   border: 1px solid var(--border-subtle);
-  border-radius: 28px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.95);
   box-shadow: var(--shadow-elevated);
   backdrop-filter: blur(20px);

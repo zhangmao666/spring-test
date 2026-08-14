@@ -96,7 +96,7 @@ img {
 .el-button {
   height: 40px;
   padding: 0 18px !important;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   border: 1px solid transparent !important;
   font-weight: 600;
   transition: transform $transition-fast, box-shadow $transition-fast, background-color $transition-fast, color $transition-fast !important;
@@ -144,7 +144,7 @@ img {
 .el-input__wrapper,
 .el-textarea__inner,
 .el-select__wrapper {
-  border-radius: 14px !important;
+  border-radius: var(--radius-sm) !important;
   box-shadow: 0 0 0 1px var(--border-subtle) inset !important;
   background: var(--surface-base) !important;
   transition: box-shadow $transition-fast, background-color $transition-fast !important;
@@ -174,7 +174,7 @@ img {
 
 .el-table {
   --el-table-border-color: var(--border-soft);
-  --el-table-header-bg-color: var(--surface-muted);
+  --el-table-header-bg-color: transparent;
   --el-table-row-hover-bg-color: rgba(47, 91, 234, 0.04);
   background: transparent !important;
 }
@@ -185,13 +185,17 @@ img {
 
 .el-table th.el-table__cell {
   color: var(--text-secondary);
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-strong) !important;
 }
 
 .el-table td.el-table__cell,
 .el-table th.el-table__cell {
-  padding: 14px 0 !important;
+  padding: 16px 0 !important;
+  border-bottom-color: var(--border-soft) !important;
 }
 
 .el-dialog {
@@ -294,9 +298,11 @@ img {
 .app-page__title {
   margin: 8px 0 0;
   color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: clamp(1.85rem, 3vw, 2.4rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.08;
+  letter-spacing: -0.01em;
 }
 
 .app-page__desc {

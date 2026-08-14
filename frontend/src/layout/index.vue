@@ -262,12 +262,10 @@ const handleCommand = async (command) => {
 .layout-shell {
   height: 100dvh;
   min-height: 100dvh;
-  padding: 18px;
-  gap: 18px;
+  padding: 14px;
+  gap: 14px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top right, rgba(47, 91, 234, 0.12), transparent 24%),
-    radial-gradient(circle at left 30%, rgba(15, 159, 110, 0.08), transparent 18%);
+  background: var(--page-bg);
 }
 
 .sidebar-shell,
@@ -278,10 +276,10 @@ const handleCommand = async (command) => {
 .sidebar-panel,
 .workspace-header,
 .workspace-main {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(12px);
 }
 
 .sidebar-panel {
@@ -290,20 +288,8 @@ const handleCommand = async (command) => {
   flex-direction: column;
   height: 100%;
   padding: 14px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-}
-
-.sidebar-panel::before {
-  content: '';
-  position: absolute;
-  top: -90px;
-  right: -30px;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(47, 91, 234, 0.14), transparent 68%);
-  pointer-events: none;
 }
 
 .sidebar-nav {
@@ -357,8 +343,10 @@ const handleCommand = async (command) => {
 
 .brand-title {
   color: var(--text-primary);
+  font-family: var(--font-display);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .brand-subtitle {
@@ -492,19 +480,7 @@ const handleCommand = async (command) => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-.workspace-shell::before {
-  content: '';
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(47, 91, 234, 0.08), transparent 68%);
-  pointer-events: none;
+  gap: 14px;
 }
 
 .workspace-shell--chat {
@@ -518,11 +494,10 @@ const handleCommand = async (command) => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 22px 24px;
-  border-radius: 24px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
   gap: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .workspace-header::after {
@@ -578,13 +553,11 @@ const handleCommand = async (command) => {
 .page-title {
   margin: 10px 0 0;
   color: var(--text-primary);
-  font-size: 1.85rem;
-  font-weight: 800;
-  line-height: 1.12;
-  background: var(--accent-gradient);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .page-description {
@@ -657,11 +630,10 @@ const handleCommand = async (command) => {
   position: relative;
   flex: 1;
   min-height: 0;
-  padding: 24px;
-  border-radius: 24px;
+  padding: 22px;
+  border-radius: var(--radius-lg);
   overflow: auto;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 247, 252, 0.84));
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .workspace-main--chat {

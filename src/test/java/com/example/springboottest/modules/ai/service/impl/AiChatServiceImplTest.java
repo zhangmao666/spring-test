@@ -79,47 +79,4 @@ class AiChatServiceImplTest {
         assertTrue(enabled);
     }
 
-    @Test
-    void shouldParseSuggestionsFromJsonArray() {
-        List<String> suggestions = AiChatServiceImpl.parseFollowUpSuggestions(
-                "[\"First follow-up?\",\"Second follow-up?\",\"Third follow-up?\"]",
-                objectMapper
-        );
-
-        assertEquals(List.of("First follow-up?", "Second follow-up?", "Third follow-up?"), suggestions);
-    }
-
-    @Test
-    void shouldParseSuggestionsFromNumberedListFallback() {
-        List<String> suggestions = AiChatServiceImpl.parseFollowUpSuggestions("""
-                1. What changed most recently?
-                2. Which risk matters most now?
-                3. What should I watch next?
-                """, objectMapper);
-
-        assertEquals(List.of(
-                "What changed most recently?",
-                "Which risk matters most now?",
-                "What should I watch next?"
-        ), suggestions);
-    }
-
-    @Test
-    void shouldCleanDuplicateAndNoisySuggestions() {
-        List<String> suggestions = AiChatServiceImpl.parseFollowUpSuggestions("""
-                [
-                  "  First follow-up?  ",
-                  "",
-                  "First follow-up?",
-                  "Second follow-up?",
-                  "This is a very long follow-up question that should be trimmed because it keeps going far beyond the allowed length for a chip in the UI."
-                ]
-                """, objectMapper);
-
-        assertEquals(3, suggestions.size());
-        assertEquals("First follow-up?", suggestions.get(0));
-        assertEquals("Second follow-up?", suggestions.get(1));
-        assertTrue(suggestions.get(2).startsWith("This is a very long follow-up question"));
-        assertTrue(suggestions.get(2).length() <= 60);
-    }
 }

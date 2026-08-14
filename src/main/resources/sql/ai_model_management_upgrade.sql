@@ -5,8 +5,7 @@ ALTER TABLE `ai_model`
   ADD COLUMN IF NOT EXISTS `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Whether enabled' AFTER `model_name`,
   ADD COLUMN IF NOT EXISTS `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether default model' AFTER `enabled`,
   ADD COLUMN IF NOT EXISTS `supports_deep_thinking` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether deep thinking is supported' AFTER `is_default`,
-  ADD COLUMN IF NOT EXISTS `supports_web_search` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether web search is supported' AFTER `supports_deep_thinking`,
-  ADD COLUMN IF NOT EXISTS `remark` VARCHAR(500) DEFAULT NULL COMMENT 'Remark' AFTER `supports_web_search`;
+  ADD COLUMN IF NOT EXISTS `supports_web_search` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether web search is supported' AFTER `supports_deep_thinking`;
 
 ALTER TABLE `chat_conversations`
   ADD COLUMN IF NOT EXISTS `model_id` BIGINT DEFAULT NULL COMMENT 'Bound model id' AFTER `model`;

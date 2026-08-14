@@ -44,18 +44,15 @@
               <div class="model-identity__content">
                 <div class="model-identity__title-row">
                   <h3 class="model-name">{{ row.displayName }}</h3>
-                  <el-tag v-if="row.isDefault" type="primary" effect="dark" round>默认模型</el-tag>
+                  <el-tag v-if="row.isDefault" type="primary" effect="dark" round>默认</el-tag>
                   <el-tag :type="row.enabled ? 'success' : 'info'" effect="plain" round>
-                    {{ row.enabled ? '已启用' : '已停用' }}
+                    {{ row.enabled ? '启用' : '停用' }}
                   </el-tag>
                 </div>
 
                 <div class="model-meta">{{ formatProvider(row.provider) }} / {{ row.modelName }}</div>
-                <p v-if="row.remark" class="model-remark">{{ row.remark }}</p>
               </div>
             </div>
-
-            <div class="provider-pill">{{ formatProvider(row.provider) }}</div>
           </div>
 
           <div class="model-specs">
@@ -66,7 +63,7 @@
 
             <div class="spec-card">
               <div class="spec-card__label">API Key</div>
-              <div class="spec-card__value mono">{{ row.maskedApiKey || '使用配置文件' }}</div>
+              <div class="spec-card__value">{{ row.apiKeyConfigured ? '已配置' : '使用配置文件' }}</div>
             </div>
 
             <div class="spec-card spec-card--capabilities">
@@ -85,7 +82,7 @@
           <div class="model-actions">
             <div class="model-actions__group">
               <el-button size="small" plain @click="handleEdit(row)">编辑</el-button>
-              <el-button size="small" plain @click="handleTestRow(row)">测试连接</el-button>
+              <el-button size="small" plain @click="handleTestRow(row)">测试</el-button>
             </div>
 
             <div class="model-actions__group model-actions__group--secondary">
@@ -100,7 +97,6 @@
               </el-button>
 
               <div class="status-toggle">
-                <span class="status-toggle__label">{{ row.enabled ? '状态：启用' : '状态：停用' }}</span>
                 <el-switch
                   :model-value="row.enabled"
                   @change="value => handleToggleStatus(row, value)"
@@ -154,34 +150,27 @@
         </el-form-item>
 
         <el-row :gutter="16">
-          <el-col :span="8">
-            <el-form-item label="启用状态">
+          <el-col :span="6">
+            <el-form-item label="启用">
               <el-switch v-model="form.enabled" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
-            <el-form-item label="默认模型">
+          <el-col :span="6">
+            <el-form-item label="默认">
               <el-switch v-model="form.isDefault" :disabled="!form.enabled" />
             </el-form-item>
           </el-col>
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="深度思考">
               <el-switch v-model="form.supportsDeepThinking" />
             </el-form-item>
           </el-col>
-        </el-row>
-
-        <el-row :gutter="16">
-          <el-col :span="8">
+          <el-col :span="6">
             <el-form-item label="联网搜索">
               <el-switch v-model="form.supportsWebSearch" />
             </el-form-item>
           </el-col>
         </el-row>
-
-        <el-form-item label="备注">
-          <el-input v-model="form.remark" type="textarea" :rows="3" placeholder="可选备注" />
-        </el-form-item>
       </el-form>
 
       <div class="test-panel">
@@ -255,8 +244,7 @@ const form = reactive({
   enabled: true,
   isDefault: false,
   supportsDeepThinking: false,
-  supportsWebSearch: false,
-  remark: ''
+  supportsWebSearch: false
 })
 
 const rules = {
@@ -286,8 +274,7 @@ const resetForm = () => {
     enabled: true,
     isDefault: false,
     supportsDeepThinking: false,
-    supportsWebSearch: false,
-    remark: ''
+    supportsWebSearch: false
   })
   connectionVerified.value = false
   lastTestMessage.value = ''
@@ -328,8 +315,7 @@ const handleEdit = (row) => {
     enabled: row.enabled,
     isDefault: row.isDefault,
     supportsDeepThinking: row.supportsDeepThinking,
-    supportsWebSearch: row.supportsWebSearch,
-    remark: row.remark || ''
+    supportsWebSearch: row.supportsWebSearch
   })
   dialogVisible.value = true
 }
@@ -385,8 +371,7 @@ const handleSubmit = async () => {
     enabled: form.enabled,
     isDefault: form.isDefault,
     supportsDeepThinking: form.supportsDeepThinking,
-    supportsWebSearch: form.supportsWebSearch,
-    remark: form.remark
+    supportsWebSearch: form.supportsWebSearch
   }
 
   if (form.id) {
@@ -419,7 +404,7 @@ const handleToggleStatus = async (row, enabled) => {
 
 const handleDelete = async (row) => {
   try {
-    await ElMessageBox.confirm(`确定删除模型“${row.displayName}”吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除模型"${row.displayName}"吗？`, '提示', { type: 'warning' })
     await deleteAiModel(row.id)
     ElMessage.success('模型已删除')
     await loadModels()
@@ -442,40 +427,8 @@ onMounted(() => {
   gap: 14px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 2px 2px 0;
-}
-
-.page-header__title {
-  margin: 0;
-  color: #0f172a;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-}
-
-.page-header__desc {
-  margin: 6px 0 0;
-  max-width: 560px;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.page-header__actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .list-card {
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: none;
 }
@@ -512,7 +465,7 @@ onMounted(() => {
 .model-card {
   position: relative;
   padding: 18px 18px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(148, 163, 184, 0.16);
   background: #fff;
   box-shadow: none;
@@ -569,25 +522,6 @@ onMounted(() => {
   margin-top: 4px;
   color: #64748b;
   font-size: 13px;
-}
-
-.model-remark {
-  margin-top: 6px;
-  color: #94a3b8;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.provider-pill {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  border: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .model-specs {
@@ -669,17 +603,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #f8fafc;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-}
-
-.status-toggle__label {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .model-card :deep(.el-button.el-button--small) {
@@ -715,14 +638,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .page-header {
-    align-items: flex-start;
-  }
-
-  .page-header__title {
-    font-size: 24px;
-  }
-
   .model-card {
     padding: 16px;
   }

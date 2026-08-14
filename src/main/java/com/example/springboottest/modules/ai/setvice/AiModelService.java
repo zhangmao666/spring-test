@@ -10,7 +10,6 @@ import com.example.springboottest.modules.ai.dto.AiModelTestRequest;
 import com.example.springboottest.modules.ai.dto.AiModelTestResponse;
 import com.example.springboottest.modules.ai.entity.AiModel;
 import com.example.springboottest.modules.ai.repository.AiModelRepository;
-import com.example.springboottest.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -73,10 +72,6 @@ public class AiModelService {
         validateUpsertRequest(request, false);
         AiModel aiModel = new AiModel();
         applyRequest(aiModel, request, false);
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        aiModel.setCreateBy(currentUserId);
-        aiModel.setUpdateBy(currentUserId);
-        aiModel.setCreateTime(LocalDateTime.now());
         aiModel.setUpdateTime(LocalDateTime.now());
         aiModelRepository.insert(aiModel);
         if (Boolean.TRUE.equals(aiModel.getIsDefault())) {
@@ -89,7 +84,6 @@ public class AiModelService {
         AiModel existing = requireModel(id);
         validateUpsertRequest(request, true);
         applyRequest(existing, request, true);
-        existing.setUpdateBy(SecurityUtils.getCurrentUserId());
         existing.setUpdateTime(LocalDateTime.now());
         aiModelRepository.updateById(existing);
         if (Boolean.TRUE.equals(request.getIsDefault())) {
@@ -108,7 +102,6 @@ public class AiModelService {
         aiModelRepository.update(null, new LambdaUpdateWrapper<AiModel>()
                 .set(AiModel::getIsDefault, false));
         target.setIsDefault(true);
-        target.setUpdateBy(SecurityUtils.getCurrentUserId());
         target.setUpdateTime(LocalDateTime.now());
         aiModelRepository.updateById(target);
     }
@@ -119,7 +112,6 @@ public class AiModelService {
             target.setIsDefault(false);
         }
         target.setEnabled(Boolean.TRUE.equals(enabled));
-        target.setUpdateBy(SecurityUtils.getCurrentUserId());
         target.setUpdateTime(LocalDateTime.now());
         aiModelRepository.updateById(target);
     }
@@ -230,7 +222,6 @@ public class AiModelService {
         target.setIsDefault(Boolean.TRUE.equals(request.getIsDefault()));
         target.setSupportsDeepThinking(Boolean.TRUE.equals(request.getSupportsDeepThinking()));
         target.setSupportsWebSearch(Boolean.TRUE.equals(request.getSupportsWebSearch()));
-        target.setRemark(trimToNull(request.getRemark()));
 
         if (keepApiKeyWhenBlank && !StringUtils.hasText(request.getApiKey())) {
             return;
@@ -269,22 +260,9 @@ public class AiModelService {
                 .isDefault(Boolean.TRUE.equals(entity.getIsDefault()))
                 .supportsDeepThinking(Boolean.TRUE.equals(entity.getSupportsDeepThinking()))
                 .supportsWebSearch(Boolean.TRUE.equals(entity.getSupportsWebSearch()))
-                .remark(entity.getRemark())
-                .maskedApiKey(maskApiKey(entity.getApiKey()))
                 .apiKeyConfigured(StringUtils.hasText(entity.getApiKey()))
-                .createTime(entity.getCreateTime())
                 .updateTime(entity.getUpdateTime())
                 .build();
-    }
-
-    private String maskApiKey(String apiKey) {
-        if (!StringUtils.hasText(apiKey)) {
-            return "";
-        }
-        if (apiKey.length() <= 8) {
-            return "****";
-        }
-        return apiKey.substring(0, 4) + "****" + apiKey.substring(apiKey.length() - 4);
     }
 
     private String trimToNull(String value) {

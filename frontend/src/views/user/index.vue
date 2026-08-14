@@ -582,7 +582,6 @@ onMounted(() => {
   font-size: 0.82rem;
 }
 
-@media (max-width: 1100px) {
 @media (max-width: 1200px) {
   .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 

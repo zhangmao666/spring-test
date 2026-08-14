@@ -1,9 +1,6 @@
 <template>
   <div class="pomodoro-page">
     <section class="hero-panel">
-      <div class="hero-panel__glow hero-panel__glow--one"></div>
-      <div class="hero-panel__glow hero-panel__glow--two"></div>
-
       <div class="hero-copy">
         <div class="eyebrow">FOCUS STUDIO</div>
         <h2 class="title">番茄钟</h2>
@@ -779,36 +776,12 @@ onBeforeUnmount(() => {
   position: relative;
   overflow: hidden;
   padding: 28px;
-  border-radius: 30px;
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(148, 163, 184, 0.16);
   background:
     radial-gradient(circle at 18% 0%, rgba(47, 91, 234, 0.18), transparent 22%),
-    radial-gradient(circle at 92% 12%, rgba(15, 159, 110, 0.16), transparent 20%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.96));
   box-shadow: 0 22px 52px rgba(15, 23, 42, 0.08);
-}
-
-.hero-panel__glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(10px);
-  pointer-events: none;
-}
-
-.hero-panel__glow--one {
-  top: -60px;
-  right: -30px;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(47, 91, 234, 0.2), transparent 68%);
-}
-
-.hero-panel__glow--two {
-  bottom: -80px;
-  left: -50px;
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, rgba(15, 159, 110, 0.14), transparent 68%);
 }
 
 .eyebrow,
@@ -825,7 +798,8 @@ onBeforeUnmount(() => {
   margin: 10px 0 0;
   color: #0f172a;
   font-size: clamp(2rem, 3.6vw, 3.2rem);
-  font-weight: 900;
+  font-weight: 700;
+  font-family: var(--font-display);
   letter-spacing: -0.05em;
 }
 
@@ -852,7 +826,7 @@ onBeforeUnmount(() => {
 
 .hero-card {
   padding: 18px;
-  border-radius: 22px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
@@ -877,6 +851,7 @@ onBeforeUnmount(() => {
   color: #0f172a;
   font-size: 1.7rem;
   font-weight: 900;
+  font-family: var(--font-mono);
   line-height: 1;
 }
 
@@ -909,7 +884,7 @@ onBeforeUnmount(() => {
 .task-panel,
 .stats-panel {
   padding: 22px;
-  border-radius: 28px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(148, 163, 184, 0.14);
   box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
@@ -1013,7 +988,7 @@ onBeforeUnmount(() => {
 
 .timer-number {
   color: #0f172a;
-  font-family: var(--el-font-family-monospace, "Cascadia Code", "JetBrains Mono", monospace);
+  font-family: var(--font-mono);
   font-size: clamp(2.8rem, 8vw, 4.8rem);
   font-weight: 900;
   letter-spacing: -0.06em;
@@ -1069,7 +1044,7 @@ onBeforeUnmount(() => {
 .preset-card {
   padding: 14px 16px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #fff, #f8fbff);
   text-align: left;
   cursor: pointer;
@@ -1112,7 +1087,7 @@ onBeforeUnmount(() => {
 
 .task-card {
   padding: 14px;
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: #f8fafc;
 }
@@ -1154,7 +1129,7 @@ onBeforeUnmount(() => {
 
 .stat-card {
   padding: 16px;
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: #f8fafc;
 }
 
@@ -1164,6 +1139,7 @@ onBeforeUnmount(() => {
   color: #0f172a;
   font-size: 1.6rem;
   font-weight: 900;
+  font-family: var(--font-mono);
   line-height: 1;
 }
 
@@ -1183,7 +1159,7 @@ onBeforeUnmount(() => {
 .growth-panel {
   margin-top: 18px;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #f8fafc, #fff);
 }
 

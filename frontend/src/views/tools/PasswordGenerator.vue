@@ -469,10 +469,9 @@ onMounted(() => {
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
   gap: 20px;
   padding: 24px 28px;
-  border-radius: 28px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 28%),
-    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.16), transparent 26%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 255, 0.96));
   border: 1px solid rgba(37, 99, 235, 0.12);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
@@ -491,7 +490,8 @@ onMounted(() => {
   margin: 10px 0 0;
   color: #0f172a;
   font-size: 2rem;
-  font-weight: 900;
+  font-weight: 700;
+  font-family: var(--font-display);
   letter-spacing: -0.04em;
 }
 
@@ -517,7 +517,7 @@ onMounted(() => {
 .preview-shell {
   width: 100%;
   padding: 22px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background:
     linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.94)),
     radial-gradient(circle at top right, rgba(45, 212, 191, 0.2), transparent 30%);
@@ -534,7 +534,7 @@ onMounted(() => {
 
 .preview-shell__value {
   margin-top: 12px;
-  font-family: var(--el-font-family-monospace, "Cascadia Code", "JetBrains Mono", monospace);
+  font-family: var(--font-mono);
   font-size: 1.2rem;
   line-height: 1.6;
   word-break: break-all;
@@ -560,7 +560,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 18px;
   padding: 22px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-sm);
@@ -582,7 +582,7 @@ onMounted(() => {
 .control-card,
 .pool-card {
   padding: 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   background:
     linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.94));
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -615,6 +615,7 @@ onMounted(() => {
   color: #0f766e;
   font-size: 1.8rem;
   font-weight: 900;
+  font-family: var(--font-mono);
 }
 
 .quick-lengths {
@@ -657,7 +658,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   border: 1px solid rgba(148, 163, 184, 0.14);
   background: rgba(255, 255, 255, 0.94);
 }
@@ -691,10 +692,10 @@ onMounted(() => {
 .pool-card__value {
   margin-top: 14px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   background: rgba(15, 23, 42, 0.94);
   color: #cbd5e1;
-  font-family: var(--el-font-family-monospace, "Cascadia Code", "JetBrains Mono", monospace);
+  font-family: var(--font-mono);
   line-height: 1.75;
   word-break: break-all;
 }
@@ -707,7 +708,7 @@ onMounted(() => {
 
 .result-hero {
   padding: 22px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 28%),
     linear-gradient(135deg, color-mix(in srgb, var(--strength-color) 86%, #0f172a), #0f172a 78%);
@@ -724,7 +725,7 @@ onMounted(() => {
 
 .result-hero__password {
   margin-top: 12px;
-  font-family: var(--el-font-family-monospace, "Cascadia Code", "JetBrains Mono", monospace);
+  font-family: var(--font-mono);
   font-size: 1.42rem;
   font-weight: 700;
   line-height: 1.7;
@@ -779,7 +780,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.96));
   border: 1px solid rgba(148, 163, 184, 0.14);
 }
@@ -795,6 +796,7 @@ onMounted(() => {
   color: #0f172a;
   font-size: 1.38rem;
   font-weight: 900;
+  font-family: var(--font-mono);
 }
 
 .result-list {
@@ -811,7 +813,7 @@ onMounted(() => {
   width: 100%;
   padding: 16px 18px;
   border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.96);
   text-align: left;
   cursor: pointer;
@@ -830,7 +832,7 @@ onMounted(() => {
 }
 
 .password-item__value {
-  font-family: var(--el-font-family-monospace, "Cascadia Code", "JetBrains Mono", monospace);
+  font-family: var(--font-mono);
   color: #0f172a;
   line-height: 1.7;
   word-break: break-all;
@@ -847,7 +849,7 @@ onMounted(() => {
   justify-content: center;
   gap: 12px;
   min-height: 220px;
-  border-radius: 22px;
+  border-radius: var(--radius-lg);
   border: 1px dashed rgba(148, 163, 184, 0.24);
   color: #94a3b8;
   text-align: center;

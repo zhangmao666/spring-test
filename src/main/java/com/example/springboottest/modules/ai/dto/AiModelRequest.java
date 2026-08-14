@@ -35,7 +35,4 @@ public class AiModelRequest {
     private Boolean supportsDeepThinking = false;
 
     private Boolean supportsWebSearch = false;
-
-    @Size(max = 500, message = "备注不能超过500个字符")
-    private String remark;
 }

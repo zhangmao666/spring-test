@@ -27,13 +27,7 @@ public class AiModelResponse {
 
     private Boolean supportsWebSearch;
 
-    private String remark;
-
-    private String maskedApiKey;
-
     private Boolean apiKeyConfigured;
-
-    private LocalDateTime createTime;
 
     private LocalDateTime updateTime;
 }

@@ -86,7 +86,7 @@
 
       <div class="messages-shell">
 
-      <main ref="messagesContainer" class="messages-panel" @scroll="handleScroll">
+      <main ref="messagesContainer" class="messages-panel" @scroll="handleScroll" @click="handleMarkdownAction">
         <div v-if="messages.length === 0" class="empty-state">
           <EmptyIllustration
             variant="chat"
@@ -125,7 +125,7 @@
           </div>
 
           <div class="message-body">
-            <div class="message-bubble">
+            <div :class="['message-bubble', { 'message-bubble--streaming': msg.isStreaming && msg.role !== 'user' }]">
               <div v-if="msg.role === 'user'" class="message-text">{{ msg.content }}</div>
               <div v-else class="assistant-content">
                 <div v-if="msg.isStreaming && !msg.content && !msg.thought" class="streaming-loader">
@@ -213,28 +213,7 @@
               </div>
             </div>
 
-            <div
-              v-if="msg.role === 'assistant' && msg.content && !msg.isStreaming && (msg.suggestionsLoading || msg.suggestions?.length)"
-              class="message-suggestions"
-            >
-              <div class="message-suggestions__label">推荐追问</div>
-              <div v-if="msg.suggestionsLoading && !msg.suggestions?.length" class="message-suggestions__loading">
-                正在生成推荐问题...
-              </div>
-              <div v-else-if="msg.suggestions?.length" class="message-suggestions__list">
-                <button
-                  v-for="(suggestion, suggestionIndex) in msg.suggestions"
-                  :key="`${msg.timestamp}-${suggestionIndex}`"
-                  class="message-suggestion-chip"
-                  type="button"
-                  @click="handleSuggestionClick(suggestion)"
-                >
-                  {{ suggestion }}
-                </button>
-              </div>
-            </div>
-
-            <div class="message-actions" v-if="msg.content">
+            <div class="message-actions" v-if="msg.content && !msg.isStreaming">
               <button class="icon-btn" type="button" aria-label="复制消息" @click="copyMessage(msg.content)">
                 <el-icon><CopyDocument /></el-icon>
               </button>
@@ -409,10 +388,11 @@ import {
   UserFilled
 } from '@element-plus/icons-vue'
 import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
+import hljs from '@/utils/highlight'
+import { normalizeMarkdown } from '@/utils/markdown'
 import 'highlight.js/styles/github.css'
 import axios from 'axios'
-import aiAvatar from '@/assets/ai_avatar.png'
+import aiAvatar from '@/assets/ai_avatar.webp'
 import { getAiCapabilities, getAiModelList } from '@/api/ai-model'
 import { getConversationSkills, listSkills, saveConversationSkills } from '@/api/ai-skill'
 import { useRouter } from 'vue-router'
@@ -426,23 +406,29 @@ const suggestionCards = [
 ]
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
+  breaks: true,
   linkify: true,
-  typographer: true,
-  highlight: (str, lang) => {
-    const langLabel = lang || 'text'
-    let highlighted = ''
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        highlighted = hljs.highlight(str, { language: lang }).value
-      } catch (__) {}
-    }
-    if (!highlighted) {
-      highlighted = md.utils.escapeHtml(str)
-    }
-    return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-lang">${langLabel}</span><button class="code-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('code').textContent).then(()=>{this.textContent='已复制';setTimeout(()=>{this.textContent='复制'},1500)})">复制</button></div><pre><code class="hljs language-${langLabel}">${highlighted}</code></pre></div>`
-  }
+  typographer: true
 })
+
+md.renderer.rules.fence = (tokens, idx) => {
+  const token = tokens[idx]
+  const rawLanguage = String(token.info || '').trim().split(/\s+/)[0]
+  const languageName = rawLanguage && hljs.getLanguage(rawLanguage) ? rawLanguage : ''
+  const languageClass = rawLanguage.replace(/[^a-zA-Z0-9_+#.-]/g, '') || 'text'
+  const langLabel = md.utils.escapeHtml(languageClass)
+  let highlighted = ''
+
+  if (languageName) {
+    try {
+      highlighted = hljs.highlight(token.content, { language: languageName }).value
+    } catch (__) {}
+  }
+  if (!highlighted) highlighted = md.utils.escapeHtml(token.content)
+
+  return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-lang">${langLabel}</span><button class="code-copy-btn" type="button" data-copy-code aria-label="复制代码块">复制代码</button></div><pre><code class="hljs language-${langLabel}">${highlighted}</code></pre></div>\n`
+}
 
 const defaultRender = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
   return self.renderToken(tokens, idx, options)
@@ -525,6 +511,25 @@ const copyMessage = (content) => {
   })
 }
 
+const handleMarkdownAction = async (event) => {
+  const copyButton = event.target.closest?.('[data-copy-code]')
+  if (!copyButton) return
+
+  const code = copyButton.closest('.code-block-wrapper')?.querySelector('code')?.textContent || ''
+  if (!code) return
+
+  const originalText = copyButton.textContent
+  try {
+    await navigator.clipboard.writeText(code)
+    copyButton.textContent = '已复制'
+    window.setTimeout(() => {
+      if (copyButton.isConnected) copyButton.textContent = originalText
+    }, 1500)
+  } catch (error) {
+    ElMessage.error('代码复制失败')
+  }
+}
+
 const loadMountedSkills = async (conversationId = currentConversationId.value) => {
   if (!conversationId) {
     mountedSkills.value = []
@@ -602,8 +607,8 @@ const goSkillManage = () => {
 const typeLabel = (value) => ({ PROMPT: '提示词', TOOL: '工具', MIXED: '混合' }[value] || value || '-')
 
 const doRender = (msg) => {
-  if (msg.content) msg.renderedHtml = md.render(msg.content)
-  if (msg.thought) msg.renderedThoughtHtml = md.render(msg.thought)
+  if (msg.content) msg.renderedHtml = md.render(normalizeMarkdown(msg.content))
+  if (msg.thought) msg.renderedThoughtHtml = md.render(normalizeMarkdown(msg.thought))
 }
 
 const createAssistantMessage = () => ({
@@ -617,8 +622,6 @@ const createAssistantMessage = () => ({
   fullText: '',
   isThinking: false,
   isStreaming: true,
-  suggestions: [],
-  suggestionsLoading: false,
   thoughtExpanded: true,
   thinkingTime: 0,
   timestamp: Date.now(),
@@ -632,15 +635,16 @@ const createAssistantMessage = () => ({
 
 const throttledRender = (msg) => {
   if (renderTimer) return
-  renderTimer = setTimeout(() => {
+  // 用 requestAnimationFrame 与浏览器绘制帧对齐，避免帧间无效渲染
+  renderTimer = requestAnimationFrame(() => {
     renderTimer = null
     doRender(msg)
-  }, 80)
+  })
 }
 
 const finalRender = (msg) => {
   if (renderTimer) {
-    clearTimeout(renderTimer)
+    cancelAnimationFrame(renderTimer)
     renderTimer = null
   }
   doRender(msg)
@@ -918,8 +922,6 @@ const mapHistoryMessage = (msg) => {
     thoughtExpanded: false,
     isThinking: false,
     isStreaming: false,
-    suggestions: [],
-    suggestionsLoading: false,
     fullText: '',
     renderedHtml: '',
     renderedThoughtHtml: '',
@@ -1106,7 +1108,6 @@ const handleSend = async () => {
 
 const handleClassicSend = async (content, requestId, aiIndex) => {
   const targetMsg = messages.value[aiIndex]
-  targetMsg.suggestionsLoading = true
 
   try {
     const token = localStorage.getItem('token')
@@ -1162,7 +1163,6 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
             ElMessage.error(json.error || 'AI 服务出错')
             targetMsg.content = `[错误] ${json.error || '系统繁忙，请稍后再试'}`
             targetMsg.isThinking = false
-            targetMsg.suggestionsLoading = false
             if (useAgent.value) {
               agentStatus.value = 'failed'
               agentStatusText.value = json.error || '智能体执行失败'
@@ -1211,7 +1211,6 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
             }
             if (thoughtTimer) clearInterval(thoughtTimer)
             targetMsg.isThinking = false
-            targetMsg.suggestionsLoading = Boolean(targetMsg.content)
              if (useAgent.value && agentStatus.value !== 'failed') {
               agentStatus.value = 'completed'
               agentStatusText.value = '智能体已完成本轮任务。'
@@ -1219,15 +1218,6 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
             }
             finalRender(targetMsg)
             setLoadingForRequest(requestId, false)
-            throttledScroll()
-            continue
-          }
-
-          if (currentEvent === 'suggestions') {
-            targetMsg.suggestions = Array.isArray(json.suggestions)
-              ? json.suggestions.filter(item => typeof item === 'string' && item.trim())
-              : []
-            targetMsg.suggestionsLoading = false
             throttledScroll()
             continue
           }
@@ -1308,14 +1298,12 @@ const handleClassicSend = async (content, requestId, aiIndex) => {
         targetMsg.agentEventsExpanded = false
       }
     }
-    targetMsg.suggestionsLoading = false
     await loadConversations()
     resolveConversationModel(conversations.value.find(item => item.conversationId === currentConversationId.value), true)
   } catch (error) {
     ElMessage.error('服务连接失败')
     const errMsg = messages.value[aiIndex]
     errMsg.content = '抱歉，系统暂时无法响应您的请求。'
-    errMsg.suggestionsLoading = false
     if (useAgent.value) {
       agentStatus.value = 'failed'
       agentStatusText.value = '智能体服务连接失败'
@@ -1336,7 +1324,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  if (renderTimer) clearTimeout(renderTimer)
+  if (renderTimer) cancelAnimationFrame(renderTimer)
   if (scrollTimer) clearTimeout(scrollTimer)
 })
 </script>
@@ -1361,7 +1349,7 @@ onBeforeUnmount(() => {
 .chat-main {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 20px;
+  border-radius: var(--radius-md);
   backdrop-filter: blur(18px);
   overflow: hidden;
 }
@@ -1426,6 +1414,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  font-family: var(--font-display);
   color: #0f172a;
 }
 
@@ -1464,7 +1453,7 @@ onBeforeUnmount(() => {
   width: 100%;
   border: 1px solid transparent;
   background: #fff;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   margin-bottom: 6px;
   text-align: left;
@@ -1565,7 +1554,7 @@ onBeforeUnmount(() => {
 }
 
 .agent-trace-card {
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   background: linear-gradient(135deg, rgba(239, 246, 255, 0.92), rgba(248, 250, 252, 0.96));
   border: 1px solid rgba(37, 99, 235, 0.14);
@@ -1695,13 +1684,18 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 16px 18px 20px;
+  padding: 24px 24px 30px;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   background:
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 24%),
     radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 22%),
-    #f8fafc;
+    var(--surface-muted);
+}
+
+.messages-inner {
+  width: min(100%, 1120px);
+  margin: 0 auto;
 }
 
 .empty-state {
@@ -1733,7 +1727,7 @@ onBeforeUnmount(() => {
   gap: 12px;
   border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(255, 255, 255, 0.9);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   cursor: pointer;
   transition: 0.2s ease;
@@ -1762,8 +1756,8 @@ onBeforeUnmount(() => {
 
 .message-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 22px;
 }
 
 .message-row--user {
@@ -1786,20 +1780,52 @@ onBeforeUnmount(() => {
 }
 
 .message-body {
-  max-width: min(84%, 1120px);
+  min-width: 0;
+}
+
+.message-row--assistant .message-body {
+  width: min(100%, 920px);
+  max-width: calc(100% - 50px);
+}
+
+.message-row--user .message-body {
+  max-width: min(72%, 720px);
 }
 
 .message-bubble {
-  border-radius: 20px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  position: relative;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 6px;
+  padding: 20px 22px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.055);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.message-row--assistant .message-bubble::before {
+  content: '';
+  position: absolute;
+  inset: 0 18px auto;
+  height: 2px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+
+// 流式输出中：微妙的蓝色边框高亮，标示内容正在生成
+.message-bubble--streaming {
+  border-color: rgba(59, 130, 246, 0.22);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05), 0 0 0 3px rgba(59, 130, 246, 0.06);
 }
 
 .message-row--user .message-bubble {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: transparent;
+  border-radius: var(--radius-md) var(--radius-md) 6px var(--radius-md);
+  padding: 12px 16px;
   color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
 }
 
 .assistant-content,
@@ -1810,7 +1836,7 @@ onBeforeUnmount(() => {
 }
 
 .thought-card {
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   background: #eff6ff;
 }
@@ -1829,54 +1855,9 @@ onBeforeUnmount(() => {
 }
 
 .message-text {
-  line-height: 1.65;
+  font-size: 16px;
+  line-height: 1.72;
   word-break: break-word;
-}
-
-.message-suggestions {
-  margin-top: 10px;
-}
-
-.message-suggestions__label {
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.message-suggestions__loading {
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(248, 250, 252, 0.95);
-  border: 1px dashed rgba(148, 163, 184, 0.4);
-  color: #64748b;
-  font-size: 13px;
-}
-
-.message-suggestions__list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.message-suggestion-chip {
-  max-width: 100%;
-  border: 1px solid rgba(59, 130, 246, 0.18);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.92));
-  color: #0f172a;
-  border-radius: 999px;
-  padding: 10px 14px;
-  line-height: 1.5;
-  text-align: left;
-  white-space: normal;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.message-suggestion-chip:hover {
-  transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.32);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
 }
 
 .streaming-loader {
@@ -1903,8 +1884,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes thinking-wave {
-  0%, 60%, 100% { transform: scale(0.8); opacity: 0.4; }
-  30%           { transform: scale(1.5); opacity: 1; }
+  0%, 60%, 100% { transform: translateY(0) scale(0.85); opacity: 0.45; }
+  30%           { transform: translateY(-5px) scale(1.2); opacity: 1; }
 }
 
 // 消息气泡入场动画
@@ -1921,18 +1902,21 @@ onBeforeUnmount(() => {
   animation: fadeInUp 0.3s ease both;
 }
 
-// 流式光标
+// 流式光标 — 细竖线，贴近真实文本插入光标
 .stream-cursor {
   display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  background: #3b82f6;
+  border-radius: 1px;
   margin-left: 2px;
-  color: #3b82f6;
-  font-weight: bold;
-  animation: cursor-blink 0.8s step-end infinite;
+  animation: cursor-blink 1s ease-in-out infinite;
 }
 
 @keyframes cursor-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%, 40%  { opacity: 1; }
+  60%, 100% { opacity: 0; }
 }
 
 @keyframes fadeInUp {
@@ -1955,6 +1939,12 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.12);
   color: #475569;
+}
+
+.icon-btn:focus-visible,
+.code-copy-btn:focus-visible {
+  outline: 2px solid var(--focus-ring-strong);
+  outline-offset: 2px;
 }
 
 .scroll-bottom-btn {
@@ -2010,7 +2000,7 @@ onBeforeUnmount(() => {
 .chat-input :deep(.el-textarea__inner) {
   padding: 10px 12px;
   line-height: 1.6;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
 }
 
 .toggle-chip {
@@ -2177,7 +2167,7 @@ onBeforeUnmount(() => {
 .search-card {
   margin-bottom: 12px;
   padding: 12px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(14, 116, 144, 0.14);
   background:
     linear-gradient(135deg, rgba(240, 249, 255, 0.92), rgba(248, 250, 252, 0.96));
@@ -2214,7 +2204,7 @@ onBeforeUnmount(() => {
 .search-source {
   display: block;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
   color: inherit;
   background: rgba(255, 255, 255, 0.82);
@@ -2247,8 +2237,191 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
-.markdown-body :deep(pre) {
-  overflow-x: auto;
+.markdown-body {
+  color: var(--text-secondary);
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+
+  :deep(p) {
+    max-width: 75ch;
+    margin: 0 0 0.9em;
+    &:last-child { margin-bottom: 0; }
+  }
+
+  :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+    max-width: 75ch;
+    margin: 1.35em 0 0.55em;
+    font-weight: 720;
+    line-height: 1.35;
+    color: var(--text-primary);
+    letter-spacing: -0.012em;
+    &:first-child { margin-top: 0; }
+  }
+  :deep(h1) {
+    padding-bottom: 0.48em;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 1.48em;
+  }
+  :deep(h2) { font-size: 1.28em; }
+  :deep(h3) {
+    position: relative;
+    padding-left: 12px;
+    font-size: 1.13em;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.2em;
+      bottom: 0.2em;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+  }
+  :deep(h4), :deep(h5), :deep(h6) { font-size: 1em; }
+
+  :deep(strong) {
+    color: var(--text-primary);
+    font-weight: 720;
+  }
+
+  :deep(ul), :deep(ol) {
+    max-width: 75ch;
+    margin: 0.65em 0 1em;
+    padding-left: 1.45em;
+  }
+  :deep(li) {
+    margin-bottom: 0.42em;
+    padding-left: 0.15em;
+  }
+  :deep(li::marker) { color: var(--accent-strong); }
+  :deep(ul) { list-style-type: disc; }
+  :deep(ol) { list-style-type: decimal; }
+
+  :deep(blockquote) {
+    max-width: 75ch;
+    margin: 1em 0;
+    padding: 0.72em 1em;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 10px 10px 0;
+    color: var(--text-secondary);
+  }
+
+  // 行内 code（不在 pre 里面的）
+  :deep(code) {
+    font-family: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    font-size: 0.88em;
+    padding: 0.14em 0.42em;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    color: var(--accent-strong);
+  }
+
+  // 代码块外层容器（highlight 函数生成）
+  :deep(.code-block-wrapper) {
+    margin: 1em 0;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: #1e2432;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+
+    pre {
+      margin: 0;
+      padding: 16px 18px;
+      overflow-x: auto;
+      background: transparent;
+    }
+
+    code {
+      padding: 0;
+      background: none;
+      color: #e2e8f0;
+      font-size: 0.875em;
+      font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+      border-radius: 0;
+      border: 0;
+    }
+  }
+
+  :deep(.code-block-header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  :deep(.code-lang) {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: #7c91b0;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
+  }
+
+  :deep(.code-copy-btn) {
+    min-height: 32px;
+    padding: 4px 11px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 6px;
+    background: transparent;
+    color: #7c91b0;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e2e8f0;
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+  }
+
+  :deep(a) {
+    color: #2563eb;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    &:hover { color: #1d4ed8; }
+  }
+
+  :deep(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75em 0;
+    font-size: 0.9em;
+  }
+  :deep(th), :deep(td) {
+    padding: 8px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    text-align: left;
+  }
+  :deep(th) {
+    background: rgba(241, 245, 249, 0.9);
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  :deep(hr) {
+    border: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.28);
+    margin: 1em 0;
+  }
+
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.1);
+  }
 }
 
 @media (max-width: 1100px) {
@@ -2261,7 +2434,7 @@ onBeforeUnmount(() => {
   }
 
   .message-body {
-    max-width: 88%;
+    max-width: calc(100% - 50px);
   }
 
   .suggestion-grid {
@@ -2295,6 +2468,40 @@ onBeforeUnmount(() => {
 
   .skill-option .el-button {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .messages-panel {
+    padding: 16px 12px 22px;
+  }
+
+  .message-row {
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .message-avatar :deep(.el-avatar),
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .message-row--assistant .message-body,
+  .message-row--user .message-body {
+    max-width: calc(100% - 42px);
+  }
+
+  .message-bubble {
+    padding: 16px;
+  }
+
+  .message-row--user .message-bubble {
+    padding: 10px 14px;
+  }
+
+  .message-text {
+    font-size: 16px;
   }
 }
 </style>

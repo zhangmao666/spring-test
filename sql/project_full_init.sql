@@ -333,11 +333,7 @@ CREATE TABLE IF NOT EXISTS `ai_model` (
   `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether default model',
   `supports_deep_thinking` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether deep thinking is supported',
   `supports_web_search` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether web search is supported',
-  `remark` VARCHAR(500) DEFAULT NULL COMMENT 'Remark',
-  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `create_by` BIGINT DEFAULT NULL COMMENT 'Creator user id',
   `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `update_by` BIGINT DEFAULT NULL COMMENT 'Updater user id',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_ai_model_enum_name` (`ai_enum`, `model_name`),
   KEY `idx_ai_model_ai_enum` (`ai_enum`)
@@ -350,8 +346,7 @@ ALTER TABLE `ai_model`
   ADD COLUMN IF NOT EXISTS `enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Whether enabled' AFTER `model_name`,
   ADD COLUMN IF NOT EXISTS `is_default` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether default model' AFTER `enabled`,
   ADD COLUMN IF NOT EXISTS `supports_deep_thinking` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether deep thinking is supported' AFTER `is_default`,
-  ADD COLUMN IF NOT EXISTS `supports_web_search` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether web search is supported' AFTER `supports_deep_thinking`,
-  ADD COLUMN IF NOT EXISTS `remark` VARCHAR(500) DEFAULT NULL COMMENT 'Remark' AFTER `supports_web_search`;
+  ADD COLUMN IF NOT EXISTS `supports_web_search` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether web search is supported' AFTER `supports_deep_thinking`;
 
 CREATE TABLE IF NOT EXISTS `chat_conversations` (
   `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
@@ -690,10 +685,10 @@ WHERE f.flow_code = 'FLOW_SIMPLE'
 
 INSERT INTO `ai_model`
   (`ai_enum`, `display_name`, `base_url`, `api_key`, `model_name`, `enabled`, `is_default`,
-   `supports_deep_thinking`, `supports_web_search`, `remark`, `create_by`, `update_by`)
+   `supports_deep_thinking`, `supports_web_search`)
 VALUES
-  ('openai', 'DeepSeek V3.2', 'https://yunwu.ai', '${OPENAI_API_KEY}', 'deepseek-v3.2', 1, 1, 1, 0, 'Default managed model', 1, 1),
-  ('openai', 'Gemini Flash', 'https://yunwu.ai', '${OPENAI_API_KEY}', 'gemini-2.5-flash-all', 1, 0, 1, 0, 'Alternative managed model', 1, 1)
+  ('openai', 'DeepSeek V3.2', 'https://yunwu.ai', '${OPENAI_API_KEY}', 'deepseek-v3.2', 1, 1, 1, 0),
+  ('openai', 'Gemini Flash', 'https://yunwu.ai', '${OPENAI_API_KEY}', 'gemini-2.5-flash-all', 1, 0, 1, 0)
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `base_url` = VALUES(`base_url`),
@@ -701,9 +696,7 @@ ON DUPLICATE KEY UPDATE
   `enabled` = VALUES(`enabled`),
   `is_default` = VALUES(`is_default`),
   `supports_deep_thinking` = VALUES(`supports_deep_thinking`),
-  `supports_web_search` = VALUES(`supports_web_search`),
-  `remark` = VALUES(`remark`),
-  `update_by` = VALUES(`update_by`);
+  `supports_web_search` = VALUES(`supports_web_search`);
 
 INSERT INTO `daily_news` (`title`, `content`, `source`, `url`, `category`, `publish_time`, `create_time`)
 SELECT 'Sample daily news item', 'This is a bootstrap record used for the daily news module.', 'Bootstrap', 'https://example.com/daily-news-1', 'Technology', CONCAT(CURDATE(), ' 08:00:00'), NOW()

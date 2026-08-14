@@ -240,7 +240,7 @@ onMounted(() => {
 
 .refresh-button {
   height: 42px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   font-weight: 700;
   background: var(--accent-gradient) !important;
   border: none !important;
@@ -267,7 +267,7 @@ onMounted(() => {
   flex: 1;
   padding: 14px 16px;
   border: 2px solid var(--border-subtle);
-  border-radius: 18px;
+  border-radius: var(--radius-md);
   background: var(--surface-base);
   color: var(--text-secondary);
   cursor: pointer;
@@ -326,7 +326,7 @@ onMounted(() => {
 
 .board-panel {
   border: 1px solid var(--border-subtle);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--surface-base);
   box-shadow: var(--shadow-sm);
@@ -381,7 +381,7 @@ onMounted(() => {
 .skeleton-rank,
 .skeleton-hot {
   height: 42px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: var(--surface-muted);
 }
 
@@ -403,7 +403,7 @@ onMounted(() => {
   gap: 14px;
   align-items: center;
   padding: 14px 12px;
-  border-radius: 16px;
+  border-radius: var(--radius-sm);
   color: inherit;
   text-decoration: none;
   transition: background-color 220ms ease, transform 220ms ease;
@@ -423,7 +423,7 @@ onMounted(() => {
   place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   font-size: 0.95rem;
   font-weight: 800;
 }
@@ -480,6 +480,7 @@ onMounted(() => {
   color: #f97316;
   font-size: 0.88rem;
   font-weight: 700;
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 

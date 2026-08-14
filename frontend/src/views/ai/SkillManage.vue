@@ -160,7 +160,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { CircleCheckFilled, MagicStick, Star, UploadFilled } from '@element-plus/icons-vue'
+import PageHero from '@/components/PageHero.vue'
+import StatCard from '@/components/StatCard.vue'
 import {
   createSkill,
   deleteSkill,

@@ -57,18 +57,6 @@ public class AiModel {
     @Schema(description = "Whether web search is supported")
     private Boolean supportsWebSearch;
 
-    @Schema(description = "Remark")
-    private String remark;
-
-    @Schema(description = "Create time")
-    private LocalDateTime createTime;
-
-    @Schema(description = "Create by")
-    private Long createBy;
-
     @Schema(description = "Update time")
     private LocalDateTime updateTime;
-
-    @Schema(description = "Update by")
-    private Long updateBy;
 }

@@ -19,7 +19,6 @@ import com.example.springboottest.modules.ai.skill.service.AiSkillService;
 import com.example.springboottest.modules.ai.websearch.WebSearchContext;
 import com.example.springboottest.modules.ai.websearch.WebSearchService;
 import org.springframework.ai.chat.messages.AssistantMessage;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +38,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +48,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AiChatServiceImpl implements AiChatService {
-
-    private static final int MAX_FOLLOW_UP_SUGGESTIONS = 3;
-    private static final int MAX_FOLLOW_UP_LENGTH = 60;
-
     private final AiProperties aiProperties;
     private final ChatHistoryService chatHistoryService;
     private final ObjectMapper objectMapper;
@@ -249,20 +243,7 @@ public class AiChatServiceImpl implements AiChatService {
                             return;
                         }
 
-                        try {
-                            List<String> suggestions = generateFollowUpSuggestions(
-                                    request.getMessage(),
-                                    assistantMessage,
-                                    searchContext,
-                                    resolved
-                            );
-                            sendSuggestionsEvent(emitter, suggestions);
-                        } catch (Exception e) {
-                            log.warn("Failed to generate follow-up suggestions", e);
-                            sendSuggestionsEvent(emitter, Collections.emptyList());
-                        } finally {
-                            emitter.complete();
-                        }
+                        emitter.complete();
                     }
             );
         } catch (Exception e) {
@@ -309,20 +290,7 @@ public class AiChatServiceImpl implements AiChatService {
                             "agentRunId", defaultIfBlank(result.getRunId(), "")
                     ))));
 
-            try {
-                List<String> suggestions = generateFollowUpSuggestions(
-                        request.getMessage(),
-                        answer,
-                        disabledSearchContext(),
-                        resolved
-                );
-                sendSuggestionsEvent(emitter, suggestions);
-            } catch (Exception e) {
-                log.warn("Failed to generate follow-up suggestions for agent response", e);
-                sendSuggestionsEvent(emitter, Collections.emptyList());
-            } finally {
-                emitter.complete();
-            }
+            emitter.complete();
         } catch (Exception e) {
             log.error("Agent streaming request failed", e);
             sendEmitterError(emitter, "Agent request failed: " + e.getMessage(), e);
@@ -393,18 +361,6 @@ public class AiChatServiceImpl implements AiChatService {
                     .data(objectMapper.writeValueAsString(payload)));
         } catch (Exception e) {
             log.warn("Failed to send search SSE event", e);
-        }
-    }
-
-    private void sendSuggestionsEvent(SseEmitter emitter, List<String> suggestions) {
-        try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("suggestions", suggestions == null ? Collections.emptyList() : suggestions);
-            emitter.send(SseEmitter.event()
-                    .name("suggestions")
-                    .data(objectMapper.writeValueAsString(payload)));
-        } catch (Exception e) {
-            log.warn("Failed to send suggestions SSE event", e);
         }
     }
 
@@ -653,82 +609,6 @@ public class AiChatServiceImpl implements AiChatService {
         return builder.toString();
     }
 
-    private List<String> generateFollowUpSuggestions(String userMessage,
-                                                     String assistantMessage,
-                                                     WebSearchContext searchContext,
-                                                     ResolvedChatModel resolved) {
-        if (!StringUtils.hasText(assistantMessage)) {
-            return Collections.emptyList();
-        }
-
-        List<Message> messages = List.of(
-                new SystemMessage("""
-                        You generate concise Chinese follow-up questions for a chat UI.
-                        Return only a JSON array of up to 3 strings.
-                        Each item must be a strong next-turn question closely tied to the answer.
-                        Do not include answers, explanations, markdown, or extra wrapper text.
-                        """),
-                new UserMessage(buildFollowUpSuggestionPrompt(userMessage, assistantMessage, searchContext))
-        );
-
-        Prompt prompt = new Prompt(messages, buildSuggestionOptions(resolved));
-        ChatResponse response = resolved.chatModel().call(prompt);
-        return parseFollowUpSuggestions(extractResponseText(response), objectMapper);
-    }
-
-    private String buildFollowUpSuggestionPrompt(String userMessage,
-                                                 String assistantMessage,
-                                                 WebSearchContext searchContext) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("Generate 3 Chinese follow-up questions for the next user turn.\n");
-        builder.append("Requirements:\n");
-        builder.append("1. Questions must stay strongly related to the assistant answer.\n");
-        builder.append("2. Avoid repeating the user's original wording.\n");
-        builder.append("3. Avoid generic prompts such as asking for more details without focus.\n");
-        builder.append("4. If web search context exists, you may use it to make the questions more specific.\n");
-        builder.append("5. Output only a JSON array, for example [\"follow-up 1\",\"follow-up 2\",\"follow-up 3\"].\n\n");
-        builder.append("User question:\n").append(defaultIfBlank(userMessage, "")).append("\n\n");
-        builder.append("Assistant answer:\n").append(defaultIfBlank(assistantMessage, "")).append("\n\n");
-
-        String searchSummary = buildSearchSummary(searchContext);
-        if (StringUtils.hasText(searchSummary)) {
-            builder.append("Web search context:\n").append(searchSummary);
-        }
-        return builder.toString();
-    }
-
-    private String buildSearchSummary(WebSearchContext searchContext) {
-        if (searchContext == null || !searchContext.success()) {
-            return "";
-        }
-
-        StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(searchContext.searchQuery())) {
-            builder.append("Search query: ").append(searchContext.searchQuery()).append("\n");
-        }
-
-        List<WebSearchSource> sources = searchContext.sources();
-        if (sources == null || sources.isEmpty()) {
-            return builder.toString().trim();
-        }
-
-        int limit = Math.min(sources.size(), 3);
-        for (int i = 0; i < limit; i++) {
-            WebSearchSource source = sources.get(i);
-            builder.append("Source ").append(i + 1).append(":\n");
-            if (StringUtils.hasText(source.getTitle())) {
-                builder.append("Title: ").append(source.getTitle()).append("\n");
-            }
-            if (StringUtils.hasText(source.getDomain())) {
-                builder.append("Domain: ").append(source.getDomain()).append("\n");
-            }
-            if (StringUtils.hasText(source.getSnippet())) {
-                builder.append("Snippet: ").append(source.getSnippet()).append("\n");
-            }
-        }
-        return builder.toString().trim();
-    }
-
     private OpenAiChatOptions buildChatOptions(AiChatRequest request, ResolvedChatModel resolved) {
         OpenAiChatOptions.Builder builder = OpenAiChatOptions.builder().model(resolved.modelName());
         if (request.getMaxTokens() != null) {
@@ -738,14 +618,6 @@ public class AiChatServiceImpl implements AiChatService {
             builder.temperature(request.getTemperature());
         }
         return builder.build();
-    }
-
-    private OpenAiChatOptions buildSuggestionOptions(ResolvedChatModel resolved) {
-        return OpenAiChatOptions.builder()
-                .model(resolved.modelName())
-                .temperature(0.4)
-                .maxTokens(220)
-                .build();
     }
 
     private AiChatResponse parseSpringAiResponse(ChatResponse response,
@@ -841,113 +713,6 @@ public class AiChatServiceImpl implements AiChatService {
         } catch (Exception e) {
             log.warn("Failed to emit final assistant message for agent", e);
         }
-    }
-
-    static List<String> parseFollowUpSuggestions(String raw, ObjectMapper objectMapper) {
-        if (!StringUtils.hasText(raw)) {
-            return Collections.emptyList();
-        }
-
-        String normalized = stripCodeFence(raw).trim();
-        List<String> parsed = parseSuggestionJsonArray(normalized, objectMapper);
-        if (!parsed.isEmpty()) {
-            return sanitizeFollowUpSuggestions(parsed);
-        }
-
-        return sanitizeFollowUpSuggestions(extractSuggestionLines(normalized));
-    }
-
-    private static List<String> parseSuggestionJsonArray(String raw, ObjectMapper objectMapper) {
-        if (!StringUtils.hasText(raw)) {
-            return Collections.emptyList();
-        }
-
-        int start = raw.indexOf('[');
-        int end = raw.lastIndexOf(']');
-        if (start < 0 || end < start) {
-            return Collections.emptyList();
-        }
-
-        String jsonArray = raw.substring(start, end + 1);
-        try {
-            return objectMapper.readValue(jsonArray, new TypeReference<List<String>>() { });
-        } catch (Exception e) {
-            return Collections.emptyList();
-        }
-    }
-
-    private static List<String> extractSuggestionLines(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return Collections.emptyList();
-        }
-
-        List<String> suggestions = new ArrayList<>();
-        for (String line : raw.split("\\r?\\n")) {
-            String candidate = line.trim();
-            if (!StringUtils.hasText(candidate)) {
-                continue;
-            }
-            candidate = candidate.replaceFirst("^[-*\\s]+", "");
-            candidate = candidate.replaceFirst("^\\u95EE\\u9898\\s*\\d+\\s*[:\\uFF1A]\\s*", "");
-            candidate = candidate.replaceFirst("^\\u5EFA\\u8BAE\\u8FFD\\u95EE\\s*[:\\uFF1A]\\s*", "");
-            candidate = candidate.replaceFirst("^\\d+[.\\u3001\\)\\uFF09]\\s*", "");
-            candidate = candidate.replaceFirst("^[\\u4E00\\u4E8C\\u4E09\\u56DB\\u4E94\\u516D\\u4E03\\u516B\\u4E5D\\u5341]+[\\u3001.\\uFF0E]\\s*", "");
-            candidate = candidate.replaceFirst("^[\"'\\u201C\\u201D\\u2018\\u2019]+", "");
-            candidate = candidate.replaceFirst("[\"'\\u201C\\u201D\\u2018\\u2019]+$", "");
-            if (StringUtils.hasText(candidate)) {
-                suggestions.add(candidate);
-            }
-        }
-        return suggestions;
-    }
-
-    private static List<String> sanitizeFollowUpSuggestions(List<String> suggestions) {
-        if (suggestions == null || suggestions.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        LinkedHashSet<String> unique = new LinkedHashSet<>();
-        for (String suggestion : suggestions) {
-            String normalized = normalizeSuggestion(suggestion);
-            if (StringUtils.hasText(normalized)) {
-                unique.add(normalized);
-            }
-            if (unique.size() >= MAX_FOLLOW_UP_SUGGESTIONS) {
-                break;
-            }
-        }
-        return new ArrayList<>(unique);
-    }
-
-    private static String normalizeSuggestion(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        normalized = normalized.replaceFirst("^[-*\\s]+", "");
-        normalized = normalized.replaceFirst("^\\u95EE\\u9898\\s*\\d+\\s*[:\\uFF1A]\\s*", "");
-        normalized = normalized.replaceFirst("^\\u5EFA\\u8BAE\\u8FFD\\u95EE\\s*[:\\uFF1A]\\s*", "");
-        normalized = normalized.replaceFirst("^\\d+[.\\u3001\\)\\uFF09]\\s*", "");
-        normalized = normalized.replaceFirst("^[\\u4E00\\u4E8C\\u4E09\\u56DB\\u4E94\\u516D\\u4E03\\u516B\\u4E5D\\u5341]+[\\u3001.\\uFF0E]\\s*", "");
-        normalized = normalized.replaceFirst("^[\"'\\u201C\\u201D\\u2018\\u2019]+", "");
-        normalized = normalized.replaceFirst("[\"'\\u201C\\u201D\\u2018\\u2019]+$", "");
-        normalized = normalized.trim();
-
-        if (!StringUtils.hasText(normalized) || normalized.length() < 2) {
-            return null;
-        }
-        if (normalized.length() > MAX_FOLLOW_UP_LENGTH) {
-            normalized = normalized.substring(0, MAX_FOLLOW_UP_LENGTH).trim();
-        }
-        return normalized;
-    }
-
-    private static String stripCodeFence(String raw) {
-        return raw
-                .replace("```json", "")
-                .replace("```JSON", "")
-                .replace("```", "");
     }
 
     private void updateConversationContext(String conversationId, String userMessage, String aiMessage) {

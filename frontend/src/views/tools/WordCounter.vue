@@ -348,7 +348,7 @@ $purple: #8b5cf6;
 $pink: #ec4899;
 $gray: #64748b;
 $border: #e2e8f0;
-$radius: 14px;
+$radius: var(--radius-sm);
 
 .wc-page {
   display: flex;
@@ -381,7 +381,7 @@ $radius: 14px;
   width: 48px;
   height: 48px;
   background: linear-gradient(135deg, $primary 0%, $purple 100%);
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -393,7 +393,8 @@ $radius: 14px;
 .wc-title {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
+  font-family: var(--font-display);
   color: #0f172a;
   letter-spacing: -0.4px;
 }
@@ -560,6 +561,7 @@ $radius: 14px;
   &__value {
     font-size: 20px;
     font-weight: 800;
+    font-family: var(--font-mono);
     color: #0f172a;
     line-height: 1;
   }
@@ -638,6 +640,7 @@ $radius: 14px;
   &__val {
     font-size: 16px;
     font-weight: 700;
+    font-family: var(--font-mono);
     color: #0f172a;
     line-height: 1;
   }

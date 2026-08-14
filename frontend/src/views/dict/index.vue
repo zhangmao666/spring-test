@@ -519,7 +519,8 @@ onMounted(async () => {
   margin: 8px 0 0;
   color: #0f172a;
   font-size: 34px;
-  font-weight: 800;
+  font-weight: 700;
+  font-family: var(--font-display);
   line-height: 1.05;
   letter-spacing: -0.04em;
 }
@@ -540,7 +541,7 @@ onMounted(async () => {
 
 .dict-card,
 .item-card {
-  border-radius: 28px;
+  border-radius: var(--radius-lg);
 }
 
 .section-header {
@@ -596,7 +597,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 16px;
   padding: 18px;
-  border-radius: 22px;
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(148, 163, 184, 0.16);
   background:
     radial-gradient(circle at top right, rgba(96, 165, 250, 0.1), transparent 32%),
@@ -665,7 +666,7 @@ onMounted(async () => {
 .dict-detail {
   margin-bottom: 16px;
   padding: 22px 24px;
-  border-radius: 22px;
+  border-radius: var(--radius-lg);
   border: 1px solid rgba(148, 163, 184, 0.14);
   background:
     radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 32%),
